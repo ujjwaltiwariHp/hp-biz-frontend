@@ -33,3 +33,84 @@ export interface DashboardStats {
   inactive_companies: number;
   new_companies_this_month: number;
 }
+
+export interface UsageReport {
+  id: number;
+  company_name: string;
+  unique_company_id: string;
+  package_name: string;
+  staff_count: number;
+  leads_count: number;
+  activities_count: number;
+}
+
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface CompaniesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    companies: Company[];
+    pagination: PaginationInfo;
+  };
+}
+
+export interface CompanyResponse {
+  success: boolean;
+  message: string;
+  data: {
+    company: Company;
+    stats: CompanyStats;
+  };
+}
+
+export interface DashboardResponse {
+  success: boolean;
+  message: string;
+  data: {
+    stats: DashboardStats;
+  };
+}
+
+export interface UsageReportResponse {
+  success: boolean;
+  message: string;
+  data: {
+    report: UsageReport[];
+    period: {
+      startDate: string;
+      endDate: string;
+    };
+    summary: {
+      totalCompanies: number;
+      totalLeads: number;
+      totalActivities: number;
+    };
+  };
+}
+
+export interface CompanyActionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    company: Company;
+  };
+}
+
+export interface DeleteCompanyResponse {
+  success: boolean;
+  message: string;
+  data: {
+    deletedCompany: {
+      id: number;
+      company_name: string;
+      unique_company_id: string;
+    };
+  };
+}
