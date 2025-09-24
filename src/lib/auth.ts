@@ -3,19 +3,19 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface SuperAdmin {
-  id: number;
-  email: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
+export const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
 
-export interface AuthResponse {
-  success: boolean;
-  message: string;
-  data: {
-    admin: SuperAdmin;
-    token: string;
-  };
-}
+  const cookies = document.cookie.split(';');
+  const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('auth-token='));
+
+  if (tokenCookie) {
+    return tokenCookie.split('=')[1];
+  }
+
+  return null;
+};
+
+export const isAuthenticated = (): boolean => {
+  return !!getAuthToken();
+};

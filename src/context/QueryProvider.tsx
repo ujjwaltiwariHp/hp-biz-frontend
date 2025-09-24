@@ -1,31 +1,33 @@
 'use client';
 
-import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
-interface QueryProviderProps {
+export default function QueryProvider({
+  children,
+}: {
   children: React.ReactNode;
-}
+}) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+            retry: 1,
+          },
+        },
+      })
+  );
 
-const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
       <ToastContainer
         position="top-right"
-        autoClose={3000}
+        autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
@@ -35,9 +37,6 @@ const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
         pauseOnHover
         theme="light"
       />
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
-};
-
-export default QueryProvider;
+}

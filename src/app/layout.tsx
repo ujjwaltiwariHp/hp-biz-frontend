@@ -2,6 +2,11 @@ import "@/css/satoshi.css";
 import "@/css/style.css";
 import QueryProvider from "@/context/QueryProvider";
 
+export const metadata = {
+  title: "Admin Panel",
+  description: "Super Admin Dashboard",
+};
+
 export default function RootLayout({
   children,
 }: {
