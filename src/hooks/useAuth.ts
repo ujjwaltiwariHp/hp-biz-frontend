@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-toastify";
-import { LoginCredentials } from "@/lib/auth";
+import { LoginCredentials } from "@/types/auth";
+
+// Helper function to get token from cookies
+const getTokenFromCookies = () => {
+  if (typeof document !== 'undefined') {
+    const cookies = document.cookie.split(';');
+    const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('auth-token='));
+    return tokenCookie ? tokenCookie.split('=')[1] : null;
+  }
+  return null;
+};
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -13,7 +23,7 @@ export function useAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("auth-token");
+    const token = getTokenFromCookies();
     if (token) {
       setIsAuthenticated(true);
     } else {
