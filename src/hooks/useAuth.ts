@@ -2,22 +2,61 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { authService } from "@/services/auth.service";
+import { toast } from "react-toastify";
+import { LoginCredentials } from "@/lib/auth";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Example: Check token in localStorage
-    const token = localStorage.getItem("prodcastToken");
-
+    const token = localStorage.getItem("auth-token");
     if (token) {
       setIsAuthenticated(true);
     } else {
       setIsAuthenticated(false);
-      router.push("/auth/signin");
+      if (window.location.pathname !== "/auth/signin") {
+        router.push("/auth/signin");
+      }
     }
   }, [router]);
 
-  return { isAuthenticated };
+  const loginMutation = useMutation({
+    mutationFn: authService.login,
+    onMutate: () => {
+      setIsLoggingIn(true);
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setIsAuthenticated(true);
+        toast.success("Login successful!");
+        router.push("/");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Login failed");
+    },
+    onSettled: () => {
+      setIsLoggingIn(false);
+    },
+  });
+
+  const login = (credentials: LoginCredentials) => {
+    loginMutation.mutate(credentials);
+  };
+
+  const logout = () => {
+    authService.logout();
+    setIsAuthenticated(false);
+  };
+
+  return {
+    isAuthenticated,
+    login,
+    logout,
+    isLoggingIn
+  };
 }

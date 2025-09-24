@@ -4,11 +4,10 @@ import { LoginCredentials, AuthResponse } from '@/lib/auth';
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await apiClient.post('/admin-auth/super-admin-login', credentials);
-
-    // Store token in localStorage
     if (response.data.success && response.data.data.token) {
       localStorage.setItem('auth-token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.admin));
+      document.cookie = `auth-token=${response.data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`; // 7 days
     }
 
     return response.data;
@@ -23,6 +22,9 @@ export const authService = {
       // Clear token from localStorage
       localStorage.removeItem('auth-token');
       localStorage.removeItem('user');
+
+      // Clear cookie
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 
       // Redirect to login
       window.location.href = '/auth/signin';
