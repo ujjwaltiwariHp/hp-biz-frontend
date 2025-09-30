@@ -38,16 +38,10 @@ export interface SuperAdmin {
 
 export interface AdminListResponse {
   success: boolean;
-  message: string;
-  data: {
-    admins: SuperAdmin[];
-  };
+  superAdmins: SuperAdmin[];
 }
 
 export interface ProfileResponse {
   success: boolean;
-  message: string;
-  data: {
-    admin: SuperAdmin;
-  };
+  superAdmin: SuperAdmin;
 }

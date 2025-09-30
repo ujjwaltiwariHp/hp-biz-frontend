@@ -4,7 +4,8 @@ import {
   CreateAdminData,
   UpdateProfileData,
   ChangePasswordData,
-  AuthResponse
+  AuthResponse,
+  ProfileResponse
 } from '@/types/auth';
 
 export const authService = {
@@ -21,7 +22,7 @@ export const authService = {
     return response.data;
   },
 
-  getProfile: async (): Promise<any> => {
+  getProfile: async (): Promise<ProfileResponse> => {
     const response = await apiClient.get('/super-admin/auth/profile');
     return response.data;
   },

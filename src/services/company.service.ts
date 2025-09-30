@@ -1,5 +1,15 @@
 import { apiClient } from '@/lib/api';
-import { Company, CompanyStats, DashboardStats } from '@/types/company';
+import {
+  Company,
+  CompanyStats,
+  DashboardStats,
+  DashboardResponse,
+  CompaniesResponse,
+  UsageReportResponse,
+  CompanyResponse,
+  CompanyActionResponse,
+  DeleteCompanyResponse,
+} from '@/types/company';
 
 export interface CompanyFilters {
   page?: number;
@@ -20,12 +30,12 @@ export interface SubscriptionUpdate {
 }
 
 export const companyService = {
-  getDashboard: async (): Promise<any> => {
+  getDashboard: async (): Promise<DashboardResponse> => {
     const response = await apiClient.get('/super-admin/companies/dashboard');
     return response.data;
   },
 
-  getCompanies: async (filters: CompanyFilters = {}): Promise<any> => {
+  getCompanies: async (filters: CompanyFilters = {}): Promise<CompaniesResponse> => {
     const params = new URLSearchParams();
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
@@ -36,7 +46,7 @@ export const companyService = {
     return response.data;
   },
 
-  getUsageReport: async (filters: UsageReportFilters): Promise<any> => {
+  getUsageReport: async (filters: UsageReportFilters): Promise<UsageReportResponse> => {
     const params = new URLSearchParams();
     params.append('startDate', filters.startDate);
     params.append('endDate', filters.endDate);
@@ -45,27 +55,27 @@ export const companyService = {
     return response.data;
   },
 
-  getCompany: async (id: number): Promise<any> => {
+  getCompany: async (id: number): Promise<CompanyResponse> => {
     const response = await apiClient.get(`/super-admin/companies/${id}`);
     return response.data;
   },
 
-  activateCompanyAccount: async (id: number): Promise<any> => {
+  activateCompanyAccount: async (id: number): Promise<CompanyActionResponse> => {
     const response = await apiClient.put(`/super-admin/companies/${id}/activate`);
     return response.data;
   },
 
-  deactivateCompanyAccount: async (id: number): Promise<any> => {
+  deactivateCompanyAccount: async (id: number): Promise<CompanyActionResponse> => {
     const response = await apiClient.put(`/super-admin/companies/${id}/deactivate`);
     return response.data;
   },
 
-  updateSubscription: async (id: number, subscriptionData: SubscriptionUpdate): Promise<any> => {
+  updateSubscription: async (id: number, subscriptionData: SubscriptionUpdate): Promise<CompanyActionResponse> => {
     const response = await apiClient.put(`/super-admin/companies/${id}/subscription`, subscriptionData);
     return response.data;
   },
 
-  removeCompany: async (id: number): Promise<any> => {
+  removeCompany: async (id: number): Promise<DeleteCompanyResponse> => {
     const response = await apiClient.delete(`/super-admin/companies/${id}`);
     return response.data;
   }
