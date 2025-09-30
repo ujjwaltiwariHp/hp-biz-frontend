@@ -7,7 +7,6 @@ import { authService } from "@/services/auth.service";
 import { toast } from "react-toastify";
 import { LoginCredentials } from "@/types/auth";
 
-// Helper function to get token from cookies
 const getTokenFromCookies = () => {
   if (typeof document !== 'undefined') {
     const cookies = document.cookie.split(';');
