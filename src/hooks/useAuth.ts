@@ -16,7 +16,6 @@ const getTokenFromCookies = () => {
   }
   return null;
 };
-
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);

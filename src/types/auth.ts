@@ -22,20 +22,18 @@ export interface ChangePasswordData {
 export interface AuthResponse {
   success: boolean;
   message: string;
-  data: {
-    token: string;
-    admin: SuperAdmin;
-  };
+  token: string;
+  superAdmin: SuperAdmin;
 }
 
 export interface SuperAdmin {
   id: number;
   email: string;
   name: string;
-  role: string;
-  is_active: boolean;
+  role?: string;
+  is_active?: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface AdminListResponse {

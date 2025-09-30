@@ -10,8 +10,8 @@ import {
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await apiClient.post('/super-admin/auth/login', credentials);
-    if (response.data.success && response.data.data.token) {
-      document.cookie = `auth-token=${response.data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+    if (response.data.success && response.data.token) {
+      document.cookie = `auth-token=${response.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
     }
     return response.data;
   },
