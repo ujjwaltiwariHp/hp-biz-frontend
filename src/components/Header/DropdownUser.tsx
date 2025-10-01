@@ -87,15 +87,15 @@ const DropdownUser = () => {
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <Calendar size={18} className="text-gray-500 dark:text-gray-400 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Member Since</p>
-              <p className="text-sm font-medium text-black dark:text-white">
-                {formatDate(profile?.created_at)}
-              </p>
-            </div>
-          </div>
+<div className="flex items-start gap-3">
+  <Calendar size={18} className="text-gray-500 dark:text-gray-400 mt-0.5" />
+  <div className="flex-1">
+    <p className="text-xs text-gray-500 dark:text-gray-400">Member Since</p>
+    <p className="text-sm font-medium text-black dark:text-white">
+      {profile?.created_at ? formatDate(profile.created_at) : 'N/A'}
+    </p>
+  </div>
+</div>
 
           <div className="flex items-start gap-3">
             <Shield size={18} className="text-gray-500 dark:text-gray-400 mt-0.5" />
