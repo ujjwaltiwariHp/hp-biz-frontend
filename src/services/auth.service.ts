@@ -10,12 +10,18 @@ import {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await apiClient.post('/super-admin/auth/login', credentials);
+    const response = await apiClient.post(
+      '/super-admin/auth/login',
+      credentials,
+      { withCredentials: true }
+    );
+
     if (response.data.success && response.data.token) {
       document.cookie = `auth-token=${response.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
     }
     return response.data;
   },
+
 
   createAdmin: async (adminData: CreateAdminData): Promise<any> => {
     const response = await apiClient.post('/super-admin/auth/create', adminData);
