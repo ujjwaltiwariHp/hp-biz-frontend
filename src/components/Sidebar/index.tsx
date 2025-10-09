@@ -9,7 +9,8 @@ import {
   CreditCard,
   Settings,
   ChevronLeft,
-  LogOut
+  LogOut,
+  Activity
 } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 
@@ -35,6 +36,11 @@ const menuItems = [
     icon: CreditCard,
   },
   {
+    label: 'Activity Logs',
+    route: '/logs',
+    icon: Activity,
+  },
+  {
     label: 'Settings',
     route: '/settings',
     icon: Settings,
@@ -46,6 +52,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
   const handleLogout = () => {
     authService.logout();
+  };
+
+  const isActive = (route: string) => {
+    if (route === '/') {
+      return pathname === '/';
+    }
+    return pathname.startsWith(route);
   };
 
   return (
@@ -76,7 +89,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   <Link
                     href={item.route}
                     className={`group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 ${
-                      pathname === item.route && 'bg-graydark dark:bg-meta-4'
+                      isActive(item.route) && 'bg-graydark dark:bg-meta-4'
                     }`}
                   >
                     <item.icon size={18} />
