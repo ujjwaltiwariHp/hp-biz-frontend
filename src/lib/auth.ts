@@ -1,21 +1,23 @@
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+import Cookies from 'js-cookie';
 
-export const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
+/**
+ * Retrieves the JWT token from the cookie storage.
+ * @returns {string | undefined} The auth token string.
+ */
+export const getAuthToken = (): string | undefined => {
+  if (typeof window === 'undefined') {
 
-  const cookies = document.cookie.split(';');
-  const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('auth-token='));
-
-  if (tokenCookie) {
-    return tokenCookie.split('=')[1];
+    const cookieString = document.cookie;
+    const tokenMatch = cookieString.match(/auth-token=([^;]+)/);
+    return tokenMatch ? tokenMatch[1] : undefined;
   }
 
-  return null;
+
+  return Cookies.get('auth-token');
 };
 
-export const isAuthenticated = (): boolean => {
-  return !!getAuthToken();
+
+export const removeAuthToken = (): void => {
+
+  Cookies.remove('auth-token', { path: '/' });
 };

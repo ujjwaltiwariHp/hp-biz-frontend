@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { User, Settings, LogOut, ChevronDown, Mail, Calendar, Shield } from 'lucide-react';
 import { authService } from '@/services/auth.service';
@@ -16,7 +16,7 @@ const DropdownUser = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const profile = profileData?.superAdmin;
+  const profile = profileData?.data;
 
   const handleLogout = () => {
     authService.logout();
@@ -41,7 +41,9 @@ const DropdownUser = () => {
           <span className="block text-sm font-medium text-black dark:text-white">
             {isLoading ? 'Loading...' : profile?.name || 'Super Admin'}
           </span>
-          <span className="block text-xs text-gray-500">Administrator</span>
+          <span className="block text-xs text-gray-500">
+            {profile?.role_name || 'Administrator'}
+          </span>
         </span>
 
         <span className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
@@ -71,7 +73,15 @@ const DropdownUser = () => {
               <h4 className="text-base font-semibold text-black dark:text-white">
                 {profile?.name || 'Super Admin'}
               </h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Administrator</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {profile?.role_name || 'Administrator'}
+              </p>
+              {profile?.is_super_admin && (
+                <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-danger">
+                  <Shield size={12} />
+                  Primary Super Admin
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -101,9 +111,15 @@ const DropdownUser = () => {
             <Shield size={18} className="text-gray-500 dark:text-gray-400 mt-0.5" />
             <div className="flex-1">
               <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 py-1 px-2.5 text-xs font-medium text-success">
-                <span className="h-1.5 w-1.5 rounded-full bg-success"></span>
-                Active
+              <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
+                profile?.status === 'active'
+                  ? 'bg-success/10 text-success'
+                  : 'bg-danger/10 text-danger'
+              }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${
+                  profile?.status === 'active' ? 'bg-success' : 'bg-danger'
+                }`}></span>
+                {profile?.status || 'Active'}
               </span>
             </div>
           </div>

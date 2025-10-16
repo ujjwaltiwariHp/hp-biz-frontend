@@ -1,457 +1,828 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
-import { Settings as SettingsIcon, User, Lock, Users, Mail, Eye, EyeOff, X } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, Users, Eye, EyeOff, X, CheckCircle, XCircle, Trash2, Shield, MinusCircle, ChevronDown } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
+import { CreateAdminData, UpdateProfileData, ChangePasswordData, SuperAdmin, SuperAdminPermissions, SuperAdminRole } from '@/types/auth';
+import { formatDate } from '@/lib/utils';
+
+
+// --- HELPERS ---
+
+const RESOURCE_MAP: { [key: string]: string } = {
+  all: 'System-Wide Access',
+  super_admins: 'Admin Users',
+  companies: 'Company Management',
+  subscriptions: 'Subscription Packages',
+  payments: 'Payment Records',
+  invoices: 'Invoices',
+  super_admin_roles: 'Admin Roles'
+};
+
+const ACTION_MAP: { [key: string]: string } = {
+  crud: 'Full CRUD',
+  view: 'View/Read',
+  create: 'Create/Add',
+  update: 'Update/Edit',
+  delete: 'Delete/Remove',
+};
+
+
+const hasPermission = (userPermissions: SuperAdminPermissions, resource: string, action: string): boolean => {
+  if (!userPermissions) return false;
+  // Check for the highest privilege
+  if (userPermissions.all && userPermissions.all.includes('crud')) {
+    return true;
+  }
+
+  const allowedActions = userPermissions[resource];
+  if (!allowedActions) return false;
+
+  // Check for specific action or CRUD shorthand
+  return allowedActions.includes(action) || allowedActions.includes('crud');
+};
+
+
+// --- COMPONENTS ---
+
+const AdminManagementTable = ({
+    admins,
+    profile,
+    roles,
+    permissions
+}: {
+    admins: SuperAdmin[];
+    profile: SuperAdmin;
+    roles: SuperAdminRole[];
+    permissions: SuperAdminPermissions;
+}) => {
+    const queryClient = useQueryClient();
+    const [showPermissionsModal, setShowPermissionsModal] = useState<SuperAdminRole | null>(null);
+
+    const deleteMutation = useMutation({
+        mutationFn: authService.deleteAdmin,
+        onSuccess: () => {
+            toast.success('Admin deleted successfully');
+            queryClient.invalidateQueries({ queryKey: ['allAdmins'] });
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to delete admin');
+        },
+    });
+
+    const toggleStatusMutation = useMutation({
+        mutationFn: authService.toggleAdminStatus,
+        onSuccess: () => {
+            toast.success('Admin status updated');
+            queryClient.invalidateQueries({ queryKey: ['allAdmins'] });
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to update status');
+        },
+    });
+
+    const handleDelete = (id: number) => {
+        if (confirm('Are you sure you want to permanently delete this administrator? This action cannot be undone.')) {
+            deleteMutation.mutate(id);
+        }
+    };
+
+    const handleToggleStatus = (id: number) => {
+        toggleStatusMutation.mutate(id);
+    };
+
+    const handleViewPermissions = (admin: SuperAdmin) => {
+        // Find the role data which contains the permissions JSON
+        const role = roles.find(r => r.id === admin.super_admin_role_id);
+        if (role) {
+            setShowPermissionsModal(role);
+        } else {
+            toast.info("Role details not available.");
+        }
+    }
+
+    const isAdminDeletable = (admin: SuperAdmin) => {
+        // 1. Can't delete self
+        if (admin.id === profile.id) return false;
+        // 2. Block deletion of primary Super Admin (Role ID 1)
+        if (admin.super_admin_role_id === 1) return false;
+        // 3. Check if the current user has the delete permission
+        return hasPermission(permissions, 'super_admins', 'delete');
+    };
+
+    const isAdminUpdatable = (admin: SuperAdmin) => {
+        // 1. Can't update self's status/role
+        if (admin.id === profile.id) return false;
+        // 2. Check if the current user has the update permission
+        return hasPermission(permissions, 'super_admins', 'update');
+    };
+
+    if (admins.length === 0) {
+        return <p className="py-8 text-center text-gray-500">No administrators found.</p>;
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full table-auto">
+                <thead>
+                    <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                        <th className="py-4 px-4 font-medium text-black dark:text-white">Name</th>
+                        <th className="py-4 px-4 font-medium text-black dark:text-white">Email</th>
+                        <th className="py-4 px-4 font-medium text-black dark:text-white">Role</th>
+                        <th className="py-4 px-4 font-medium text-black dark:text-white">Status</th>
+                        <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {admins.map((admin) => (
+                        <tr key={admin.id} className="border-b border-stroke dark:border-strokedark">
+                            <td className="py-4 px-4 text-black dark:text-white font-medium">
+                                {admin.name} {admin.id === profile.id && <span className="text-xs text-primary">(You)</span>}
+                            </td>
+                            <td className="py-4 px-4 text-black dark:text-white">{admin.email}</td>
+                            <td className="py-4 px-4 text-black dark:text-white">
+                                <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
+                                    admin.super_admin_role_id === 1 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+                                }`}>
+                                    <Shield size={12} />
+                                    {admin.role_name || 'N/A'}
+                                </span>
+                            </td>
+                            <td className="py-4 px-4">
+                                <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
+                                    admin.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                                }`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${admin.status === 'active' ? 'bg-success' : 'bg-danger'}`}></span>
+                                    {admin.status}
+                                </span>
+                            </td>
+                            <td className="py-4 px-4 flex items-center space-x-2">
+                                {isAdminUpdatable(admin) && (
+                                    <button
+                                        onClick={() => handleToggleStatus(admin.id)}
+                                        className={`${admin.status === 'active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'} disabled:opacity-50`}
+                                        title={`Toggle to ${admin.status === 'active' ? 'Inactive' : 'Active'}`}
+                                        disabled={toggleStatusMutation.isPending}
+                                    >
+                                        {admin.status === 'active' ? <XCircle size={20} /> : <CheckCircle size={20} />}
+                                    </button>
+                                )}
+                                {isAdminDeletable(admin) && (
+                                    <button
+                                        onClick={() => handleDelete(admin.id)}
+                                        className="text-danger hover:text-danger/80 disabled:opacity-50"
+                                        title="Delete Admin"
+                                        disabled={deleteMutation.isPending || toggleStatusMutation.isPending}
+                                    >
+                                        <Trash2 size={20} />
+                                    </button>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            {showPermissionsModal && (
+                <PermissionsModal role={showPermissionsModal} onClose={() => setShowPermissionsModal(null)} />
+            )}
+        </div>
+    );
+};
+
+const PermissionsModal = ({ role, onClose }: { role: SuperAdminRole, onClose: () => void }) => {
+    return (
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                    <h3 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
+                        <Shield size={20} />
+                        Permissions for: {role.role_name}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {Object.entries(role.permissions).sort().map(([resource, actions]) => (
+                        <div key={resource} className="p-3 rounded-lg bg-gray-2 dark:bg-meta-4 border border-stroke dark:border-strokedark">
+                            <h4 className="font-bold text-black dark:text-white mb-1">
+                                {RESOURCE_MAP[resource] || resource.toUpperCase()}
+                            </h4>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                {actions.map((action: string) => (
+                                    <span key={action} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                                        {ACTION_MAP[action] || action.toUpperCase()}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-6 text-right">
+                    <button onClick={onClose} className="rounded bg-primary py-2 px-4 text-white hover:bg-primary/90">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminRole[], permissions: SuperAdminPermissions, onClose: () => void }) => {
+    const queryClient = useQueryClient();
+    // Default to the first role ID or 0
+    const initialRoleId = roles.length > 0 ? roles[0].id : 0;
+    const [createAdminData, setCreateAdminData] = useState<CreateAdminData>({
+        email: '',
+        password: '',
+        name: '',
+        role_id: initialRoleId
+    });
+    const [showPassword, setShowPassword] = useState(false);
+
+    const createAdminMutation = useMutation({
+        mutationFn: authService.createAdmin,
+        onSuccess: () => {
+            toast.success('Admin created successfully');
+            queryClient.invalidateQueries({ queryKey: ['allAdmins'] });
+            onClose();
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to create admin');
+        },
+    });
+
+    const isCreationAllowed = hasPermission(permissions, 'super_admins', 'create');
+
+    const handleCreateAdmin = (e: React.FormEvent) => {
+        e.preventDefault();
+        const { email, password, name, role_id } = createAdminData;
+        if (!email || !password || !name || role_id === 0) {
+            toast.error('Please fill all required fields and select a role');
+            return;
+        }
+        if (password.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        createAdminMutation.mutate(createAdminData);
+    };
+
+    if (!isCreationAllowed) {
+        return (
+             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+                <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-black dark:text-white">Access Denied</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="text-center py-6 text-danger">
+                        <MinusCircle size={40} className="mx-auto mb-3" />
+                        <p className="text-lg">You do not have permission to create new administrators.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
+                <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                    <h3 className="text-xl font-semibold text-black dark:text-white">Create New Administrator</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                        <X size={24} />
+                    </button>
+                </div>
+                <form onSubmit={handleCreateAdmin}>
+                    <div className="mb-4">
+                        <label className="mb-2.5 block text-black dark:text-white">Name</label>
+                        <input
+                            type="text"
+                            value={createAdminData.name}
+                            onChange={(e) => setCreateAdminData({ ...createAdminData, name: e.target.value })}
+                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="mb-2.5 block text-black dark:text-white">Email</label>
+                        <input
+                            type="email"
+                            value={createAdminData.email}
+                            onChange={(e) => setCreateAdminData({ ...createAdminData, email: e.target.value })}
+                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="mb-2.5 block text-black dark:text-white">Assign Role</label>
+                        <div className="relative">
+                            <select
+                                value={createAdminData.role_id}
+                                onChange={(e) => setCreateAdminData({ ...createAdminData, role_id: parseInt(e.target.value) })}
+                                className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                required
+                            >
+                                {roles.length === 0 && <option value={0} disabled>Loading Roles...</option>}
+                                {roles.map(role => (
+                                    <option key={role.id} value={role.id}>
+                                        {role.role_name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute top-1/2 right-4 z-10 -translate-y-1/2" size={20} />
+                        </div>
+                    </div>
+                    <div className="mb-6">
+                        <label className="mb-2.5 block text-black dark:text-white">Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={createAdminData.password}
+                                onChange={(e) => setCreateAdminData({ ...createAdminData, password: e.target.value })}
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-4 text-gray-500 hover:text-black dark:hover:text-white"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={createAdminMutation.isPending}
+                        className="w-full rounded bg-success py-3 px-6 text-white hover:bg-success/90 disabled:opacity-50"
+                    >
+                        {createAdminMutation.isPending ? 'Creating...' : 'Create Admin'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
+const AllAdminsModal = ({ admins, profile, roles, permissions, onClose }: { admins: SuperAdmin[], profile: SuperAdmin, roles: SuperAdminRole[], permissions: SuperAdminPermissions, onClose: () => void }) => {
+    return (
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-4xl rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                    <h3 className="text-xl font-semibold text-black dark:text-white">All Administrators</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                        <X size={24} />
+                    </button>
+                </div>
+                <AdminManagementTable admins={admins} profile={profile} roles={roles} permissions={permissions} />
+            </div>
+        </div>
+    );
+};
+
 
 export default function SettingsPage() {
-  const queryClient = useQueryClient();
-  const [showEditProfile, setShowEditProfile] = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [showCreateAdmin, setShowCreateAdmin] = useState(false);
-  const [showAllAdmins, setShowAllAdmins] = useState(false);
+    const queryClient = useQueryClient();
+    const [showEditProfile, setShowEditProfile] = useState(false);
+    const [showChangePassword, setShowChangePassword] = useState(false);
+    const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+    const [showAllAdmins, setShowAllAdmins] = useState(false);
 
-  const [profileData, setProfileData] = useState({ email: '', name: '' });
-  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [createAdminData, setCreateAdminData] = useState({ email: '', password: '', name: '' });
-  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+    const [profileData, setProfileData] = useState<UpdateProfileData>({ email: '', name: '' });
+    const [passwordData, setPasswordData] = useState<ChangePasswordData & { confirmPassword: string }>({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile'],
-    queryFn: authService.getProfile,
-  });
-
-  const { data: adminsData, isLoading: adminsLoading } = useQuery({
-    queryKey: ['allAdmins'],
-    queryFn: authService.getAllAdmins,
-    enabled: showAllAdmins,
-  });
-
-  useEffect(() => {
-    if (profile?.success) {
-      setProfileData({
-        email: profile.superAdmin.email || '',
-        name: profile.superAdmin.name || '',
-      });
-    }
-  }, [profile]);
-
-  const updateProfileMutation = useMutation({
-    mutationFn: authService.updateProfile,
-    onSuccess: () => {
-      toast.success('Profile updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      setShowEditProfile(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update profile');
-    },
-  });
-
-  const changePasswordMutation = useMutation({
-    mutationFn: authService.changePassword,
-    onSuccess: () => {
-      toast.success('Password changed successfully');
-      setShowChangePassword(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to change password');
-    },
-  });
-
-  const createAdminMutation = useMutation({
-    mutationFn: authService.createAdmin,
-    onSuccess: () => {
-      toast.success('Admin created successfully');
-      queryClient.invalidateQueries({ queryKey: ['allAdmins'] });
-      setShowCreateAdmin(false);
-      setCreateAdminData({ email: '', password: '', name: '' });
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create admin');
-    },
-  });
-
-  const handleUpdateProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profileData.email || !profileData.name) {
-      toast.error('Please fill all fields');
-      return;
-    }
-    updateProfileMutation.mutate(profileData);
-  };
-
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      toast.error('Please fill all fields');
-      return;
-    }
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    if (passwordData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    changePasswordMutation.mutate({
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
+    // Fetch User Profile
+    const { data: profileResponse, isLoading: profileLoading } = useQuery({
+        queryKey: ['profile'],
+        queryFn: authService.getProfile,
     });
-  };
+    const profile = profileResponse?.data;
+    const userPermissions = profile?.permissions || {};
 
-  const handleCreateAdmin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createAdminData.email || !createAdminData.password || !createAdminData.name) {
-      toast.error('Please fill all fields');
-      return;
-    }
-    if (createAdminData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    createAdminMutation.mutate(createAdminData);
-  };
+    // Fetch Roles
+  const { data: rolesResponse, isLoading: rolesLoading } = useQuery({
+    queryKey: ['superAdminRoles'],
+    queryFn: authService.getRoles,
+    enabled: true,
+});
+    const roles = rolesResponse?.data?.roles || [];
 
-  return (
+    // Fetch All Admins (Enabled only when modal is open)
+    const { data: adminsResponse, isLoading: adminsLoading } = useQuery({
+        queryKey: ['allAdmins'],
+        queryFn: authService.getAllAdmins,
+        enabled: showAllAdmins,
+    });
+    const admins = adminsResponse?.data?.superAdmins || [];
+
+
+    // Effect to pre-fill profile data on load
+    useEffect(() => {
+        if (profile) {
+            setProfileData({
+                email: profile.email || '',
+                name: profile.name || '',
+            });
+        }
+    }, [profile]);
+
+
+    // --- MUTATIONS ---
+
+    const updateProfileMutation = useMutation({
+        mutationFn: authService.updateProfile,
+        onSuccess: () => {
+            toast.success('Profile updated successfully');
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+            setShowEditProfile(false);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to update profile');
+        },
+    });
+
+    const changePasswordMutation = useMutation({
+        mutationFn: authService.changePassword,
+        onSuccess: () => {
+            toast.success('Password changed successfully');
+            setShowChangePassword(false);
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to change password');
+        },
+    });
+
+
+    // --- HANDLERS ---
+
+    const handleUpdateProfile = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!profileData.email || !profileData.name) {
+            toast.error('Please fill all fields');
+            return;
+        }
+        updateProfileMutation.mutate(profileData);
+    };
+
+    const handleChangePassword = (e: React.FormEvent) => {
+        e.preventDefault();
+        const { currentPassword, newPassword, confirmPassword } = passwordData;
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            toast.error('Please fill all fields');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast.error('New passwords do not match');
+            return;
+        }
+        if (newPassword.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        changePasswordMutation.mutate({ currentPassword, newPassword });
+    };
+
+    const isViewAllowed = hasPermission(userPermissions, 'super_admins', 'view');
+    const isCreateAllowed = hasPermission(userPermissions, 'super_admins', 'create');
+
+
+return (
     <DefaultLayout>
-      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        <div className="py-6 px-4 md:px-6 xl:px-7.5">
-          <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-            <SettingsIcon size={24} />
-            Settings
-          </h4>
+        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-6 px-4 md:px-6 xl:px-7.5">
+                <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
+                    <SettingsIcon size={24} />
+                    Admin Panel Settings
+                </h4>
+            </div>
+
+            <div className="p-4 md:p-6 xl:p-7.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                                <User className="h-6 w-6 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-medium text-black dark:text-white">Profile</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Update your profile information and contact details.
+                        </p>
+                        <button
+                            onClick={() => setShowEditProfile(true)}
+                            className="w-full rounded bg-primary py-2 px-4 text-white hover:bg-primary/90 transition-colors"
+                        >
+                            Edit Profile
+                        </button>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
+                                <Lock className="h-6 w-6 text-warning" />
+                            </div>
+                            <h3 className="text-lg font-medium text-black dark:text-white">Security</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Change your account password for better security.
+                        </p>
+                        <button
+                            onClick={() => setShowChangePassword(true)}
+                            className="w-full rounded bg-warning py-2 px-4 text-white hover:bg-warning/90 transition-colors"
+                        >
+                            Change Password
+                        </button>
+                    </div>
+
+                    <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isCreateAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                                <Users className="h-6 w-6 text-success" />
+                            </div>
+                            <h3 className="text-lg font-medium text-black dark:text-white">New Admin</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Add new administrator (Super/Sub-Admin).
+                        </p>
+                        <button
+                            onClick={() => setShowCreateAdmin(true)}
+                            disabled={!isCreateAllowed}
+                            className="w-full rounded bg-success py-2 px-4 text-white hover:bg-success/90 transition-colors disabled:opacity-50 disabled:hover:bg-success"
+                        >
+                            Create Admin
+                        </button>
+                    </div>
+
+                    <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isViewAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-meta-5/10">
+                                <Users className="h-6 w-6 text-meta-5" />
+                            </div>
+                            <h3 className="text-lg font-medium text-black dark:text-white">Manage Admins</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            View all system administrators and manage status/roles.
+                        </p>
+                        <button
+                            onClick={() => setShowAllAdmins(true)}
+                            disabled={!isViewAllowed}
+                            className="w-full rounded bg-meta-5 py-2 px-4 text-white hover:bg-meta-5/90 transition-colors disabled:opacity-50 disabled:hover:bg-meta-5"
+                        >
+                            View/Manage
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-8 rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark">
+                    <h3 className="text-lg font-medium text-black dark:text-white mb-4">
+                        Your Account Information
+                    </h3>
+                    {profileLoading ? (
+                        <div className="text-center py-4">Loading...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <InfoCard title="Name" value={profile?.name} />
+                            <InfoCard title="Email" value={profile?.email} />
+                            <InfoCard title="Primary Role" value={profile?.is_super_admin} isBold={true} />
+                            <InfoCard title="Created At" value={profile?.created_at} isDate={true} />
+                            <InfoCard title="Last Updated" value={profile?.updated_at} isDate={true} />
+                            <InfoCard title="Access" value={profile?.is_super_admin} isStatus={true} />
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
 
-        <div className="p-4 md:p-6 xl:p-7.5">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="rounded-lg border border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium text-black dark:text-white">
-                  Profile Settings
-                </h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Update information and contact details.
-              </p>
-              <button
-                onClick={() => setShowEditProfile(true)}
-                className="w-full rounded bg-primary py-2 px-4 text-white hover:bg-primary/90 transition-colors"
-              >
-                Edit Profile
-              </button>
+        {showEditProfile && <EditProfileModal profileData={profileData} setProfileData={setProfileData} mutation={updateProfileMutation} onClose={() => setShowEditProfile(false)} />}
+        {showChangePassword && <ChangePasswordModal passwordData={passwordData} setPasswordData={setPasswordData} mutation={changePasswordMutation} showPasswords={showPasswords} setShowPasswords={setShowPasswords} onClose={() => setShowChangePassword(false)} />}
+        {showCreateAdmin && <RoleCreationModal roles={roles} permissions={userPermissions} onClose={() => setShowCreateAdmin(false)} />}
+        {showAllAdmins && adminsLoading && (
+             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+                <div className="text-white text-lg">Loading Admin Data...</div>
             </div>
-
-            <div className="rounded-lg border border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
-                  <Lock className="h-6 w-6 text-warning" />
-                </div>
-                <h3 className="text-lg font-medium text-black dark:text-white">
-                  Security
-                </h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Change password for better security.
-              </p>
-              <button
-                onClick={() => setShowChangePassword(true)}
-                className="w-full rounded bg-warning py-2 px-4 text-white hover:bg-warning/90 transition-colors"
-              >
-                Change Password
-              </button>
-            </div>
-
-            <div className="rounded-lg border border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-                  <Users className="h-6 w-6 text-success" />
-                </div>
-                <h3 className="text-lg font-medium text-black dark:text-white">
-                  Create Admin
-                </h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Add new administrators to the system.
-              </p>
-              <button
-                onClick={() => setShowCreateAdmin(true)}
-                className="w-full rounded bg-success py-2 px-4 text-white hover:bg-success/90 transition-colors"
-              >
-                Create Admin
-              </button>
-            </div>
-
-            <div className="rounded-lg border border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-meta-5/10">
-                  <Users className="h-6 w-6 text-meta-5" />
-                </div>
-                <h3 className="text-lg font-medium text-black dark:text-white">
-                  View Admins
-                </h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                View all system administrators.
-              </p>
-              <button
-                onClick={() => setShowAllAdmins(true)}
-                className="w-full rounded bg-meta-5 py-2 px-4 text-white hover:bg-meta-5/90 transition-colors"
-              >
-                View All Admins
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-lg border border-stroke p-6 dark:border-strokedark">
-            <h3 className="text-lg font-medium text-black dark:text-white mb-4">
-              Account Information
-            </h3>
-            {profileLoading ? (
-              <div className="text-center py-4">Loading...</div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
-                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Name</label>
-                  <p className="text-base font-semibold text-black dark:text-white mt-1">
-                    {profile?.superAdmin?.name || 'N/A'}
-                  </p>
-                </div>
-                <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
-                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
-                  <p className="text-base font-semibold text-black dark:text-white mt-1">
-                    {profile?.superAdmin?.email || 'N/A'}
-                  </p>
-                </div>
-                <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
-                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Role</label>
-                  <p className="text-base font-semibold text-black dark:text-white mt-1">
-                    Administrator
-                  </p>
-                </div>
-                <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
-                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Member Since</label>
-                  <p className="text-base font-semibold text-black dark:text-white mt-1">
-                    {profile?.superAdmin?.created_at ? new Date(profile.superAdmin.created_at).toLocaleDateString() : 'N/A'}
-                  </p>
-                </div>
-              </div>
+        )}
+        {showAllAdmins && !adminsLoading && (
+         <AllAdminsModal admins={admins} profile={profile!} roles={roles} permissions={userPermissions} onClose={() => setShowAllAdmins(false)} />
             )}
-          </div>
-        </div>
-      </div>
-
-      {showEditProfile && (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-black dark:text-white">Edit Profile</h3>
-              <button onClick={() => setShowEditProfile(false)} className="text-gray-500 hover:text-black dark:hover:text-white">
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleUpdateProfile}>
-              <div className="mb-4">
-                <label className="mb-2.5 block text-black dark:text-white">Name</label>
-                <input
-                  type="text"
-                  value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                />
-              </div>
-              <div className="mb-6">
-                <label className="mb-2.5 block text-black dark:text-white">Email</label>
-                <input
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={updateProfileMutation.isPending}
-                className="w-full rounded bg-primary py-3 px-6 text-white hover:bg-primary/90 disabled:opacity-50"
-              >
-                {updateProfileMutation.isPending ? 'Updating...' : 'Update Profile'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showChangePassword && (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-black dark:text-white">Change Password</h3>
-              <button onClick={() => setShowChangePassword(false)} className="text-gray-500 hover:text-black dark:hover:text-white">
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleChangePassword}>
-              <div className="mb-4">
-                <label className="mb-2.5 block text-black dark:text-white">Current Password</label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.current ? 'text' : 'password'}
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                    className="absolute right-4 top-4"
-                  >
-                    {showPasswords.current ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-              <div className="mb-4">
-                <label className="mb-2.5 block text-black dark:text-white">New Password</label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.new ? 'text' : 'password'}
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                    className="absolute right-4 top-4"
-                  >
-                    {showPasswords.new ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-              <div className="mb-6">
-                <label className="mb-2.5 block text-black dark:text-white">Confirm New Password</label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.confirm ? 'text' : 'password'}
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                    className="absolute right-4 top-4"
-                  >
-                    {showPasswords.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={changePasswordMutation.isPending}
-                className="w-full rounded bg-warning py-3 px-6 text-white hover:bg-warning/90 disabled:opacity-50"
-              >
-                {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showCreateAdmin && (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-black dark:text-white">Create Admin</h3>
-              <button onClick={() => setShowCreateAdmin(false)} className="text-gray-500 hover:text-black dark:hover:text-white">
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleCreateAdmin}>
-              <div className="mb-4">
-                <label className="mb-2.5 block text-black dark:text-white">Name</label>
-                <input
-                  type="text"
-                  value={createAdminData.name}
-                  onChange={(e) => setCreateAdminData({ ...createAdminData, name: e.target.value })}
-                  className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="mb-2.5 block text-black dark:text-white">Email</label>
-                <input
-                  type="email"
-                  value={createAdminData.email}
-                  onChange={(e) => setCreateAdminData({ ...createAdminData, email: e.target.value })}
-                  className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                />
-              </div>
-              <div className="mb-6">
-                <label className="mb-2.5 block text-black dark:text-white">Password</label>
-                <input
-                  type="password"
-                  value={createAdminData.password}
-                  onChange={(e) => setCreateAdminData({ ...createAdminData, password: e.target.value })}
-                  className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={createAdminMutation.isPending}
-                className="w-full rounded bg-success py-3 px-6 text-white hover:bg-success/90 disabled:opacity-50"
-              >
-                {createAdminMutation.isPending ? 'Creating...' : 'Create Admin'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showAllAdmins && (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-4xl rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-black dark:text-white">All Administrators</h3>
-              <button onClick={() => setShowAllAdmins(false)} className="text-gray-500 hover:text-black dark:hover:text-white">
-                <X size={24} />
-              </button>
-            </div>
-            {adminsLoading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                      <th className="py-4 px-4 font-medium text-black dark:text-white">Name</th>
-                      <th className="py-4 px-4 font-medium text-black dark:text-white">Email</th>
-                      <th className="py-4 px-4 font-medium text-black dark:text-white">Created At</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adminsData?.superAdmins?.map((admin: any) => (
-                      <tr key={admin.id} className="border-b border-stroke dark:border-strokedark">
-                        <td className="py-4 px-4 text-black dark:text-white">{admin.name}</td>
-                        <td className="py-4 px-4 text-black dark:text-white">{admin.email}</td>
-                        <td className="py-4 px-4 text-black dark:text-white">
-                          {new Date(admin.created_at).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </DefaultLayout>
-  );
+);
 }
+
+// --- Reusable Info Card Component ---
+const InfoCard = ({
+    title,
+    value,
+    isDate = false,
+    isBold = false,
+    isStatus = false
+}: {
+    title: string;
+    value?: string | boolean;
+    isDate?: boolean;
+    isBold?: string | boolean;
+    isStatus?: boolean;
+}) => {
+    let displayValue: string = value?.toString() || 'N/A';
+    if (isDate && value && typeof value === 'string') {
+        displayValue = formatDate(value);
+    }
+
+    return (
+        <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block">{title}</label>
+            {isStatus ? (
+                <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium mt-1 ${
+                    value ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+                }`}>
+                    <Shield size={12} />
+                    {value ? 'Primary Super Admin' : 'Sub-Admin'}
+                </span>
+            ) : (
+                 <p className={`text-base mt-1 ${isBold ? 'font-semibold' : 'font-medium'} text-black dark:text-white`}>
+                    {displayValue}
+                </p>
+            )}
+        </div>
+    );
+};
+
+// --- Modals (Defined outside main component for clarity) ---
+
+const EditProfileModal = ({
+    profileData,
+    setProfileData,
+    mutation,
+    onClose
+}: {
+    profileData: UpdateProfileData;
+    setProfileData: React.Dispatch<React.SetStateAction<UpdateProfileData>>;
+    mutation: any;
+    onClose: () => void;
+}) => {
+    const handleUpdateProfile = (e: React.FormEvent) => {
+        e.preventDefault();
+        mutation.mutate(profileData);
+    };
+
+    return (
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-black dark:text-white">Edit Profile</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                        <X size={24} />
+                    </button>
+                </div>
+                <form onSubmit={handleUpdateProfile}>
+                    <div className="mb-4">
+                        <label className="mb-2.5 block text-black dark:text-white">Name</label>
+                        <input
+                            type="text"
+                            value={profileData.name}
+                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                        />
+                    </div>
+                    <div className="mb-6">
+                        <label className="mb-2.5 block text-black dark:text-white">Email</label>
+                        <input
+                            type="email"
+                            value={profileData.email}
+                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={mutation.isPending}
+                        className="w-full rounded bg-primary py-3 px-6 text-white hover:bg-primary/90 disabled:opacity-50"
+                    >
+                        {mutation.isPending ? 'Updating...' : 'Update Profile'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const ChangePasswordModal = ({
+    passwordData,
+    setPasswordData,
+    mutation,
+    showPasswords,
+    setShowPasswords,
+    onClose
+}: {
+    passwordData: ChangePasswordData & { confirmPassword: string };
+    setPasswordData: React.Dispatch<React.SetStateAction<ChangePasswordData & { confirmPassword: string }>>;
+    mutation: any;
+    showPasswords: { current: boolean; new: boolean; confirm: boolean };
+    setShowPasswords: React.Dispatch<React.SetStateAction<{ current: boolean; new: boolean; confirm: boolean }>>;
+    onClose: () => void;
+}) => {
+    const handleChangePassword = (e: React.FormEvent) => {
+        e.preventDefault();
+        const { currentPassword, newPassword, confirmPassword } = passwordData;
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            toast.error('Please fill all fields');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast.error('New passwords do not match');
+            return;
+        }
+        if (newPassword.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        mutation.mutate({ currentPassword, newPassword });
+    };
+
+    return (
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-black dark:text-white">Change Password</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                        <X size={24} />
+                    </button>
+                </div>
+                <form onSubmit={handleChangePassword}>
+                    <div className="mb-4">
+                        <label className="mb-2.5 block text-black dark:text-white">Current Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPasswords.current ? 'text' : 'password'}
+                                value={passwordData.currentPassword}
+                                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                                className="absolute right-4 top-4"
+                            >
+                                {showPasswords.current ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mb-4">
+                        <label className="mb-2.5 block text-black dark:text-white">New Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPasswords.new ? 'text' : 'password'}
+                                value={passwordData.newPassword}
+                                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                                className="absolute right-4 top-4"
+                            >
+                                {showPasswords.new ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mb-6">
+                        <label className="mb-2.5 block text-black dark:text-white">Confirm New Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPasswords.confirm ? 'text' : 'password'}
+                                value={passwordData.confirmPassword}
+                                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                                className="absolute right-4 top-4"
+                            >
+                                {showPasswords.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={mutation.isPending}
+                        className="w-full rounded bg-warning py-3 px-6 text-white hover:bg-warning/90 disabled:opacity-50"
+                    >
+                        {mutation.isPending ? 'Changing...' : 'Change Password'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};

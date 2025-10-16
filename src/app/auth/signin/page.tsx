@@ -36,7 +36,7 @@ const SignIn: React.FC = () => {
       const response = await authService.login(formData);
 
       if (response.success) {
-        toast.success('Login successful!');
+        toast.success(response.message || 'Login successful!');
         router.push('/dashboard');
       } else {
         toast.error(response.message || 'Invalid credentials. Please try again.');
