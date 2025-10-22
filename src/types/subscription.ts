@@ -1,5 +1,3 @@
-// types/subscription.ts (Updated Content)
-
 export interface SubscriptionPackage {
   id: number;
   name: string;
@@ -10,7 +8,7 @@ export interface SubscriptionPackage {
   max_leads_per_month: number;
   is_active: boolean;
 
-  // New fields from backend enhancements
+
   is_trial: boolean;
   trial_duration_days: number;
 
@@ -29,7 +27,7 @@ export interface CreatePackageData {
   max_leads_per_month: number;
   is_active?: boolean;
 
-  // New fields for creation
+  // fields for creation
   is_trial: boolean;
   trial_duration_days: number;
 }
@@ -43,7 +41,7 @@ export interface UpdatePackageData {
   max_leads_per_month?: number;
   is_active?: boolean;
 
-  // New optional fields for update
+  // optional fields for update
   is_trial?: boolean;
   trial_duration_days?: number;
 }
