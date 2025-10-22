@@ -21,7 +21,6 @@ interface UpdatePageProps {
   };
 }
 
-// Helper to determine the end date based on duration
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -47,11 +46,10 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
   return format(end, 'yyyy-MM-dd');
 };
 
-// FIX APPLIED HERE: Destructuring { id } directly from params
-export default function UpdateSubscriptionPage({ params: { id } }: UpdatePageProps) {
+export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const companyId = parseInt(id); // Use destructured 'id'
+  const companyId = parseInt(params.id);
 
   const [formData, setFormData] = useState<SubscriptionUpdate>({
     subscription_package_id: 0,
@@ -59,32 +57,36 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     subscription_end_date: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  // Basic validation guard clause
-  if (isNaN(companyId)) {
-    router.push('/companies');
-    return null;
-  }
-
-  // 1. Fetch Company Details
-  const { data: companyResponse, isLoading: isCompanyLoading, isError: isCompanyError } = useQuery({
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
+  const { data: companyResponse, isLoading: isCompanyLoading, isError: isCompanyError, error: companyError } = useQuery({
     queryKey: ['company', companyId],
     queryFn: () => companyService.getCompany(companyId),
-    enabled: true,
+    enabled: !!companyId && !isNaN(companyId),
     staleTime: 60000,
   });
 
-  const currentCompany = companyResponse?.data.company;
-
-  // 2. Fetch Active Packages
   const { data: packagesResponse, isLoading: isPackagesLoading } = useQuery<PackagesResponse>({
     queryKey: ['activePackages'],
     queryFn: () => subscriptionService.getPackages({ active_only: true }),
     staleTime: Infinity,
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: SubscriptionUpdate) =>
+      companyService.updateSubscription(companyId, data),
+    onSuccess: (data) => {
+      toast.success(data.message || 'Subscription updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+      router.push('/companies');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update subscription');
+    },
+  });
+
   const packages = packagesResponse?.data.packages || [];
 
-  // Map packages for easy lookup
   const packageMap = useMemo(() => {
     return packages.reduce((acc, pkg) => {
       acc[pkg.id] = pkg;
@@ -92,15 +94,14 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     }, {} as { [key: number]: SubscriptionPackage });
   }, [packages]);
 
+  const currentCompany = companyResponse?.data.company;
   const selectedPackage = packageMap[formData.subscription_package_id] || null;
 
-  // 3. Initialize form data on load
+  // Initialize form data on load
   useEffect(() => {
     if (currentCompany && packages.length > 0 && formData.subscription_package_id === 0) {
-      // Use optional chaining or nullish coalescing for database fields
       const pkgId = currentCompany.subscription_package_id || packages[0].id;
 
-      // Ensure dates are formatted correctly for input fields (YYYY-MM-DD)
       const startDate = currentCompany.subscription_start_date
         ? format(new Date(currentCompany.subscription_start_date), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd');
@@ -117,26 +118,24 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     }
   }, [currentCompany, packages, packageMap, formData.subscription_package_id]);
 
-  // 4. Update mutation setup
-  const updateMutation = useMutation({
-    mutationFn: (data: SubscriptionUpdate) =>
-      companyService.updateSubscription(companyId, data),
-    onSuccess: (data) => {
-      toast.success(data.message || 'Subscription updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
-      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
-      router.push('/companies');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update subscription');
-    },
-  });
+
+
+  if (isCompanyLoading || isPackagesLoading) {
+    return <Loader />;
+  }
+
+  if (!currentCompany || isCompanyError) {
+    toast.error(companyError?.message || `Company with ID ${companyId} not found or access denied.`);
+    router.push('/companies');
+    return null;
+  }
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let newFormData = { ...formData, [name]: name === 'subscription_package_id' ? parseInt(value) : value };
 
-    // Auto-calculate end date when package or start date changes
     if (name === 'subscription_package_id' || name === 'subscription_start_date') {
       const pkgId = name === 'subscription_package_id' ? parseInt(value) : newFormData.subscription_package_id;
       const pkg = packageMap[pkgId];
@@ -167,15 +166,6 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     updateMutation.mutate(formData);
   };
 
-  if (isCompanyLoading || isPackagesLoading) {
-    return <Loader />;
-  }
-
-  if (!currentCompany || isCompanyError) {
-    toast.error(`Company with ID ${companyId} not found or access denied.`);
-    router.push('/companies');
-    return null;
-  }
 
   return (
     <DefaultLayout>
@@ -230,7 +220,7 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
                         </select>
                         {selectedPackage && (
                             <p className="text-xs text-gray-500 mt-2">
-                                New Package Price: **${selectedPackage.price.toFixed(2)}** / {selectedPackage.duration_type}
+                                New Package Price: ${selectedPackage.price.toFixed(2)} / {selectedPackage.duration_type}
                             </p>
                         )}
                     </div>

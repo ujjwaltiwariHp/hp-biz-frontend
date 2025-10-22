@@ -14,13 +14,8 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Shield, User, DollarSign, ToggleRight, X, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-// --- Type assertion for companyService to fix TS error ---
-// We assert the type locally using the module's structure
 const typedCompanyService: typeof companyService = companyService as typeof companyService;
-// ---------------------------------------------------------
 
-
-// Helper functions (omitted for brevity, assume correct existence)
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -81,10 +76,21 @@ export default function CreateCompanyPage() {
     staleTime: Infinity,
   });
 
+  const createCompanyMutation = useMutation<CreateCompanyResponse, Error, CreateCompanyData>({
+    mutationFn: (data: CreateCompanyData) => typedCompanyService.createCompanyByAdmin(data),
+    onSuccess: (data: CreateCompanyResponse) => {
+      toast.success(data.message || 'Company provisioned successfully! Admin OTP sent.');
+      router.push('/companies');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to provision company.';
+      toast.error(errorMessage);
+    },
+  });
+
   const packages = packagesResponse?.data.packages || [];
 
   useEffect(() => {
-    // ... existing logic ...
     const pkg = packages.find(p => p.id === formData.subscription_package_id);
     setSelectedPackage(pkg || null);
 
@@ -99,7 +105,6 @@ export default function CreateCompanyPage() {
   }, [formData.subscription_package_id, formData.subscription_start_date, packages]);
 
   useEffect(() => {
-    // ... existing logic ...
     const { company_name, admin_email, admin_name, password, subscription_package_id, subscription_end_date } = formData;
 
     let valid = !!company_name && !!admin_email && !!admin_name && !!password && subscription_package_id > 0;
@@ -115,76 +120,6 @@ export default function CreateCompanyPage() {
 
     setIsFormValid(valid);
   }, [formData]);
-
-
-  const createCompanyMutation = useMutation<CreateCompanyResponse, Error, CreateCompanyData>({
-    // Using the locally asserted type to fix the compilation error
-    mutationFn: (data: CreateCompanyData) => typedCompanyService.createCompanyByAdmin(data),
-    onSuccess: (data: CreateCompanyResponse) => {
-      toast.success(data.message || 'Company provisioned successfully! Admin OTP sent.');
-      router.push('/companies');
-    },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to provision company.';
-      toast.error(errorMessage);
-    },
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    // ... existing logic ...
-    const { name, value, type } = e.target;
-    let newValue: string | number | boolean = value;
-
-    if (type === 'checkbox') {
-        newValue = (e.target as HTMLInputElement).checked;
-    } else if (type === 'number') {
-        newValue = Number(value);
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: newValue,
-    }));
-  };
-
-
-  const handleNext = () => {
-    // ... existing validation logic ...
-      const { company_name, admin_email, admin_name, password } = formData;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (!company_name || !admin_email || !admin_name || !password) {
-          toast.error('Please fill all required Company Admin fields.');
-          return;
-      }
-      if (!emailRegex.test(admin_email)) {
-          toast.error('Please provide a valid Admin Email.');
-          return;
-      }
-      if (password.length < 6) {
-          toast.error('Password must be at least 6 characters long.');
-          return;
-      }
-      setStep(2);
-  };
-
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) {
-        toast.error('Please fix all validation errors before submitting.');
-        return;
-    }
-
-    const dataToSend = {
-        ...formData,
-        subscription_package_id: Number(formData.subscription_package_id),
-        subscription_start_date: formData.subscription_start_date,
-        subscription_end_date: formData.subscription_end_date,
-    };
-
-    createCompanyMutation.mutate(dataToSend);
-  };
 
   if (packagesLoading) {
     return <Loader />;
@@ -211,6 +146,58 @@ export default function CreateCompanyPage() {
       );
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    let newValue: string | number | boolean = value;
+
+    if (type === 'checkbox') {
+        newValue = (e.target as HTMLInputElement).checked;
+    } else if (type === 'number') {
+        newValue = Number(value);
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: newValue,
+    }));
+  };
+
+  const handleNext = () => {
+      const { company_name, admin_email, admin_name, password } = formData;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!company_name || !admin_email || !admin_name || !password) {
+          toast.error('Please fill all required Company Admin fields.');
+          return;
+      }
+      if (!emailRegex.test(admin_email)) {
+          toast.error('Please provide a valid Admin Email.');
+          return;
+      }
+      if (password.length < 6) {
+          toast.error('Password must be at least 6 characters long.');
+          return;
+      }
+      setStep(2);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid) {
+        toast.error('Please fix all validation errors before submitting.');
+        return;
+    }
+
+    const dataToSend = {
+        ...formData,
+        subscription_package_id: Number(formData.subscription_package_id),
+        subscription_start_date: formData.subscription_start_date,
+        subscription_end_date: formData.subscription_end_date,
+    };
+
+    createCompanyMutation.mutate(dataToSend);
+  };
+
   return (
     <DefaultLayout>
       <Breadcrumb pageName="Provision New Company" />
@@ -225,36 +212,29 @@ export default function CreateCompanyPage() {
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
 
-              {/* Step 1: Company & Admin Details */}
               <div className={step === 1 ? 'block' : 'hidden'}>
                 <h5 className="text-lg font-medium text-primary mb-5 flex items-center gap-2"><User size={18} /> Company & Admin Information</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Company Name */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Company Name <span className="text-danger">*</span></label>
                         <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Industry (Optional) */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Industry</label>
                         <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Admin Name */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Admin Full Name <span className="text-danger">*</span></label>
                         <input type="text" name="admin_name" value={formData.admin_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Phone (Optional) */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Phone</label>
                         <input type="tel" name="phone" value={formData.phone || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Admin Email */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Admin Email <span className="text-danger">*</span></label>
                         <input type="email" name="admin_email" value={formData.admin_email} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Password */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Temporary Password <span className="text-danger">*</span></label>
                         <div className="relative">
@@ -270,11 +250,9 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
-              {/* Step 2: Subscription Details */}
               <div className={step === 2 ? 'block' : 'hidden'}>
                 <h5 className="text-lg font-medium text-primary mb-5 flex items-center gap-2"><DollarSign size={18} /> Subscription & Billing</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Package Selection */}
                     <div className="md:col-span-2">
                         <label className="mb-2.5 block text-black dark:text-white">Subscription Package <span className="text-danger">*</span></label>
                         <div className="relative z-20 bg-white dark:bg-form-input">
@@ -288,7 +266,6 @@ export default function CreateCompanyPage() {
                             </select>
                         </div>
                     </div>
-                    {/* Package Info Card */}
                     {selectedPackage && (
                         <div className="md:col-span-2 p-4 border border-primary/20 bg-primary/5 rounded-lg">
                             <h6 className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</h6>
@@ -302,12 +279,10 @@ export default function CreateCompanyPage() {
                         </div>
                     )}
 
-                    {/* Subscription Start Date */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">Start Date <span className="text-danger">*</span></label>
                         <input type="date" name="subscription_start_date" value={formData.subscription_start_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Subscription End Date */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">End Date <span className="text-danger">*</span></label>
                         <input type="date" name="subscription_end_date" value={formData.subscription_end_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
@@ -316,7 +291,6 @@ export default function CreateCompanyPage() {
                         )}
                     </div>
 
-                    {/* Send Welcome Email Toggle */}
                     <div className="md:col-span-2 flex items-center space-x-3 mt-4">
                         <label className="relative flex cursor-pointer select-none items-center">
                             <input
@@ -340,7 +314,6 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
-              {/* Navigation and Submission */}
               <div className="flex justify-between pt-6 mt-6 border-t border-stroke dark:border-strokedark">
                   {step === 2 && (
                       <button
