@@ -1,33 +1,51 @@
 export interface SubscriptionPackage {
   id: number;
   name: string;
-  duration_type: 'monthly' | 'yearly';
+  duration_type: 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
   price: number;
   features: string[];
   max_staff_count: number;
   max_leads_per_month: number;
   is_active: boolean;
+
+
+  is_trial: boolean;
+  trial_duration_days: number;
+
+  company_count: number;
+
   created_at: string;
   updated_at: string;
 }
 
 export interface CreatePackageData {
   name: string;
-  duration_type: 'monthly' | 'yearly';
+  duration_type: 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
   price: number;
   features: string[];
   max_staff_count: number;
   max_leads_per_month: number;
+  is_active?: boolean;
+
+  // fields for creation
+  is_trial: boolean;
+  trial_duration_days: number;
 }
 
 export interface UpdatePackageData {
   name?: string;
-  duration_type?: 'monthly' | 'yearly';
+  duration_type?: 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
   price?: number;
   features?: string[];
   max_staff_count?: number;
   max_leads_per_month?: number;
+  is_active?: boolean;
+
+  // optional fields for update
+  is_trial?: boolean;
+  trial_duration_days?: number;
 }
+
 
 export interface PackagesResponse {
   success: boolean;

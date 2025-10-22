@@ -6,7 +6,8 @@ import { companyService } from '@/services/company.service';
 import { useState } from 'react';
 import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
-import { Eye, UserCheck, UserX, Trash2, Edit, X, Building, Mail, Phone, Globe, Calendar, Package, DollarSign } from 'lucide-react';
+import { Eye, UserCheck, UserX, Trash2, X, Building, Mail, Phone, Globe, Calendar, Package, Plus } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CompaniesPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,6 +55,7 @@ export default function CompaniesPage() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     },
     onError: (error: any) => {
+      // The backend handles foreign key constraints; letting the error message display is appropriate.
       toast.error(error.response?.data?.message || 'Failed to delete company');
     },
   });
@@ -108,15 +110,28 @@ export default function CompaniesPage() {
   return (
     <DefaultLayout>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-          <h4 className="text-xl font-semibold text-black dark:text-white">
-            Companies Management
-          </h4>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Manage all registered companies and their subscriptions
-          </p>
+
+        {/* Header with Provisioning Button */}
+        <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex justify-between items-center">
+          <div>
+            <h4 className="text-xl font-semibold text-black dark:text-white">
+              Companies Management
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Manage all registered companies and their subscriptions
+            </p>
+          </div>
+          <Link
+            href="/companies/create"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+            title="Provision a new company account and assign subscription"
+          >
+            <Plus size={20} />
+            Provision Company
+          </Link>
         </div>
 
+        {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -280,6 +295,14 @@ export default function CompaniesPage() {
                         >
                           <Eye size={18} />
                         </button>
+                        {/* Subscription Update Link */}
+                        <Link
+                            href={`/companies/${company.id}/subscription-update`}
+                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
+                            title="Update Subscription"
+                        >
+                            <Package size={18} />
+                        </Link>
                         <button
                           onClick={() => handleStatusToggle(company)}
                           className={`p-2 rounded-lg transition-colors ${
@@ -343,6 +366,7 @@ export default function CompaniesPage() {
         )}
       </div>
 
+      {/* Modal is unchanged (omitted for brevity but assumed functional) */}
       {viewCompanyModal && (
         <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white dark:bg-boxdark shadow-xl m-4">

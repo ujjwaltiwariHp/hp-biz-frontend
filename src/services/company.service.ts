@@ -1,3 +1,5 @@
+// services/company.service.ts (Final Corrected Content)
+
 import { apiClient } from '@/lib/api';
 import {
   Company,
@@ -9,6 +11,9 @@ import {
   CompanyResponse,
   CompanyActionResponse,
   DeleteCompanyResponse,
+  CreateCompanyData,
+  CreateCompanyResponse,
+  SubscriptionUpdate,
 } from '@/types/company';
 
 export interface CompanyFilters {
@@ -21,12 +26,6 @@ export interface CompanyFilters {
 export interface UsageReportFilters {
   startDate: string;
   endDate: string;
-}
-
-export interface SubscriptionUpdate {
-  subscription_package_id: number;
-  subscription_start_date: string;
-  subscription_end_date: string;
 }
 
 export const companyService = {
@@ -57,6 +56,11 @@ export const companyService = {
 
   getCompany: async (id: number): Promise<CompanyResponse> => {
     const response = await apiClient.get(`/super-admin/companies/${id}`);
+    return response.data;
+  },
+
+  createCompanyByAdmin: async (companyData: CreateCompanyData): Promise<CreateCompanyResponse> => {
+    const response = await apiClient.post('/super-admin/companies/create', companyData);
     return response.data;
   },
 

@@ -8,10 +8,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { CreateAdminData, UpdateProfileData, ChangePasswordData, SuperAdmin, SuperAdminPermissions, SuperAdminRole } from '@/types/auth';
 import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth'; // <-- Essential Import
+import Loader from '@/components/common/Loader'; // <-- Essential Import
 
-
-// --- HELPERS ---
-
+// --- HELPERS (Keep as is) ---
 const RESOURCE_MAP: { [key: string]: string } = {
   all: 'System-Wide Access',
   super_admins: 'Admin Users',
@@ -33,7 +33,7 @@ const ACTION_MAP: { [key: string]: string } = {
 
 const hasPermission = (userPermissions: SuperAdminPermissions, resource: string, action: string): boolean => {
   if (!userPermissions) return false;
-  // Check for the highest privilege
+
   if (userPermissions.all && userPermissions.all.includes('crud')) {
     return true;
   }
@@ -41,12 +41,11 @@ const hasPermission = (userPermissions: SuperAdminPermissions, resource: string,
   const allowedActions = userPermissions[resource];
   if (!allowedActions) return false;
 
-  // Check for specific action or CRUD shorthand
   return allowedActions.includes(action) || allowedActions.includes('crud');
 };
 
 
-// --- COMPONENTS ---
+// --- COMPONENTS (Keep as is, relies on permissions passed via props) ---
 
 const AdminManagementTable = ({
     admins,
@@ -84,18 +83,17 @@ const AdminManagementTable = ({
         },
     });
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (adminId: number) => {
         if (confirm('Are you sure you want to permanently delete this administrator? This action cannot be undone.')) {
-            deleteMutation.mutate(id);
+            deleteMutation.mutate(adminId);
         }
     };
 
-    const handleToggleStatus = (id: number) => {
-        toggleStatusMutation.mutate(id);
+    const handleToggleStatus = (adminId: number) => {
+        toggleStatusMutation.mutate(adminId);
     };
 
     const handleViewPermissions = (admin: SuperAdmin) => {
-        // Find the role data which contains the permissions JSON
         const role = roles.find(r => r.id === admin.super_admin_role_id);
         if (role) {
             setShowPermissionsModal(role);
@@ -105,18 +103,14 @@ const AdminManagementTable = ({
     }
 
     const isAdminDeletable = (admin: SuperAdmin) => {
-        // 1. Can't delete self
         if (admin.id === profile.id) return false;
-        // 2. Block deletion of primary Super Admin (Role ID 1)
         if (admin.super_admin_role_id === 1) return false;
-        // 3. Check if the current user has the delete permission
         return hasPermission(permissions, 'super_admins', 'delete');
     };
 
     const isAdminUpdatable = (admin: SuperAdmin) => {
-        // 1. Can't update self's status/role
         if (admin.id === profile.id) return false;
-        // 2. Check if the current user has the update permission
+        if (admin.super_admin_role_id === 1) return false;
         return hasPermission(permissions, 'super_admins', 'update');
     };
 
@@ -144,12 +138,18 @@ const AdminManagementTable = ({
                             </td>
                             <td className="py-4 px-4 text-black dark:text-white">{admin.email}</td>
                             <td className="py-4 px-4 text-black dark:text-white">
-                                <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
-                                    admin.super_admin_role_id === 1 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
-                                }`}>
-                                    <Shield size={12} />
-                                    {admin.role_name || 'N/A'}
-                                </span>
+                                <button
+                                     onClick={() => handleViewPermissions(admin)}
+                                     className="hover:text-primary text-left text-sm"
+                                     title="View Role Permissions"
+                                >
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
+                                        admin.super_admin_role_id === 1 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+                                    }`}>
+                                        <Shield size={12} />
+                                        {admin.role_name || 'N/A'}
+                                    </span>
+                                </button>
                             </td>
                             <td className="py-4 px-4">
                                 <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
@@ -193,6 +193,24 @@ const AdminManagementTable = ({
 };
 
 const PermissionsModal = ({ role, onClose }: { role: SuperAdminRole, onClose: () => void }) => {
+    const RESOURCE_MAP: { [key: string]: string } = {
+        all: 'System-Wide Access',
+        super_admins: 'Admin Users',
+        companies: 'Company Management',
+        subscriptions: 'Subscription Packages',
+        payments: 'Payment Records',
+        invoices: 'Invoices',
+        super_admin_roles: 'Admin Roles'
+    };
+
+    const ACTION_MAP: { [key: string]: string } = {
+        crud: 'Full CRUD',
+        view: 'View/Read',
+        create: 'Create/Add',
+        update: 'Update/Edit',
+        delete: 'Delete/Remove',
+    };
+
     return (
         <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
             <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
@@ -235,8 +253,7 @@ const PermissionsModal = ({ role, onClose }: { role: SuperAdminRole, onClose: ()
 
 const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminRole[], permissions: SuperAdminPermissions, onClose: () => void }) => {
     const queryClient = useQueryClient();
-    // Default to the first role ID or 0
-    const initialRoleId = roles.length > 0 ? roles[0].id : 0;
+    const initialRoleId = roles.length > 0 ? roles.find(r => r.role_name !== 'Super Admin')?.id || roles[0].id : 0;
     const [createAdminData, setCreateAdminData] = useState<CreateAdminData>({
         email: '',
         password: '',
@@ -332,7 +349,9 @@ const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminR
                                 required
                             >
                                 {roles.length === 0 && <option value={0} disabled>Loading Roles...</option>}
-                                {roles.map(role => (
+                                {roles
+                                    .filter(r => r.role_name !== 'Super Admin')
+                                    .map(role => (
                                     <option key={role.id} value={role.id}>
                                         {role.role_name}
                                     </option>
@@ -375,6 +394,27 @@ const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminR
 
 
 const AllAdminsModal = ({ admins, profile, roles, permissions, onClose }: { admins: SuperAdmin[], profile: SuperAdmin, roles: SuperAdminRole[], permissions: SuperAdminPermissions, onClose: () => void }) => {
+    const isViewListAllowed = hasPermission(permissions, 'super_admins', 'view');
+
+    if (!isViewListAllowed) {
+        return (
+             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+                <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-black dark:text-white">Access Denied</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="text-center py-6 text-danger">
+                        <MinusCircle size={40} className="mx-auto mb-3" />
+                        <p className="text-lg">You do not have permission to view the list of administrators.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
             <div className="w-full max-w-4xl rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
@@ -393,6 +433,8 @@ const AllAdminsModal = ({ admins, profile, roles, permissions, onClose }: { admi
 
 export default function SettingsPage() {
     const queryClient = useQueryClient();
+    const { profile, permissions, isInitialized, isAuthenticated } = useAuth(); // Use useAuth hook for data
+
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showCreateAdmin, setShowCreateAdmin] = useState(false);
@@ -402,27 +444,23 @@ export default function SettingsPage() {
     const [passwordData, setPasswordData] = useState<ChangePasswordData & { confirmPassword: string }>({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
-    // Fetch User Profile
-    const { data: profileResponse, isLoading: profileLoading } = useQuery({
-        queryKey: ['profile'],
-        queryFn: authService.getProfile,
-    });
-    const profile = profileResponse?.data;
-    const userPermissions = profile?.permissions || {};
-
     // Fetch Roles
   const { data: rolesResponse, isLoading: rolesLoading } = useQuery({
     queryKey: ['superAdminRoles'],
     queryFn: authService.getRoles,
-    enabled: true,
+    enabled: isInitialized && isAuthenticated,
 });
     const roles = rolesResponse?.data?.roles || [];
 
     // Fetch All Admins (Enabled only when modal is open)
+    const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');
+    const isCreateAllowed = hasPermission(permissions, 'super_admins', 'create');
+    const isProfileLoading = !isInitialized; // Use isInitialized from useAuth for profile loading check
+
     const { data: adminsResponse, isLoading: adminsLoading } = useQuery({
         queryKey: ['allAdmins'],
         queryFn: authService.getAllAdmins,
-        enabled: showAllAdmins,
+        enabled: showAllAdmins && isViewAllowed,
     });
     const admins = adminsResponse?.data?.superAdmins || [];
 
@@ -494,9 +532,9 @@ export default function SettingsPage() {
         changePasswordMutation.mutate({ currentPassword, newPassword });
     };
 
-    const isViewAllowed = hasPermission(userPermissions, 'super_admins', 'view');
-    const isCreateAllowed = hasPermission(userPermissions, 'super_admins', 'create');
-
+if (!isInitialized || !isAuthenticated || !profile) {
+    return <Loader />;
+}
 
 return (
     <DefaultLayout>
@@ -589,7 +627,7 @@ return (
                     <h3 className="text-lg font-medium text-black dark:text-white mb-4">
                         Your Account Information
                     </h3>
-                    {profileLoading ? (
+                    {isProfileLoading ? (
                         <div className="text-center py-4">Loading...</div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -607,20 +645,20 @@ return (
 
         {showEditProfile && <EditProfileModal profileData={profileData} setProfileData={setProfileData} mutation={updateProfileMutation} onClose={() => setShowEditProfile(false)} />}
         {showChangePassword && <ChangePasswordModal passwordData={passwordData} setPasswordData={setPasswordData} mutation={changePasswordMutation} showPasswords={showPasswords} setShowPasswords={setShowPasswords} onClose={() => setShowChangePassword(false)} />}
-        {showCreateAdmin && <RoleCreationModal roles={roles} permissions={userPermissions} onClose={() => setShowCreateAdmin(false)} />}
-        {showAllAdmins && adminsLoading && (
+        {showCreateAdmin && <RoleCreationModal roles={roles} permissions={permissions} onClose={() => setShowCreateAdmin(false)} />}
+        {showAllAdmins && isViewAllowed && adminsLoading && (
              <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
                 <div className="text-white text-lg">Loading Admin Data...</div>
             </div>
         )}
-        {showAllAdmins && !adminsLoading && (
-         <AllAdminsModal admins={admins} profile={profile!} roles={roles} permissions={userPermissions} onClose={() => setShowAllAdmins(false)} />
-            )}
+        {showAllAdmins && isViewAllowed && !adminsLoading && (
+         <AllAdminsModal admins={admins} profile={profile!} roles={roles} permissions={permissions} onClose={() => setShowAllAdmins(false)} />
+        )}
     </DefaultLayout>
 );
 }
 
-// --- Reusable Info Card Component ---
+// --- Reusable Info Card Component (Keep as is) ---
 const InfoCard = ({
     title,
     value,
@@ -658,8 +696,7 @@ const InfoCard = ({
     );
 };
 
-// --- Modals (Defined outside main component for clarity) ---
-
+// --- Modals (Keep as is) ---
 const EditProfileModal = ({
     profileData,
     setProfileData,
