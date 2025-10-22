@@ -9,6 +9,7 @@ export interface Company {
   website: string;
   industry: string;
   company_size: string;
+  subscription_package_id: number; // <-- FIXED: Added this crucial field
   subscription_start_date: string;
   subscription_end_date: string;
   is_active: boolean;
@@ -18,6 +19,40 @@ export interface Company {
   package_name: string;
   package_price: number;
   duration_type: string;
+}
+
+// Interface for Company Provisioning (Creation by Super Admin)
+export interface CreateCompanyData {
+  company_name: string;
+  admin_email: string;
+  admin_name: string;
+  password: string;
+  subscription_package_id: number;
+  subscription_start_date: string;
+  subscription_end_date: string;
+
+  // Optional fields
+  phone?: string;
+  address?: string;
+  website?: string;
+  industry?: string;
+  company_size?: string;
+  send_welcome_email?: boolean;
+}
+
+// Response interface for Company Creation
+export interface CreateCompanyResponse {
+  success: boolean;
+  message: string;
+  data: {
+    company: {
+      id: number;
+      company_name: string;
+      admin_email: string;
+      created_at: string;
+      subscription_package_id: number;
+    };
+  };
 }
 
 export interface CompanyStats {
@@ -113,4 +148,11 @@ export interface DeleteCompanyResponse {
       unique_company_id: string;
     };
   };
+}
+
+// Final, required exported interface for subscription updates
+export interface SubscriptionUpdate {
+  subscription_package_id: number;
+  subscription_start_date: string;
+  subscription_end_date: string;
 }
