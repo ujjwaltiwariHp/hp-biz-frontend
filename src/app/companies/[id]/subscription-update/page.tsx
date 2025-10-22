@@ -10,18 +10,19 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { Company, SubscriptionUpdate } from '@/types/company';
 import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, use } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Package, Calendar, DollarSign, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
+// PARAMS TYPE DEFINITION
 interface UpdatePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-// Helper to determine the end date based on duration
+// HELPER FUNCTION
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -47,11 +48,12 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
   return format(end, 'yyyy-MM-dd');
 };
 
-// FIX APPLIED HERE: Destructuring { id } directly from params
-export default function UpdateSubscriptionPage({ params: { id } }: UpdatePageProps) {
+// MAIN COMPONENT
+export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const companyId = parseInt(id); // Use destructured 'id'
+  const companyId = parseInt(resolvedParams.id);
 
   const [formData, setFormData] = useState<SubscriptionUpdate>({
     subscription_package_id: 0,
@@ -59,32 +61,40 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     subscription_end_date: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  // Basic validation guard clause
-  if (isNaN(companyId)) {
-    router.push('/companies');
-    return null;
-  }
-
-  // 1. Fetch Company Details
-  const { data: companyResponse, isLoading: isCompanyLoading, isError: isCompanyError } = useQuery({
+  // FETCH COMPANY DATA
+  const { data: companyResponse, isLoading: isCompanyLoading, isError: isCompanyError, error: companyError } = useQuery({
     queryKey: ['company', companyId],
     queryFn: () => companyService.getCompany(companyId),
-    enabled: true,
+    enabled: !!companyId && !isNaN(companyId),
     staleTime: 60000,
   });
 
-  const currentCompany = companyResponse?.data.company;
-
-  // 2. Fetch Active Packages
+  // FETCH PACKAGES DATA
   const { data: packagesResponse, isLoading: isPackagesLoading } = useQuery<PackagesResponse>({
     queryKey: ['activePackages'],
     queryFn: () => subscriptionService.getPackages({ active_only: true }),
     staleTime: Infinity,
   });
 
-  const packages = packagesResponse?.data.packages || [];
+  // UPDATE MUTATION
+  const updateMutation = useMutation({
+    mutationFn: (data: SubscriptionUpdate) =>
+      companyService.updateSubscription(companyId, data),
+    onSuccess: (data) => {
+      toast.success(data.message || 'Subscription updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+      router.push('/companies');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update subscription');
+    },
+  });
 
-  // Map packages for easy lookup
+  // MEMOIZED PACKAGES
+  const packages = useMemo(() => packagesResponse?.data.packages || [], [packagesResponse]);
+
+  // MEMOIZED PACKAGE MAP
   const packageMap = useMemo(() => {
     return packages.reduce((acc, pkg) => {
       acc[pkg.id] = pkg;
@@ -92,15 +102,14 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     }, {} as { [key: number]: SubscriptionPackage });
   }, [packages]);
 
+  const currentCompany = companyResponse?.data.company;
   const selectedPackage = packageMap[formData.subscription_package_id] || null;
 
-  // 3. Initialize form data on load
+  // INITIALIZE FORM WITH COMPANY DATA
   useEffect(() => {
     if (currentCompany && packages.length > 0 && formData.subscription_package_id === 0) {
-      // Use optional chaining or nullish coalescing for database fields
       const pkgId = currentCompany.subscription_package_id || packages[0].id;
 
-      // Ensure dates are formatted correctly for input fields (YYYY-MM-DD)
       const startDate = currentCompany.subscription_start_date
         ? format(new Date(currentCompany.subscription_start_date), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd');
@@ -117,26 +126,21 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     }
   }, [currentCompany, packages, packageMap, formData.subscription_package_id]);
 
-  // 4. Update mutation setup
-  const updateMutation = useMutation({
-    mutationFn: (data: SubscriptionUpdate) =>
-      companyService.updateSubscription(companyId, data),
-    onSuccess: (data) => {
-      toast.success(data.message || 'Subscription updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
-      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
-      router.push('/companies');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update subscription');
-    },
-  });
+  if (isCompanyLoading || isPackagesLoading) {
+    return <Loader />;
+  }
 
+  if (!currentCompany || isCompanyError) {
+    toast.error(companyError?.message || `Company with ID ${companyId} not found or access denied.`);
+    router.push('/companies');
+    return null;
+  }
+
+  // HANDLE INPUT CHANGES
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let newFormData = { ...formData, [name]: name === 'subscription_package_id' ? parseInt(value) : value };
 
-    // Auto-calculate end date when package or start date changes
     if (name === 'subscription_package_id' || name === 'subscription_start_date') {
       const pkgId = name === 'subscription_package_id' ? parseInt(value) : newFormData.subscription_package_id;
       const pkg = packageMap[pkgId];
@@ -150,6 +154,7 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
     setFormData(newFormData);
   };
 
+  // HANDLE FORM SUBMISSION
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const { subscription_package_id, subscription_start_date, subscription_end_date } = formData;
@@ -166,16 +171,6 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
 
     updateMutation.mutate(formData);
   };
-
-  if (isCompanyLoading || isPackagesLoading) {
-    return <Loader />;
-  }
-
-  if (!currentCompany || isCompanyError) {
-    toast.error(`Company with ID ${companyId} not found or access denied.`);
-    router.push('/companies');
-    return null;
-  }
 
   return (
     <DefaultLayout>
@@ -202,7 +197,6 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
                 <div className="space-y-6">
-                    {/* Current Package Info */}
                     <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Package</p>
                         <h5 className="text-lg font-semibold text-black dark:text-white">{currentCompany.package_name}</h5>
@@ -211,7 +205,6 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
                         </p>
                     </div>
 
-                    {/* Package Selection */}
                     <div>
                         <label className="mb-2.5 block text-black dark:text-white">New Subscription Package <span className="text-danger">*</span></label>
                         <select
@@ -230,12 +223,11 @@ export default function UpdateSubscriptionPage({ params: { id } }: UpdatePagePro
                         </select>
                         {selectedPackage && (
                             <p className="text-xs text-gray-500 mt-2">
-                                New Package Price: **${selectedPackage.price.toFixed(2)}** / {selectedPackage.duration_type}
+                                New Package Price: ${selectedPackage.price.toFixed(2)} / {selectedPackage.duration_type}
                             </p>
                         )}
                     </div>
 
-                    {/* Date Inputs */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="mb-2.5 block text-black dark:text-white">Start Date <span className="text-danger">*</span></label>

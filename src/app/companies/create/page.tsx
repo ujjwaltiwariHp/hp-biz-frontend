@@ -10,17 +10,11 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { CreateCompanyData, CreateCompanyResponse } from '@/types/company';
 import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Shield, User, DollarSign, ToggleRight, X, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-// --- Type assertion for companyService to fix TS error ---
-// We assert the type locally using the module's structure
-const typedCompanyService: typeof companyService = companyService as typeof companyService;
-// ---------------------------------------------------------
-
-
-// Helper functions (omitted for brevity, assume correct existence)
+// HELPER FUNCTION
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -46,6 +40,7 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
   return format(end, 'yyyy-MM-dd');
 };
 
+// HELPER FUNCTION
 const getDefaultFormData = (selectedPackage: SubscriptionPackage | null): CreateCompanyData => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const duration = selectedPackage?.duration_type || 'monthly';
@@ -63,6 +58,7 @@ const getDefaultFormData = (selectedPackage: SubscriptionPackage | null): Create
   };
 };
 
+// MAIN COMPONENT
 export default function CreateCompanyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -71,6 +67,7 @@ export default function CreateCompanyPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
 
+  // FETCH PACKAGES DATA
   const {
     data: packagesResponse,
     isLoading: packagesLoading,
@@ -81,10 +78,11 @@ export default function CreateCompanyPage() {
     staleTime: Infinity,
   });
 
-  const packages = packagesResponse?.data.packages || [];
+  // MEMOIZED PACKAGES
+  const packages = useMemo(() => packagesResponse?.data.packages || [], [packagesResponse]);
 
+  // SYNC SELECTED PACKAGE AND END DATE
   useEffect(() => {
-    // ... existing logic ...
     const pkg = packages.find(p => p.id === formData.subscription_package_id);
     setSelectedPackage(pkg || null);
 
@@ -98,8 +96,8 @@ export default function CreateCompanyPage() {
     }
   }, [formData.subscription_package_id, formData.subscription_start_date, packages]);
 
+  // VALIDATE FORM
   useEffect(() => {
-    // ... existing logic ...
     const { company_name, admin_email, admin_name, password, subscription_package_id, subscription_end_date } = formData;
 
     let valid = !!company_name && !!admin_email && !!admin_name && !!password && subscription_package_id > 0;
@@ -116,10 +114,9 @@ export default function CreateCompanyPage() {
     setIsFormValid(valid);
   }, [formData]);
 
-
+  // CREATE COMPANY MUTATION
   const createCompanyMutation = useMutation<CreateCompanyResponse, Error, CreateCompanyData>({
-    // Using the locally asserted type to fix the compilation error
-    mutationFn: (data: CreateCompanyData) => typedCompanyService.createCompanyByAdmin(data),
+    mutationFn: (data: CreateCompanyData) => companyService.createCompanyByAdmin(data),
     onSuccess: (data: CreateCompanyResponse) => {
       toast.success(data.message || 'Company provisioned successfully! Admin OTP sent.');
       router.push('/companies');
@@ -130,8 +127,8 @@ export default function CreateCompanyPage() {
     },
   });
 
+  // HANDLE INPUT CHANGES
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    // ... existing logic ...
     const { name, value, type } = e.target;
     let newValue: string | number | boolean = value;
 
@@ -147,9 +144,8 @@ export default function CreateCompanyPage() {
     }));
   };
 
-
+  // HANDLE NEXT STEP
   const handleNext = () => {
-    // ... existing validation logic ...
       const { company_name, admin_email, admin_name, password } = formData;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -168,7 +164,7 @@ export default function CreateCompanyPage() {
       setStep(2);
   };
 
-
+  // HANDLE FORM SUBMISSION
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) {
@@ -293,8 +289,8 @@ export default function CreateCompanyPage() {
                         <div className="md:col-span-2 p-4 border border-primary/20 bg-primary/5 rounded-lg">
                             <h6 className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</h6>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Max Staff: **{selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}** |
-                                Max Leads: **{selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}**
+                                Max Staff: <strong>{selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}</strong> |
+                                Max Leads: <strong>{selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}</strong>
                             </p>
                             <p className="text-xs text-gray-500 mt-2">
                                 *Note: Since this is a manual provisioning, the dates below determine the subscription cycle.
