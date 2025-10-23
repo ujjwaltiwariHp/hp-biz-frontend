@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { Settings as SettingsIcon, User, Lock, Users, Eye, EyeOff, X, CheckCircle, XCircle, Trash2, Shield, MinusCircle, ChevronDown } from 'lucide-react';
 import { authService } from '@/services/auth.service';
@@ -191,24 +191,6 @@ const AdminManagementTable = ({
 };
 
 const PermissionsModal = ({ role, onClose }: { role: SuperAdminRole, onClose: () => void }) => {
-    const RESOURCE_MAP: { [key: string]: string } = {
-        all: 'System-Wide Access',
-        super_admins: 'Admin Users',
-        companies: 'Company Management',
-        subscriptions: 'Subscription Packages',
-        payments: 'Payment Records',
-        invoices: 'Invoices',
-        super_admin_roles: 'Admin Roles'
-    };
-
-    const ACTION_MAP: { [key: string]: string } = {
-        crud: 'Full CRUD',
-        view: 'View/Read',
-        create: 'Create/Add',
-        update: 'Update/Edit',
-        delete: 'Delete/Remove',
-    };
-
     return (
         <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
             <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
@@ -251,7 +233,10 @@ const PermissionsModal = ({ role, onClose }: { role: SuperAdminRole, onClose: ()
 
 const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminRole[], permissions: SuperAdminPermissions, onClose: () => void }) => {
     const queryClient = useQueryClient();
-    const initialRoleId = roles.length > 0 ? roles.find(r => r.role_name !== 'Super Admin')?.id || roles[0].id : 0;
+
+    const nonSuperAdminRole = roles.find(r => r.role_name !== 'Super Admin');
+    const initialRoleId = nonSuperAdminRole ? nonSuperAdminRole.id : (roles.length > 0 ? roles[0].id : 0);
+
     const [createAdminData, setCreateAdminData] = useState<CreateAdminData>({
         email: '',
         password: '',
@@ -347,9 +332,7 @@ const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminR
                                 required
                             >
                                 {roles.length === 0 && <option value={0} disabled>Loading Roles...</option>}
-                                {roles
-                                    .filter(r => r.role_name !== 'Super Admin')
-                                    .map(role => (
+                                {roles.map(role => (
                                     <option key={role.id} value={role.id}>
                                         {role.role_name}
                                     </option>
@@ -431,7 +414,7 @@ const AllAdminsModal = ({ admins, profile, roles, permissions, onClose }: { admi
 
 export default function SettingsPage() {
     const queryClient = useQueryClient();
-    const { profile, permissions, isInitialized, isAuthenticated } = useAuth(); // Use useAuth hook for data
+    const { profile, permissions, isInitialized, isAuthenticated } = useAuth();
 
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -442,12 +425,11 @@ export default function SettingsPage() {
     const [passwordData, setPasswordData] = useState<ChangePasswordData & { confirmPassword: string }>({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
-    // Fetch Roles
-  const { data: rolesResponse, isLoading: rolesLoading } = useQuery({
-    queryKey: ['superAdminRoles'],
-    queryFn: authService.getRoles,
-    enabled: isInitialized && isAuthenticated,
-});
+    const { data: rolesResponse, isLoading: rolesLoading } = useQuery({
+        queryKey: ['superAdminRoles'],
+        queryFn: authService.getRoles,
+        enabled: isInitialized && isAuthenticated,
+    });
     const roles = rolesResponse?.data?.roles || [];
 
     const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');
@@ -462,7 +444,6 @@ export default function SettingsPage() {
     const admins = adminsResponse?.data?.superAdmins || [];
 
 
-    // Effect to pre-fill profile data on load
     useEffect(() => {
         if (profile) {
             setProfileData({
@@ -472,8 +453,6 @@ export default function SettingsPage() {
         }
     }, [profile]);
 
-
-    // --- MUTATIONS ---
 
     const updateProfileMutation = useMutation({
         mutationFn: authService.updateProfile,
@@ -499,8 +478,6 @@ export default function SettingsPage() {
         },
     });
 
-
-    // --- HANDLERS ---
 
     const handleUpdateProfile = (e: React.FormEvent) => {
         e.preventDefault();
@@ -529,145 +506,138 @@ export default function SettingsPage() {
         changePasswordMutation.mutate({ currentPassword, newPassword });
     };
 
-if (!isInitialized || !isAuthenticated || !profile) {
-    return <Loader />;
-}
+    if (!isInitialized || !isAuthenticated || !profile) {
+        return <Loader />;
+    }
 
-return (
-    <DefaultLayout>
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-            <div className="py-6 px-4 md:px-6 xl:px-7.5">
-                <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-                    <SettingsIcon size={24} />
-                    Admin Panel Settings
-                </h4>
-            </div>
-
-            <div className="p-4 md:p-6 xl:p-7.5">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                                <User className="h-6 w-6 text-primary" />
-                            </div>
-                            <h3 className="text-lg font-medium text-black dark:text-white">Profile</h3>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Update your profile information and contact details.
-                        </p>
-                        <button
-                            onClick={() => setShowEditProfile(true)}
-                            className="w-full rounded bg-primary py-2 px-4 text-white hover:bg-primary/90 transition-colors"
-                        >
-                            Edit Profile
-                        </button>
-                    </div>
-
-                    <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
-                                <Lock className="h-6 w-6 text-warning" />
-                            </div>
-                            <h3 className="text-lg font-medium text-black dark:text-white">Security</h3>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Change your account password for better security.
-                        </p>
-                        <button
-                            onClick={() => setShowChangePassword(true)}
-                            className="w-full rounded bg-warning py-2 px-4 text-white hover:bg-warning/90 transition-colors"
-                        >
-                            Change Password
-                        </button>
-                    </div>
-
-                    <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isCreateAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-                                <Users className="h-6 w-6 text-success" />
-                            </div>
-                            <h3 className="text-lg font-medium text-black dark:text-white">New Admin</h3>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Add new administrator (Super/Sub-Admin).
-                        </p>
-                        <button
-                            onClick={() => setShowCreateAdmin(true)}
-                            disabled={!isCreateAllowed}
-                            className="w-full rounded bg-success py-2 px-4 text-white hover:bg-success/90 transition-colors disabled:opacity-50 disabled:hover:bg-success"
-                        >
-                            Create Admin
-                        </button>
-                    </div>
-
-                    <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isViewAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-meta-5/10">
-                                <Users className="h-6 w-6 text-meta-5" />
-                            </div>
-                            <h3 className="text-lg font-medium text-black dark:text-white">Manage Admins</h3>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            View all system administrators and manage status/roles.
-                        </p>
-                        <button
-                            onClick={() => setShowAllAdmins(true)}
-                            disabled={!isViewAllowed}
-                            className="w-full rounded bg-meta-5 py-2 px-4 text-white hover:bg-meta-5/90 transition-colors disabled:opacity-50 disabled:hover:bg-meta-5"
-                        >
-                            View/Manage
-                        </button>
-                    </div>
+    return (
+        <DefaultLayout>
+            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+                <div className="py-6 px-4 md:px-6 xl:px-7.5">
+                    <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
+                        <SettingsIcon size={24} />
+                        Admin Panel Settings
+                    </h4>
                 </div>
 
-                <div className="mt-8 rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark">
-                    <h3 className="text-lg font-medium text-black dark:text-white mb-4">
-                        Your Account Information
-                    </h3>
-                    {isProfileLoading ? (
-                        <div className="text-center py-4">Loading...</div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <InfoCard title="Name" value={profile?.name} />
-                            <InfoCard title="Email" value={profile?.email} />
-                            <InfoCard title="Primary Role" value={profile?.is_super_admin} isBold={true} />
-                            <InfoCard title="Created At" value={profile?.created_at} isDate={true} />
-                            <InfoCard title="Last Updated" value={profile?.updated_at} isDate={true} />
-                            <InfoCard title="Access" value={profile?.is_super_admin} isStatus={true} />
+                <div className="p-4 md:p-6 xl:p-7.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                                    <User className="h-6 w-6 text-primary" />
+                                </div>
+                                <h3 className="text-lg font-medium text-black dark:text-white">Profile</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Update your profile information and contact details.
+                            </p>
+                            <button
+                                onClick={() => setShowEditProfile(true)}
+                                className="w-full rounded bg-primary py-2 px-4 text-white hover:bg-primary/90 transition-colors"
+                            >
+                                Edit Profile
+                            </button>
                         </div>
-                    )}
+
+                        <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
+                                    <Lock className="h-6 w-6 text-warning" />
+                                </div>
+                                <h3 className="text-lg font-medium text-black dark:text-white">Security</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Change your account password for better security.
+                            </p>
+                            <button
+                                onClick={() => setShowChangePassword(true)}
+                                className="w-full rounded bg-warning py-2 px-4 text-white hover:bg-warning/90 transition-colors"
+                            >
+                                Change Password
+                            </button>
+                        </div>
+
+                        <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isCreateAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                                    <Users className="h-6 w-6 text-success" />
+                                </div>
+                                <h3 className="text-lg font-medium text-black dark:text-white">New Admin</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Add new administrator (Super-Admin/Sub-Admin).
+                            </p>
+                            <button
+                                onClick={() => setShowCreateAdmin(true)}
+                                disabled={!isCreateAllowed}
+                                className="w-full rounded bg-success py-2 px-4 text-white hover:bg-success/90 transition-colors disabled:opacity-50 disabled:hover:bg-success"
+                            >
+                                Create Admin
+                            </button>
+                        </div>
+
+                        <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isViewAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-meta-5/10">
+                                    <Users className="h-6 w-6 text-meta-5" />
+                                </div>
+                                <h3 className="text-lg font-medium text-black dark:text-white">Manage Admins</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                View all system administrators and manage status/roles.
+                            </p>
+                            <button
+                                onClick={() => setShowAllAdmins(true)}
+                                disabled={!isViewAllowed}
+                                className="w-full rounded bg-meta-5 py-2 px-4 text-white hover:bg-meta-5/90 transition-colors disabled:opacity-50 disabled:hover:bg-meta-5"
+                            >
+                                View/Manage
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark">
+                        <h3 className="text-lg font-medium text-black dark:text-white mb-4">
+                            Your Account Information
+                        </h3>
+                        {isProfileLoading ? (
+                            <div className="text-center py-4">Loading...</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <InfoCard title="Name" value={profile?.name} />
+                                <InfoCard title="Email" value={profile?.email} />
+                                <InfoCard title="Created At" value={profile?.created_at} isDate={true} />
+                                <InfoCard title="Last Updated" value={profile?.updated_at} isDate={true} />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {showEditProfile && <EditProfileModal profileData={profileData} setProfileData={setProfileData} mutation={updateProfileMutation} onClose={() => setShowEditProfile(false)} />}
-        {showChangePassword && <ChangePasswordModal passwordData={passwordData} setPasswordData={setPasswordData} mutation={changePasswordMutation} showPasswords={showPasswords} setShowPasswords={setShowPasswords} onClose={() => setShowChangePassword(false)} />}
-        {showCreateAdmin && <RoleCreationModal roles={roles} permissions={permissions} onClose={() => setShowCreateAdmin(false)} />}
-        {showAllAdmins && isViewAllowed && adminsLoading && (
-             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-                <div className="text-white text-lg">Loading Admin Data...</div>
-            </div>
-        )}
-        {showAllAdmins && isViewAllowed && !adminsLoading && (
-         <AllAdminsModal admins={admins} profile={profile!} roles={roles} permissions={permissions} onClose={() => setShowAllAdmins(false)} />
-        )}
-    </DefaultLayout>
-);
+            {showEditProfile && <EditProfileModal profileData={profileData} setProfileData={setProfileData} mutation={updateProfileMutation} onClose={() => setShowEditProfile(false)} />}
+            {showChangePassword && <ChangePasswordModal passwordData={passwordData} setPasswordData={setPasswordData} mutation={changePasswordMutation} showPasswords={showPasswords} setShowPasswords={setShowPasswords} onClose={() => setShowChangePassword(false)} />}
+            {showCreateAdmin && <RoleCreationModal roles={roles} permissions={permissions} onClose={() => setShowCreateAdmin(false)} />}
+            {showAllAdmins && isViewAllowed && adminsLoading && (
+                 <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+                    <div className="text-white text-lg">Loading Admin Data...</div>
+                </div>
+            )}
+            {showAllAdmins && isViewAllowed && !adminsLoading && (
+             <AllAdminsModal admins={admins} profile={profile!} roles={roles} permissions={permissions} onClose={() => setShowAllAdmins(false)} />
+            )}
+        </DefaultLayout>
+    );
 }
 
-// --- Reusable Info Card Component (Keep as is) ---
 const InfoCard = ({
     title,
     value,
     isDate = false,
-    isBold = false,
-    isStatus = false
 }: {
     title: string;
     value?: string | boolean;
     isDate?: boolean;
-    isBold?: string | boolean;
-    isStatus?: boolean;
 }) => {
     let displayValue: string = value?.toString() || 'N/A';
     if (isDate && value && typeof value === 'string') {
@@ -677,23 +647,14 @@ const InfoCard = ({
     return (
         <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
             <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block">{title}</label>
-            {isStatus ? (
-                <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium mt-1 ${
-                    value ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
-                }`}>
-                    <Shield size={12} />
-                    {value ? 'Primary Super Admin' : 'Sub-Admin'}
-                </span>
-            ) : (
-                 <p className={`text-base mt-1 ${isBold ? 'font-semibold' : 'font-medium'} text-black dark:text-white`}>
-                    {displayValue}
-                </p>
-            )}
+            <p className="text-base mt-1 font-medium text-black dark:text-white">
+                {displayValue}
+            </p>
         </div>
     );
 };
 
-// --- Modals (Keep as is) ---
+
 const EditProfileModal = ({
     profileData,
     setProfileData,
