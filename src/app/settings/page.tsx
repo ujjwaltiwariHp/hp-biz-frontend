@@ -8,10 +8,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { CreateAdminData, UpdateProfileData, ChangePasswordData, SuperAdmin, SuperAdminPermissions, SuperAdminRole } from '@/types/auth';
 import { formatDate } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth'; // <-- Essential Import
-import Loader from '@/components/common/Loader'; // <-- Essential Import
+import { useAuth } from '@/hooks/useAuth';
+import Loader from '@/components/common/Loader';
 
-// --- HELPERS (Keep as is) ---
+
 const RESOURCE_MAP: { [key: string]: string } = {
   all: 'System-Wide Access',
   super_admins: 'Admin Users',
@@ -44,8 +44,6 @@ const hasPermission = (userPermissions: SuperAdminPermissions, resource: string,
   return allowedActions.includes(action) || allowedActions.includes('crud');
 };
 
-
-// --- COMPONENTS (Keep as is, relies on permissions passed via props) ---
 
 const AdminManagementTable = ({
     admins,
@@ -452,10 +450,9 @@ export default function SettingsPage() {
 });
     const roles = rolesResponse?.data?.roles || [];
 
-    // Fetch All Admins (Enabled only when modal is open)
     const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');
     const isCreateAllowed = hasPermission(permissions, 'super_admins', 'create');
-    const isProfileLoading = !isInitialized; // Use isInitialized from useAuth for profile loading check
+    const isProfileLoading = !isInitialized;
 
     const { data: adminsResponse, isLoading: adminsLoading } = useQuery({
         queryKey: ['allAdmins'],

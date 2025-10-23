@@ -11,36 +11,28 @@ import { toast } from 'react-toastify';
 import { UpdatePackageData, SubscriptionPackage } from '@/types/subscription';
 import { use } from 'react';
 
-// PARAMS TYPE DEFINITION
 interface EditSubscriptionPageProps {
   params: Promise<{
     id: string;
   }>;
 }
 
-// MAIN COMPONENT
+
 export default function EditSubscriptionPage({ params }: EditSubscriptionPageProps) {
   const resolvedParams = use(params);
   const packageId = parseInt(resolvedParams.id);
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  if (isNaN(packageId)) {
-    router.push('/subscriptions');
-    return null;
-  }
 
-  // FETCH PACKAGE DATA
   const { data: packageResponse, isLoading, isError, error } = useQuery({
     queryKey: ['package', packageId],
     queryFn: () => subscriptionService.getPackageById(packageId),
-    enabled: true,
+    enabled: !isNaN(packageId),
     staleTime: 5 * 60 * 1000,
   });
 
-  const existingPackage = packageResponse?.data.package;
 
-  // UPDATE MUTATION
   const updateMutation = useMutation({
     mutationFn: (data: UpdatePackageData) =>
       subscriptionService.updatePackage(packageId, data),
@@ -55,6 +47,13 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
       toast.error(errorMessage);
     },
   });
+
+  if (isNaN(packageId)) {
+    router.push('/subscriptions');
+    return null;
+  }
+
+  const existingPackage = packageResponse?.data.package;
 
   // HANDLE FORM SUBMISSION
   const handleSubmit = (data: UpdatePackageData) => {
