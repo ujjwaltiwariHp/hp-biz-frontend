@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { User, Settings, LogOut, ChevronDown, Mail, Calendar, Shield, User as ProfileIcon } from 'lucide-react';
+import { User, Settings, LogOut,  Mail, Calendar, Shield, User as ProfileIcon } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { useQuery } from '@tanstack/react-query';
 import ClickOutside from '../ClickOutside';
@@ -39,7 +39,6 @@ const DropdownUser = () => {
 
   return (
     <ClickOutside onClick={() => setDropdownOpen(false)} className="relative">
-      {/* Profile Button (Redirects to Settings Page) */}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className="flex items-center gap-4"
@@ -57,13 +56,7 @@ const DropdownUser = () => {
           {profile.name?.charAt(0).toUpperCase() || 'A'}
         </span>
 
-        <ChevronDown
-          className={`hidden fill-current sm:block transition-transform duration-200 ${
-            dropdownOpen ? 'rotate-180' : ''
-          }`}
-          width="12"
-          height="8"
-        />
+
       </button>
 
       <div
@@ -84,7 +77,6 @@ const DropdownUser = () => {
                 {profile.role_name || 'Administrator'}
               </p>
               {profile.is_super_admin && (
-                // FIX: Changed color to text-success for Primary Super Admin status
                 <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-success">
                   <Shield size={12} />
                   Primary Super Admin
@@ -114,29 +106,9 @@ const DropdownUser = () => {
               </p>
             </div>
           </div>
-
-          <div className="flex items-start gap-3">
-            <Shield size={18} className="text-gray-500 dark:text-gray-400 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
-              <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
-                profile.status === 'active'
-                  ? 'bg-success/10 text-success'
-                  : 'bg-danger/10 text-danger'
-              }`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${
-                  profile.status === 'active' ? 'bg-success' : 'bg-danger'
-                }`}></span>
-                {profile.status || 'Active'}
-              </span>
-            </div>
-          </div>
         </div>
 
         <div className="flex flex-col">
-           {/* New 'Your Profile' link (redirects to the settings page) */}
-
-
           {hasSettingsPermission && (
               <Link
                 href="/settings"

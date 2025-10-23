@@ -155,7 +155,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
         <button
           onClick={handleLogout}
-          className="mt-2 flex w-full items-center gap-2.5 rounded-lg py-3 px-4 font-medium text-danger transition-colors hover:bg-danger/10 dark:hover:bg-danger/20"
+          className="mt-2 flex w-full items-center gap-2.5 rounded-lg py-3 px-4 font-bold text-danger transition-colors hover:bg-danger/10 dark:hover:bg-danger/20"
         >
           <LogOut size={18} />
           Logout
