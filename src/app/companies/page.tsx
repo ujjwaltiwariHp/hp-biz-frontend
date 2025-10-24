@@ -8,8 +8,10 @@ import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
 import { Eye, UserCheck, UserX, Trash2, X, Building, Mail, Phone, Globe, Calendar, Package, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function CompaniesPage() {
+  const { isSuperAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -55,12 +57,15 @@ export default function CompaniesPage() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     },
     onError: (error: any) => {
-      // The backend handles foreign key constraints; letting the error message display is appropriate.
       toast.error(error.response?.data?.message || 'Failed to delete company');
     },
   });
 
   const handleStatusToggle = (company: Company) => {
+    if (!isSuperAdmin) {
+      toast.error('Permission Denied: View-only access.');
+      return;
+    }
     if (company.is_active) {
       if (confirm(`Are you sure you want to deactivate "${company.company_name}"?`)) {
         deactivateMutation.mutate(company.id);
@@ -73,6 +78,10 @@ export default function CompaniesPage() {
   };
 
   const handleDelete = (company: Company) => {
+    if (!isSuperAdmin) {
+      toast.error('Permission Denied: View-only access.');
+      return;
+    }
     if (confirm(`Are you sure you want to delete "${company.company_name}"? This action cannot be undone.`)) {
       deleteMutation.mutate(company.id);
     }
@@ -121,14 +130,16 @@ export default function CompaniesPage() {
               Manage all registered companies and their subscriptions
             </p>
           </div>
-          <Link
-            href="/companies/create"
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
-            title="Provision a new company account and assign subscription"
-          >
-            <Plus size={20} />
-            Provision Company
-          </Link>
+          {isSuperAdmin && (
+            <Link
+              href="/companies/create"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+              title="Provision a new company account and assign subscription"
+            >
+              <Plus size={20} />
+              Provision Company
+            </Link>
+          )}
         </div>
 
         {/* Filters */}
@@ -295,40 +306,44 @@ export default function CompaniesPage() {
                         >
                           <Eye size={18} />
                         </button>
-                        {/* Subscription Update Link */}
-                        <Link
-                            href={`/companies/${company.id}/subscription-update`}
-                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
-                            title="Update Subscription"
-                        >
-                            <Package size={18} />
-                        </Link>
-                        <button
-                          onClick={() => handleStatusToggle(company)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            activateMutation.isPending || deactivateMutation.isPending
-                              ? 'opacity-50 cursor-not-allowed'
-                              : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                          } ${
-                            company.is_active
-                              ? 'text-red-600 dark:text-red-400 hover:text-red-700'
-                              : 'text-green-600 dark:text-green-400 hover:text-green-700'
-                          }`}
-                          disabled={activateMutation.isPending || deactivateMutation.isPending}
-                          title={company.is_active ? 'Deactivate Company' : 'Activate Company'}
-                        >
-                          {company.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(company)}
-                          className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${
-                            deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          disabled={deleteMutation.isPending}
-                          title="Delete Company"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {isSuperAdmin && (
+                          <>
+                            {/* Subscription Update Link */}
+                            <Link
+                                href={`/companies/${company.id}/subscription-update`}
+                                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
+                                title="Update Subscription"
+                            >
+                                <Package size={18} />
+                            </Link>
+                            <button
+                              onClick={() => handleStatusToggle(company)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                activateMutation.isPending || deactivateMutation.isPending
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                              } ${
+                                company.is_active
+                                  ? 'text-red-600 dark:text-red-400 hover:text-red-700'
+                                  : 'text-green-600 dark:text-green-400 hover:text-green-700'
+                              }`}
+                              disabled={activateMutation.isPending || deactivateMutation.isPending}
+                              title={company.is_active ? 'Deactivate Company' : 'Activate Company'}
+                            >
+                              {company.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(company)}
+                              className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${
+                                deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                              disabled={deleteMutation.isPending}
+                              title="Delete Company"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -3,7 +3,7 @@ import "@/css/style.css";
 import QueryProvider from "@/context/QueryProvider";
 
 export const metadata = {
-  title: "Admin Panel",
+  title: "Hp-Biz",
   description: "Super Admin Dashboard",
 };
 

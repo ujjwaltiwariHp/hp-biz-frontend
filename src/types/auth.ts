@@ -24,6 +24,8 @@ export interface SuperAdminPermissions {
   [key: string]: string[];
 }
 
+export type AdminRoleName = 'Super Admin' | 'Sub Admin';
+
 export interface SuperAdmin {
   id: number;
   email: string;
@@ -31,7 +33,7 @@ export interface SuperAdmin {
   status: string;
   is_super_admin: boolean;
   super_admin_role_id: number;
-  role_name: string;
+  role_name: AdminRoleName;
   created_at: string;
   updated_at: string;
   permissions: SuperAdminPermissions;
@@ -74,7 +76,7 @@ export interface AdminListResponse {
 
 export interface SuperAdminRole {
   id: number;
-  role_name: string;
+  role_name: AdminRoleName;
   description: string;
   permissions: SuperAdminPermissions;
 }

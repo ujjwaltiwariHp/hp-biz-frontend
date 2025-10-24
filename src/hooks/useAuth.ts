@@ -59,6 +59,9 @@ export function useAuth() {
   const profile: SuperAdmin | undefined = profileResponse?.data;
   const permissions: SuperAdminPermissions = profile?.permissions || {};
 
+  const isSuperAdmin = profile?.role_name === 'Super Admin';
+  const isSubAdmin = profile?.role_name === 'Sub Admin';
+
 
   const loginMutation = useMutation({
     mutationFn: authService.login,
@@ -91,6 +94,8 @@ export function useAuth() {
     isInitialized,
     profile,
     permissions,
+    isSuperAdmin,
+    isSubAdmin,
     login,
     logout,
     isLoggingIn: loginMutation.isPending

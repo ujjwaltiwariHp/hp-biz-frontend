@@ -8,6 +8,7 @@ import { SubscriptionPackage, CreatePackageData, UpdatePackageData } from '@/typ
 import { toast } from 'react-toastify';
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, CheckCircle, MinusCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 const formatDurationType = (type: string) => {
   if (type === 'one_time') return 'One-Time';
@@ -22,6 +23,7 @@ const FeatureItem = ({ feature, Icon = CheckCircle }: { feature: string, Icon?: 
 );
 
 export default function SubscriptionsPage() {
+  const { isSuperAdmin } = useAuth();
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const queryClient = useQueryClient();
 
@@ -66,6 +68,10 @@ export default function SubscriptionsPage() {
   });
 
   const handleToggleStatus = (pkg: SubscriptionPackage) => {
+    if (!isSuperAdmin) {
+        toast.error('Permission Denied: View-only access.');
+        return;
+    }
     if (pkg.is_active && pkg.company_count > 0) {
         toast.error("Cannot deactivate: Package is currently used by active companies.");
         return;
@@ -76,6 +82,10 @@ export default function SubscriptionsPage() {
   };
 
   const handleDelete = (pkg: SubscriptionPackage) => {
+    if (!isSuperAdmin) {
+        toast.error('Permission Denied: View-only access.');
+        return;
+    }
     if (pkg.company_count > 0) {
       toast.error(`Cannot delete ${pkg.name}. It is currently assigned to ${pkg.company_count} active companies.`);
       return;
@@ -109,13 +119,15 @@ export default function SubscriptionsPage() {
               Manage subscription packages and pricing
             </p>
           </div>
-          <Link
-            href="/subscriptions/create"
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
-          >
-            <Plus size={20} />
-            Create Package
-          </Link>
+          {isSuperAdmin && (
+            <Link
+              href="/subscriptions/create"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+            >
+              <Plus size={20} />
+              Create Package
+            </Link>
+          )}
         </div>
 
         <div className="px-4 md:px-6 xl:px-7.5 pb-6">
@@ -157,12 +169,14 @@ export default function SubscriptionsPage() {
           {packages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg mb-4">No packages found matching the filter.</p>
-              <Link
-                href="/subscriptions/create"
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
-              >
-                Create Your First Package
-              </Link>
+              {isSuperAdmin && (
+                  <Link
+                    href="/subscriptions/create"
+                    className="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+                  >
+                    Create Your First Package
+                  </Link>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -254,39 +268,41 @@ export default function SubscriptionsPage() {
                     <div className="text-xs text-gray-500">
                       Created: {new Date(pkg.created_at).toLocaleDateString()}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleToggleStatus(pkg)}
-                        className={`hover:text-primary transition-colors ${
-                          disableToggle ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                        disabled={disableToggle}
-                        title={pkg.is_active
-                            ? (pkg.company_count > 0 ? 'Deactivation blocked by active clients' : 'Deactivate Package')
-                            : 'Activate Package'}
-                      >
-                        {pkg.is_active
-                            ? <ToggleRight size={24} className={pkg.company_count > 0 ? 'text-gray-500' : 'text-danger'}/>
-                            : <ToggleLeft size={24} className='text-success'/>}
-                      </button>
-                      <Link
-                        href={`/subscriptions/${pkg.id}/edit`}
-                        className="hover:text-primary transition-colors"
-                        title="Edit Package"
-                      >
-                        <Edit size={18} />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(pkg)}
-                        className={`hover:text-danger transition-colors ${
-                          disableDelete ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                        disabled={disableDelete}
-                        title={pkg.company_count > 0 ? `Cannot delete: ${pkg.company_count} active clients` : 'Delete Package'}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {isSuperAdmin && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleStatus(pkg)}
+                            className={`hover:text-primary transition-colors ${
+                              disableToggle ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            disabled={disableToggle}
+                            title={pkg.is_active
+                                ? (pkg.company_count > 0 ? 'Deactivation blocked by active clients' : 'Deactivate Package')
+                                : 'Activate Package'}
+                          >
+                            {pkg.is_active
+                                ? <ToggleRight size={24} className={pkg.company_count > 0 ? 'text-gray-500' : 'text-danger'}/>
+                                : <ToggleLeft size={24} className='text-success'/>}
+                          </button>
+                          <Link
+                            href={`/subscriptions/${pkg.id}/edit`}
+                            className="hover:text-primary transition-colors"
+                            title="Edit Package"
+                          >
+                            <Edit size={18} />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(pkg)}
+                            className={`hover:text-danger transition-colors ${
+                              disableDelete ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            disabled={disableDelete}
+                            title={pkg.company_count > 0 ? `Cannot delete: ${pkg.company_count} active clients` : 'Delete Package'}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                    )}
                   </div>
                 </div>
               );})}
