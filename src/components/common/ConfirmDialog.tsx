@@ -59,11 +59,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = "Cancel",
   isLoading = false,
 }) => {
-  if (!isOpen) return null;
-
-  const config = dialogConfig[type];
-  const IconComponent = config.icon;
-
   // Prevent background scroll when dialog is open
   React.useEffect(() => {
     if (isOpen) {
@@ -73,6 +68,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const config = dialogConfig[type];
+  const IconComponent = config.icon;
 
   return (
     <div
