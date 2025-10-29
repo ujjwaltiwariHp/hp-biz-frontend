@@ -10,6 +10,8 @@ import { CreateAdminData, UpdateProfileData, ChangePasswordData, SuperAdmin, Sup
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import Loader from '@/components/common/Loader';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 
 const RESOURCE_MAP: { [key: string]: string } = {
@@ -59,11 +61,17 @@ const AdminManagementTable = ({
     const queryClient = useQueryClient();
     const [showPermissionsModal, setShowPermissionsModal] = useState<SuperAdminRole | null>(null);
 
+    // Dialog hooks and state
+    const deleteDialog = useConfirmDialog();
+    const toggleDialog = useConfirmDialog();
+    const [selectedAdmin, setSelectedAdmin] = useState<SuperAdmin | null>(null);
+
     const deleteMutation = useMutation({
         mutationFn: authService.deleteAdmin,
         onSuccess: () => {
             toast.success('Admin deleted successfully');
             queryClient.invalidateQueries({ queryKey: ['allAdmins'] });
+            setSelectedAdmin(null);
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || 'Failed to delete admin');
@@ -75,20 +83,50 @@ const AdminManagementTable = ({
         onSuccess: () => {
             toast.success('Admin status updated');
             queryClient.invalidateQueries({ queryKey: ['allAdmins'] });
+            setSelectedAdmin(null);
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || 'Failed to update status');
         },
     });
 
-    const handleDelete = (adminId: number) => {
-        if (confirm('Are you sure you want to permanently delete this administrator? This action cannot be undone.')) {
-            deleteMutation.mutate(adminId);
+    const handleDelete = (admin: SuperAdmin) => {
+        // Special check: Super Admin (role_id 1) cannot be deleted, only deactivated.
+        if (admin.super_admin_role_id === 1) {
+            toast.error(`Cannot delete the Super Admin account (${admin.name}). You can only deactivate it.`);
+            return;
         }
+
+        setSelectedAdmin(admin);
+        deleteDialog.openDialog();
     };
 
-    const handleToggleStatus = (adminId: number) => {
-        toggleStatusMutation.mutate(adminId);
+    const confirmDelete = () => {
+        if (!selectedAdmin) return;
+
+        // This check is redundant due to handleDelete, but kept as a safeguard
+        if (selectedAdmin.super_admin_role_id === 1) {
+             toast.error(`Cannot delete the Super Admin account (${selectedAdmin.name}). You can only deactivate it.`);
+             deleteDialog.closeDialog();
+             setSelectedAdmin(null);
+             return;
+        }
+
+        deleteMutation.mutate(selectedAdmin.id);
+        deleteDialog.closeDialog();
+        setSelectedAdmin(null);
+    };
+
+    const handleToggleStatus = (admin: SuperAdmin) => {
+        setSelectedAdmin(admin);
+        toggleDialog.openDialog();
+    };
+
+    const confirmToggleStatus = () => {
+        if (!selectedAdmin) return;
+        toggleStatusMutation.mutate(selectedAdmin.id);
+        toggleDialog.closeDialog();
+        setSelectedAdmin(null);
     };
 
     const handleViewPermissions = (admin: SuperAdmin) => {
@@ -102,14 +140,23 @@ const AdminManagementTable = ({
 
     const isAdminDeletable = (admin: SuperAdmin) => {
         if (admin.id === profile.id) return false;
+        // Super Admin role (ID 1) cannot be deleted, regardless of user permissions
         if (admin.super_admin_role_id === 1) return false;
         return hasPermission(permissions, 'super_admins', 'delete');
     };
 
     const isAdminUpdatable = (admin: SuperAdmin) => {
         if (admin.id === profile.id) return false;
-        if (admin.super_admin_role_id === 1) return false;
+        // Super Admin role (ID 1) can be updated (status toggle is the main update here)
         return hasPermission(permissions, 'super_admins', 'update');
+    };
+
+    // Determine the delete title/tooltip based on deletion logic
+    const getDeleteTitle = (admin: SuperAdmin) => {
+        if (admin.id === profile.id) return "Cannot delete your own account";
+        if (admin.super_admin_role_id === 1) return "Super Admin cannot be deleted (only deactivated)";
+        if (!hasPermission(permissions, 'super_admins', 'delete')) return "Permission denied: Missing delete rights";
+        return "Delete Admin";
     };
 
     if (admins.length === 0) {
@@ -160,7 +207,7 @@ const AdminManagementTable = ({
                             <td className="py-4 px-4 flex items-center space-x-2">
                                 {isAdminUpdatable(admin) && (
                                     <button
-                                        onClick={() => handleToggleStatus(admin.id)}
+                                        onClick={() => handleToggleStatus(admin)}
                                         className={`${admin.status === 'active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'} disabled:opacity-50`}
                                         title={`Toggle to ${admin.status === 'active' ? 'Inactive' : 'Active'}`}
                                         disabled={toggleStatusMutation.isPending}
@@ -168,12 +215,13 @@ const AdminManagementTable = ({
                                         {admin.status === 'active' ? <XCircle size={20} /> : <CheckCircle size={20} />}
                                     </button>
                                 )}
-                                {isAdminDeletable(admin) && (
+                                {/* Only render delete button if the user has permission, but disable it if the admin is undeletable */}
+                                {hasPermission(permissions, 'super_admins', 'delete') && (
                                     <button
-                                        onClick={() => handleDelete(admin.id)}
-                                        className="text-danger hover:text-danger/80 disabled:opacity-50"
-                                        title="Delete Admin"
-                                        disabled={deleteMutation.isPending || toggleStatusMutation.isPending}
+                                        onClick={() => handleDelete(admin)}
+                                        className={`text-danger hover:text-danger/80 ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        title={getDeleteTitle(admin)}
+                                        disabled={deleteMutation.isPending || toggleStatusMutation.isPending || !isAdminDeletable(admin)}
                                     >
                                         <Trash2 size={20} />
                                     </button>
@@ -186,6 +234,26 @@ const AdminManagementTable = ({
             {showPermissionsModal && (
                 <PermissionsModal role={showPermissionsModal} onClose={() => setShowPermissionsModal(null)} />
             )}
+
+            {/* Confirmation Dialogs */}
+            <ConfirmDialog
+                {...deleteDialog.confirmProps}
+                type="danger"
+                title="Delete Administrator"
+                message={`Are you sure you want to permanently delete "${selectedAdmin?.name}"? This action cannot be undone.`}
+                onConfirm={confirmDelete}
+                confirmText="Delete"
+                isLoading={deleteMutation.isPending}
+            />
+            <ConfirmDialog
+                {...toggleDialog.confirmProps}
+                type={selectedAdmin?.status === 'active' ? 'warning' : 'success'}
+                title={`${selectedAdmin?.status === 'active' ? 'Deactivate' : 'Activate'} Administrator`}
+                message={`Are you sure you want to ${selectedAdmin?.status === 'active' ? 'deactivate' : 'activate'} "${selectedAdmin?.name}"?`}
+                onConfirm={confirmToggleStatus}
+                confirmText={selectedAdmin?.status === 'active' ? 'Deactivate' : 'Activate'}
+                isLoading={toggleStatusMutation.isPending}
+            />
         </div>
     );
 };

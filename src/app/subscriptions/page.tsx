@@ -9,6 +9,8 @@ import { toast } from 'react-toastify';
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, CheckCircle, MinusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 const formatDurationType = (type: string) => {
   if (type === 'one_time') return 'One-Time';
@@ -27,6 +29,12 @@ export default function SubscriptionsPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const queryClient = useQueryClient();
 
+  // Dialog hooks and state
+  const deleteDialog = useConfirmDialog();
+  const toggleDialog = useConfirmDialog();
+  const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
+  const [actionType, setActionType] = useState<'activate' | 'deactivate'>('deactivate');
+
   const { data: packagesData, isLoading } = useQuery({
     queryKey: ['packages', activeFilter],
     queryFn: () => subscriptionService.getPackages({
@@ -40,6 +48,8 @@ export default function SubscriptionsPage() {
     onSuccess: (data) => {
       toast.success(data.message || 'Package status updated successfully');
       queryClient.invalidateQueries({ queryKey: ['packages'] });
+      toggleDialog.closeDialog();
+      setSelectedPackage(null);
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || 'Failed to update package status.';
@@ -48,6 +58,8 @@ export default function SubscriptionsPage() {
       } else {
           toast.error(errorMessage);
       }
+      toggleDialog.closeDialog();
+      setSelectedPackage(null);
     },
   });
 
@@ -56,6 +68,8 @@ export default function SubscriptionsPage() {
     onSuccess: (data) => {
       toast.success(data.message || 'Package deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['packages'] });
+      deleteDialog.closeDialog();
+      setSelectedPackage(null);
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || 'Failed to delete package.';
@@ -64,6 +78,8 @@ export default function SubscriptionsPage() {
       } else {
         toast.error(errorMessage);
       }
+      deleteDialog.closeDialog();
+      setSelectedPackage(null);
     },
   });
 
@@ -76,9 +92,14 @@ export default function SubscriptionsPage() {
         toast.error("Cannot deactivate: Package is currently used by active companies.");
         return;
     }
-    if (confirm(`Are you sure you want to ${pkg.is_active ? 'deactivate' : 'activate'} the "${pkg.name}" package?`)) {
-        toggleStatusMutation.mutate(pkg.id);
-    }
+    setSelectedPackage(pkg);
+    setActionType(pkg.is_active ? 'deactivate' : 'activate');
+    toggleDialog.openDialog();
+  };
+
+  const confirmToggleStatus = () => {
+    if (!selectedPackage) return;
+    toggleStatusMutation.mutate(selectedPackage.id);
   };
 
   const handleDelete = (pkg: SubscriptionPackage) => {
@@ -90,9 +111,13 @@ export default function SubscriptionsPage() {
       toast.error(`Cannot delete ${pkg.name}. It is currently assigned to ${pkg.company_count} active companies.`);
       return;
     }
-    if (confirm(`Are you sure you want to delete the "${pkg.name}" package? This action cannot be undone.`)) {
-      deleteMutation.mutate(pkg.id);
-    }
+    setSelectedPackage(pkg);
+    deleteDialog.openDialog();
+  };
+
+  const confirmDelete = () => {
+    if (!selectedPackage) return;
+    deleteMutation.mutate(selectedPackage.id);
   };
 
   if (isLoading) {
@@ -106,6 +131,17 @@ export default function SubscriptionsPage() {
   }
 
   const packages = packagesData?.data?.packages || [];
+
+  // Calculate dialog props only when rendering
+  const toggleDialogProps = selectedPackage
+    ? {
+        type: selectedPackage.is_active ? 'warning' : 'success' as 'warning' | 'success',
+        title: `${selectedPackage.is_active ? 'Deactivate' : 'Activate'} Package`,
+        message: `Are you sure you want to ${selectedPackage.is_active ? 'deactivate' : 'activate'} the package "${selectedPackage.name}"? This will affect its availability for new and existing company subscriptions.`,
+        confirmText: selectedPackage.is_active ? 'Deactivate' : 'Activate',
+      }
+    : { type: 'warning' as 'warning' | 'success', title: '', message: '', confirmText: '' };
+
 
   return (
     <DefaultLayout>
@@ -310,6 +346,28 @@ export default function SubscriptionsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        {...deleteDialog.confirmProps}
+        type="danger"
+        title="Delete Package"
+        message={`Are you sure you want to permanently delete the package "${selectedPackage?.name}"? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        isLoading={deleteMutation.isPending}
+      />
+
+      {/* Toggle Status Confirmation Dialog */}
+      <ConfirmDialog
+        {...toggleDialog.confirmProps}
+        type={toggleDialogProps.type}
+        title={toggleDialogProps.title}
+        message={toggleDialogProps.message}
+        onConfirm={confirmToggleStatus}
+        confirmText={toggleDialogProps.confirmText}
+        isLoading={toggleStatusMutation.isPending}
+      />
     </DefaultLayout>
   );
 }
