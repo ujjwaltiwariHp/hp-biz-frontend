@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
 import { Eye, UserCheck, UserX, Trash2, X, Building, Mail, Phone, Globe, Calendar, Package, Plus } from 'lucide-react';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -16,6 +18,13 @@ export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [viewCompanyModal, setViewCompanyModal] = useState<Company | null>(null);
+
+  // Dialog hooks
+  const deleteDialog = useConfirmDialog();
+  const toggleDialog = useConfirmDialog();
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [actionType, setActionType] = useState<'activate' | 'deactivate'>('deactivate');
+
   const queryClient = useQueryClient();
 
   const { data: companiesData, isLoading } = useQuery({
@@ -61,30 +70,46 @@ export default function CompaniesPage() {
     },
   });
 
-  const handleStatusToggle = (company: Company) => {
+  // NEW HANDLER: Opens the toggle status confirmation dialog
+  const handleToggleStatus = (company: Company) => {
     if (!isSuperAdmin) {
       toast.error('Permission Denied: View-only access.');
       return;
     }
-    if (company.is_active) {
-      if (confirm(`Are you sure you want to deactivate "${company.company_name}"?`)) {
-        deactivateMutation.mutate(company.id);
-      }
-    } else {
-      if (confirm(`Are you sure you want to activate "${company.company_name}"?`)) {
-        activateMutation.mutate(company.id);
-      }
-    }
+    setSelectedCompany(company);
+    setActionType(company.is_active ? 'deactivate' : 'activate');
+    toggleDialog.openDialog();
   };
 
+  // NEW HANDLER: Confirms and executes the status toggle action
+  const confirmToggleStatus = () => {
+    if (!selectedCompany) return;
+
+    if (selectedCompany.is_active) {
+      deactivateMutation.mutate(selectedCompany.id);
+    } else {
+      activateMutation.mutate(selectedCompany.id);
+    }
+    toggleDialog.closeDialog();
+    setSelectedCompany(null);
+  };
+
+  // UPDATED HANDLER: Opens the delete confirmation dialog
   const handleDelete = (company: Company) => {
     if (!isSuperAdmin) {
       toast.error('Permission Denied: View-only access.');
       return;
     }
-    if (confirm(`Are you sure you want to delete "${company.company_name}"? This action cannot be undone.`)) {
-      deleteMutation.mutate(company.id);
-    }
+    setSelectedCompany(company);
+    deleteDialog.openDialog();
+  };
+
+  // NEW HANDLER: Confirms and executes the delete action
+  const confirmDelete = () => {
+    if (!selectedCompany) return;
+    deleteMutation.mutate(selectedCompany.id);
+    deleteDialog.closeDialog();
+    setSelectedCompany(null);
   };
 
   const handleViewCompany = (company: Company) => {
@@ -317,7 +342,7 @@ export default function CompaniesPage() {
                                 <Package size={18} />
                             </Link>
                             <button
-                              onClick={() => handleStatusToggle(company)}
+                              onClick={() => handleToggleStatus(company)} // UPDATED to use new handler
                               className={`p-2 rounded-lg transition-colors ${
                                 activateMutation.isPending || deactivateMutation.isPending
                                   ? 'opacity-50 cursor-not-allowed'
@@ -333,7 +358,7 @@ export default function CompaniesPage() {
                               {company.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
                             </button>
                             <button
-                              onClick={() => handleDelete(company)}
+                              onClick={() => handleDelete(company)} // UPDATED to use new handler (opens dialog)
                               className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${
                                 deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
@@ -381,7 +406,7 @@ export default function CompaniesPage() {
         )}
       </div>
 
-      {/* Modal is unchanged (omitted for brevity but assumed functional) */}
+      {/* View Company Modal - KEPT AS IS */}
       {viewCompanyModal && (
         <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white dark:bg-boxdark shadow-xl m-4">
@@ -550,6 +575,35 @@ export default function CompaniesPage() {
           </div>
         </div>
       )}
+
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        {...deleteDialog.confirmProps}
+        type="danger"
+        title="Delete Company"
+        message={`Are you sure you want to permanently delete "${selectedCompany?.company_name}"? This action cannot be undone and will remove all associated data.`}
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deleteMutation.isPending}
+      />
+
+      {/* Toggle Status Confirmation Dialog */}
+      <ConfirmDialog
+        {...toggleDialog.confirmProps}
+        type={actionType === 'deactivate' ? 'warning' : 'success'}
+        title={`${actionType === 'deactivate' ? 'Deactivate' : 'Activate'} Company`}
+        message={`Are you sure you want to ${actionType} "${selectedCompany?.company_name}"? ${
+          actionType === 'deactivate'
+            ? 'The company will lose access to the platform.'
+            : 'The company will regain full access to the platform.'
+        }`}
+        onConfirm={confirmToggleStatus}
+        confirmText={actionType === 'deactivate' ? 'Deactivate' : 'Activate'}
+        cancelText="Cancel"
+        isLoading={activateMutation.isPending || deactivateMutation.isPending}
+      />
     </DefaultLayout>
   );
 }
