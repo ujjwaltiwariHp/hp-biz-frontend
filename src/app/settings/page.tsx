@@ -61,7 +61,6 @@ const AdminManagementTable = ({
     const queryClient = useQueryClient();
     const [showPermissionsModal, setShowPermissionsModal] = useState<SuperAdminRole | null>(null);
 
-    // Dialog hooks and state
     const deleteDialog = useConfirmDialog();
     const toggleDialog = useConfirmDialog();
     const [selectedAdmin, setSelectedAdmin] = useState<SuperAdmin | null>(null);
@@ -74,7 +73,14 @@ const AdminManagementTable = ({
             setSelectedAdmin(null);
         },
         onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Failed to delete admin');
+            const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to delete admin';
+
+            if (errorMessage.includes('primary Super Admin') || errorMessage.includes('full privileges')) {
+                toast.error('Cannot delete a primary Super Admin account. You can only deactivate it.');
+            } else {
+                toast.error(errorMessage);
+            }
+            setSelectedAdmin(null);
         },
     });
 
@@ -91,9 +97,9 @@ const AdminManagementTable = ({
     });
 
     const handleDelete = (admin: SuperAdmin) => {
-        // Special check: Super Admin (role_id 1) cannot be deleted, only deactivated.
+        // Role ID 1 is the Super Admin (Primary Admin) role
         if (admin.super_admin_role_id === 1) {
-            toast.error(`Cannot delete the Super Admin account (${admin.name}). You can only deactivate it.`);
+            toast.error('Cannot delete a primary Super Admin account. You can only deactivate it.');
             return;
         }
 
@@ -104,9 +110,8 @@ const AdminManagementTable = ({
     const confirmDelete = () => {
         if (!selectedAdmin) return;
 
-        // This check is redundant due to handleDelete, but kept as a safeguard
         if (selectedAdmin.super_admin_role_id === 1) {
-             toast.error(`Cannot delete the Super Admin account (${selectedAdmin.name}). You can only deactivate it.`);
+             toast.error('Cannot delete a primary Super Admin account. You can only deactivate it.');
              deleteDialog.closeDialog();
              setSelectedAdmin(null);
              return;
@@ -140,21 +145,18 @@ const AdminManagementTable = ({
 
     const isAdminDeletable = (admin: SuperAdmin) => {
         if (admin.id === profile.id) return false;
-        // Super Admin role (ID 1) cannot be deleted, regardless of user permissions
         if (admin.super_admin_role_id === 1) return false;
         return hasPermission(permissions, 'super_admins', 'delete');
     };
 
     const isAdminUpdatable = (admin: SuperAdmin) => {
         if (admin.id === profile.id) return false;
-        // Super Admin role (ID 1) can be updated (status toggle is the main update here)
         return hasPermission(permissions, 'super_admins', 'update');
     };
 
-    // Determine the delete title/tooltip based on deletion logic
     const getDeleteTitle = (admin: SuperAdmin) => {
         if (admin.id === profile.id) return "Cannot delete your own account";
-        if (admin.super_admin_role_id === 1) return "Super Admin cannot be deleted (only deactivated)";
+        if (admin.super_admin_role_id === 1) return "Super Admin accounts cannot be deleted (only deactivated)";
         if (!hasPermission(permissions, 'super_admins', 'delete')) return "Permission denied: Missing delete rights";
         return "Delete Admin";
     };
@@ -215,7 +217,6 @@ const AdminManagementTable = ({
                                         {admin.status === 'active' ? <XCircle size={20} /> : <CheckCircle size={20} />}
                                     </button>
                                 )}
-                                {/* Only render delete button if the user has permission, but disable it if the admin is undeletable */}
                                 {hasPermission(permissions, 'super_admins', 'delete') && (
                                     <button
                                         onClick={() => handleDelete(admin)}
@@ -235,7 +236,6 @@ const AdminManagementTable = ({
                 <PermissionsModal role={showPermissionsModal} onClose={() => setShowPermissionsModal(null)} />
             )}
 
-            {/* Confirmation Dialogs */}
             <ConfirmDialog
                 {...deleteDialog.confirmProps}
                 type="danger"
