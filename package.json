@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm run dev:local",
     "dev:local": "next dev",
-    "dev:deployed": "NEXT_PUBLIC_API_BASE_URL=https://hp-biz-backend-production-46ce.up.railway.app/api/v1 next dev",
+    "dev:deployed": "NEXT_PUBLIC_API_BASE_URL=https://hp-biz-backend-9jnt.onrender.com/api/v1 next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

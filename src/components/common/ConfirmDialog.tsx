@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 const dialogConfig = {
@@ -58,6 +59,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmText = "Confirm",
   cancelText = "Cancel",
   isLoading = false,
+  children,
 }) => {
   // Prevent background scroll when dialog is open
   React.useEffect(() => {
@@ -105,9 +107,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {message}
           </p>
+
+          {/* Children Content */}
+          {children && (
+            <div className="mt-4 mb-6">{children}</div>
+          )}
+
 
           {/* Action Buttons */}
           <div className="flex gap-3 justify-center">
