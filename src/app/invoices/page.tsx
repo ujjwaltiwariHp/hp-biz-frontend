@@ -11,18 +11,17 @@ import {
   Download,
   Eye,
   Search,
-  Filter,
-  Calendar,
-  DollarSign,
   Building,
   CheckCircle,
   Clock,
   AlertCircle,
   XCircle,
   X,
+  DollarSign,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 export default function InvoicesPage() {
   const { isSuperAdmin } = useAuth();
@@ -30,6 +29,15 @@ export default function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewInvoiceModal, setViewInvoiceModal] = useState<Invoice | null>(null);
+  const queryClient = useQueryClient();
+
+  const paymentDialog = useConfirmDialog();
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [paymentData, setPaymentData] = useState({
+    payment_method: 'N/A',
+    payment_reference: 'N/A',
+    payment_notes: '',
+  });
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ['invoices', currentPage, searchTerm, statusFilter],
@@ -39,6 +47,56 @@ export default function InvoicesPage() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
       }),
   });
+
+const markPaymentMutation = useMutation({
+  mutationFn: (invoiceId: number) =>
+    invoiceService.markPaymentReceived(invoiceId, paymentData),
+  onSuccess: () => {
+    toast.success('Payment marked as received successfully');
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    paymentDialog.closeDialog();
+    setSelectedInvoice(null);
+    setPaymentData({
+      payment_method: 'N/A',
+      payment_reference: 'N/A',
+      payment_notes: '',
+    });
+  },
+  onError: (error: any) => {
+    let errorMessage = 'Failed to mark payment as received';
+
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    toast.error(errorMessage);
+  },
+});
+
+  const handleMarkPaymentReceived = (invoice: Invoice) => {
+    if (invoice.status !== 'sent' && invoice.status !== 'overdue') {
+      toast.error('This invoice cannot be marked as payment received');
+      return;
+    }
+    setSelectedInvoice(invoice);
+    setPaymentData({
+      payment_method: 'N/A',
+      payment_reference: 'N/A',
+      payment_notes: '',
+    });
+    paymentDialog.openDialog();
+  };
+
+  const confirmMarkPayment = () => {
+
+    if (selectedInvoice?.id) {
+      markPaymentMutation.mutate(selectedInvoice.id);
+    }
+  };
 
   const handleViewInvoice = (invoice: Invoice) => {
     setViewInvoiceModal(invoice);
@@ -108,6 +166,10 @@ export default function InvoicesPage() {
 
   const isOverdue = (dueDate: string, status: string) => {
     return new Date(dueDate) < new Date() && !['paid', 'rejected'].includes(status);
+  };
+
+  const canMarkPayment = (status: string) => {
+    return status === 'sent' || status === 'overdue';
   };
 
   if (isLoading) {
@@ -315,14 +377,15 @@ export default function InvoicesPage() {
                         >
                           <Download size={18} />
                         </button>
-                        {invoice.status === 'sent' || invoice.status === 'overdue' ? (
-                          <Link
-                            href={`/invoices/${invoice.id}`}
-                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
+                        {canMarkPayment(invoice.status) ? (
+                          <button
+                            onClick={() => handleMarkPaymentReceived(invoice)}
+                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Mark Payment Received"
+                            disabled={markPaymentMutation.isPending}
                           >
                             <DollarSign size={18} />
-                          </Link>
+                          </button>
                         ) : null}
                       </div>
                     </td>
@@ -496,46 +559,8 @@ export default function InvoicesPage() {
                 </div>
               </div>
 
-              {/* Payment Information */}
-              {(viewInvoiceModal.payment_reference || viewInvoiceModal.payment_method) && (
-                <div className="border-t border-stroke dark:border-strokedark pt-6">
-                  <h4 className="text-lg font-semibold text-black dark:text-white mb-4">
-                    Payment Information
-                  </h4>
-                  <div className="space-y-3">
-                    {viewInvoiceModal.payment_method && (
-                      <div className="p-3 rounded-lg bg-gray-50 dark:bg-meta-4">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          Payment Method
-                        </p>
-                        <p className="font-medium text-black dark:text-white">
-                          {viewInvoiceModal.payment_method}
-                        </p>
-                      </div>
-                    )}
-                    {viewInvoiceModal.payment_reference && (
-                      <div className="p-3 rounded-lg bg-gray-50 dark:bg-meta-4">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          Payment Reference
-                        </p>
-                        <p className="font-medium text-black dark:text-white font-mono">
-                          {viewInvoiceModal.payment_reference}
-                        </p>
-                      </div>
-                    )}
-                    {viewInvoiceModal.payment_notes && (
-                      <div className="p-3 rounded-lg bg-gray-50 dark:bg-meta-4">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          Notes
-                        </p>
-                        <p className="text-sm text-black dark:text-white">
-                          {viewInvoiceModal.payment_notes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* Removed Payment Information Section */}
+
 
               {/* Rejection Information */}
               {viewInvoiceModal.rejection_reason && (
@@ -589,6 +614,20 @@ export default function InvoicesPage() {
           </div>
         </div>
       )}
+
+      {/* Mark Payment Received Dialog */}
+      <ConfirmDialog
+        {...paymentDialog.confirmProps}
+        type="success"
+        title="Mark Payment Received"
+        message={`Record payment received for invoice ${selectedInvoice?.invoice_number}? (Amount: ${selectedInvoice?.currency} ${parseFloat(selectedInvoice?.total_amount || '0').toFixed(2)})`}
+        onConfirm={confirmMarkPayment}
+        confirmText="Mark as Received"
+        cancelText="Cancel"
+        isLoading={markPaymentMutation.isPending}
+      >
+        {/* Removed all input fields for payment data from the dialog */}
+      </ConfirmDialog>
     </DefaultLayout>
   );
 }

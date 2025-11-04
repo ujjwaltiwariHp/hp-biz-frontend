@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle, XCircle, Clock, AlertCircle, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, Eye, RefreshCw } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { notificationService } from '@/services/notification.service';
@@ -18,14 +18,15 @@ const NotificationsPage = () => {
   const [page] = useState(1);
   const [limit] = useState(10);
 
-  const [filters] = useState({
-    is_read: '0',
-    notification_type: 'payment_pending'
-  });
+  const queryFilters = {
+    is_read: false
+  };
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['superAdminNotifications', page, limit, filters],
-    queryFn: () => notificationService.getAllNotifications(page, limit, filters),
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['superAdminNotifications', page, limit, queryFilters],
+    queryFn: () => notificationService.getAllNotifications(page, limit, queryFilters),
+    retry: 2,
+    staleTime: 30000,
   });
 
   const approveDialog = useConfirmDialog();
@@ -38,17 +39,24 @@ const NotificationsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
       queryClient.invalidateQueries({ queryKey: ['superAdminNotificationsStats'] });
+      toast.success('Notification marked as read');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to mark as read');
     },
   });
 
   const approveSubscriptionMutation = useMutation({
-    mutationFn: (companyId: number) =>
-      invoiceService.approveSubscription(companyId, {
+    mutationFn: (companyId: number) => {
+      return invoiceService.approveSubscription(companyId, {
         invoice_id: selectedNotification?.metadata?.invoice_id || 0,
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success('Subscription approved successfully');
-      markAsReadMutate(selectedNotification?.id || 0);
+      if (selectedNotification?.id) {
+        markAsReadMutate(selectedNotification.id);
+      }
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
       approveDialog.closeDialog();
       setSelectedNotification(null);
@@ -59,14 +67,17 @@ const NotificationsPage = () => {
   });
 
   const rejectSubscriptionMutation = useMutation({
-    mutationFn: (companyId: number) =>
-      invoiceService.rejectSubscription(companyId, {
+    mutationFn: (companyId: number) => {
+      return invoiceService.rejectSubscription(companyId, {
         invoice_id: selectedNotification?.metadata?.invoice_id || 0,
         rejection_reason: rejectReason || 'Not specified',
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success('Subscription rejected successfully');
-      markAsReadMutate(selectedNotification?.id || 0);
+      if (selectedNotification?.id) {
+        markAsReadMutate(selectedNotification.id);
+      }
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
       rejectDialog.closeDialog();
       setSelectedNotification(null);
@@ -78,20 +89,30 @@ const NotificationsPage = () => {
   });
 
   const handleApprove = (notification: SuperAdminNotification) => {
+    if (!notification.metadata?.company_id) {
+      toast.error('Company ID not found in notification');
+      return;
+    }
     setSelectedNotification(notification);
     approveDialog.openDialog();
   };
 
   const handleReject = (notification: SuperAdminNotification) => {
+    if (!notification.metadata?.company_id) {
+      toast.error('Company ID not found in notification');
+      return;
+    }
     setSelectedNotification(notification);
     setRejectReason('');
     rejectDialog.openDialog();
   };
 
   const confirmApprove = () => {
-    if (selectedNotification?.metadata?.company_id) {
-      approveSubscriptionMutation.mutate(selectedNotification.metadata.company_id);
+    if (!selectedNotification?.metadata?.company_id) {
+      toast.error('Company ID is required');
+      return;
     }
+    approveSubscriptionMutation.mutate(selectedNotification.metadata.company_id);
   };
 
   const confirmReject = () => {
@@ -99,9 +120,11 @@ const NotificationsPage = () => {
       toast.error('Please provide a rejection reason');
       return;
     }
-    if (selectedNotification?.metadata?.company_id) {
-      rejectSubscriptionMutation.mutate(selectedNotification.metadata.company_id);
+    if (!selectedNotification?.metadata?.company_id) {
+      toast.error('Company ID is required');
+      return;
     }
+    rejectSubscriptionMutation.mutate(selectedNotification.metadata.company_id);
   };
 
   const handleMarkRead = (id: number) => {
@@ -112,6 +135,8 @@ const NotificationsPage = () => {
     switch (type) {
       case 'payment_pending':
         return <Clock className="text-warning" size={20} />;
+      case 'payment_received':
+        return <CheckCircle className="text-success" size={20} />;
       case 'subscription_activated':
         return <CheckCircle className="text-success" size={20} />;
       case 'invoice_overdue':
@@ -125,6 +150,8 @@ const NotificationsPage = () => {
     switch (type) {
       case 'payment_pending':
         return 'bg-warning/10 border-warning/20';
+      case 'payment_received':
+        return 'bg-success/10 border-success/20';
       case 'subscription_activated':
         return 'bg-success/10 border-success/20';
       case 'invoice_overdue':
@@ -137,6 +164,7 @@ const NotificationsPage = () => {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
+      case 'urgent':
         return 'text-danger font-bold';
       case 'normal':
         return 'text-warning';
@@ -150,6 +178,7 @@ const NotificationsPage = () => {
   if (isLoading) {
     return (
       <DefaultLayout>
+        <Breadcrumb pageName="Subscription Notifications" />
         <div className="flex justify-center items-center h-40">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -157,12 +186,41 @@ const NotificationsPage = () => {
     );
   }
 
+  if (error) {
+    return (
+      <DefaultLayout>
+        <Breadcrumb pageName="Subscription Notifications" />
+        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+          <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
+            <h4 className="text-xl font-semibold text-black dark:text-white">
+              Error Loading Notifications
+            </h4>
+          </div>
+          <div className="p-6 text-center">
+            <AlertCircle size={48} className="mx-auto mb-3 text-danger opacity-50" />
+            <p className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-4">
+              Failed to load notifications
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <RefreshCw size={16} />
+              Try Again
+            </button>
+          </div>
+        </div>
+      </DefaultLayout>
+    );
+  }
+
+  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+
   return (
     <DefaultLayout>
       <Breadcrumb pageName="Subscription Notifications" />
 
       <div className="space-y-6">
-        {/* Header Card */}
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
             <div className="flex items-center justify-between">
@@ -174,34 +232,48 @@ const NotificationsPage = () => {
                   Review and approve/reject pending company subscriptions
                 </p>
               </div>
-              <div className="px-4 py-2 rounded-full bg-warning/10 text-warning font-bold text-lg">
-                {data?.notifications.length || 0}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => refetch()}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  title="Refresh notifications"
+                >
+                  <RefreshCw size={20} className="text-primary" />
+                </button>
+                <div className="px-4 py-2 rounded-full bg-warning/10 text-warning font-bold text-lg">
+                  {notifications.filter(n => !n.is_read).length}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Notifications List */}
           <div className="divide-y divide-stroke dark:divide-strokedark">
-            {data?.notifications && data.notifications.length > 0 ? (
-              data.notifications.map((notification: SuperAdminNotification) => {
+            {notifications && notifications.length > 0 ? (
+              notifications.map((notification: SuperAdminNotification) => {
                 const invoiceId = notification.metadata?.invoice_id;
                 const companyName = notification.metadata?.company_name || 'Unknown Company';
                 const companyId = notification.metadata?.company_id;
 
+                const ActionableType = 'payment_received';
+                const isPaymentReceived = notification.notification_type === ActionableType;
+                const isFinalAction = ['subscription_activated', 'rejected'].includes(notification.notification_type);
+
                 return (
                   <div
-                    key={notification.id}
+                    key={`notification-${notification.id}`}
                     className={`p-6 transition-all hover:bg-gray-50 dark:hover:bg-meta-4 ${
-                      notification.is_read ? 'opacity-60' : 'bg-warning/5'
+                      notification.is_read ? 'opacity-60' : isPaymentReceived ? 'bg-success/5' : 'bg-warning/5'
                     }`}
                   >
                     <div className="flex gap-4">
-                      {/* Icon */}
-                      <div className={`flex-shrink-0 p-3 rounded-lg ${getNotificationBadgeColor(notification.notification_type)}`}>
+                      <div
+                        className={`flex-shrink-0 p-3 rounded-lg border ${getNotificationBadgeColor(
+                          notification.notification_type
+                        )}`}
+                      >
                         {getNotificationIcon(notification.notification_type)}
                       </div>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
@@ -212,44 +284,22 @@ const NotificationsPage = () => {
                               {companyName}
                             </p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-2 ${getPriorityColor(notification.priority)}`}>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-2 ${getPriorityColor(
+                              notification.priority
+                            )}`}
+                          >
                             {notification.priority.toUpperCase()} PRIORITY
                           </span>
                         </div>
 
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                           {notification.message}
+                          <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                            {new Date(notification.created_at).toLocaleDateString()}
+                          </span>
                         </p>
 
-                        {/* Metadata Display */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
-                          {invoiceId && (
-                            <div className="p-2 rounded bg-gray-50 dark:bg-gray-800">
-                              <span className="text-gray-500 dark:text-gray-400">Invoice ID</span>
-                              <p className="font-medium text-black dark:text-white">{invoiceId}</p>
-                            </div>
-                          )}
-                          <div className="p-2 rounded bg-gray-50 dark:bg-gray-800">
-                            <span className="text-gray-500 dark:text-gray-400">Type</span>
-                            <p className="font-medium text-black dark:text-white capitalize">
-                              {notification.notification_type.replace(/_/g, ' ')}
-                            </p>
-                          </div>
-                          <div className="p-2 rounded bg-gray-50 dark:bg-gray-800">
-                            <span className="text-gray-500 dark:text-gray-400">Created</span>
-                            <p className="font-medium text-black dark:text-white">
-                              {new Date(notification.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="p-2 rounded bg-gray-50 dark:bg-gray-800">
-                            <span className="text-gray-500 dark:text-gray-400">Time</span>
-                            <p className="font-medium text-black dark:text-white">
-                              {new Date(notification.created_at).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
                         <div className="flex flex-wrap gap-2">
                           {invoiceId && (
                             <Link
@@ -262,16 +312,36 @@ const NotificationsPage = () => {
                           )}
                           <button
                             onClick={() => handleApprove(notification)}
-                            disabled={approveSubscriptionMutation.isPending}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-success text-white text-sm rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50"
+                            disabled={
+                              !isPaymentReceived ||
+                              isFinalAction ||
+                              approveSubscriptionMutation.isPending ||
+                              !notification.metadata?.company_id
+                            }
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-success text-white text-sm rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={
+                              !isPaymentReceived
+                                ? 'Awaiting payment verification (Status: Pending Payment Verification)'
+                                : isFinalAction ? 'Subscription already processed' : 'Approve this subscription'
+                            }
                           >
                             <CheckCircle size={16} />
                             Approve
                           </button>
                           <button
                             onClick={() => handleReject(notification)}
-                            disabled={rejectSubscriptionMutation.isPending}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-danger text-white text-sm rounded-lg hover:bg-danger/90 transition-colors disabled:opacity-50"
+                            disabled={
+                              isFinalAction ||
+                              rejectSubscriptionMutation.isPending ||
+                              approveSubscriptionMutation.isPending ||
+                              !notification.metadata?.company_id
+                            }
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-danger text-white text-sm rounded-lg hover:bg-danger/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={
+                              !notification.metadata?.company_id
+                                ? 'Company ID not available'
+                                : 'Reject this subscription'
+                            }
                           >
                             <XCircle size={16} />
                             Reject
@@ -305,7 +375,6 @@ const NotificationsPage = () => {
         </div>
       </div>
 
-      {/* Approve Confirmation Dialog */}
       <ConfirmDialog
         {...approveDialog.confirmProps}
         type="success"
@@ -317,7 +386,6 @@ const NotificationsPage = () => {
         isLoading={approveSubscriptionMutation.isPending}
       />
 
-      {/* Reject Confirmation Dialog */}
       <ConfirmDialog
         {...rejectDialog.confirmProps}
         type="danger"
@@ -328,7 +396,6 @@ const NotificationsPage = () => {
         cancelText="Cancel"
         isLoading={rejectSubscriptionMutation.isPending}
       >
-        {/* Rejection Reason Input */}
         <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Rejection Reason (Required)
