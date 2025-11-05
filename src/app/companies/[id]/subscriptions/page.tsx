@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState } from 'react';
+import React, { use, useState, useMemo } from 'react'; // ADDED: useMemo
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
@@ -94,10 +94,13 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
     },
   });
 
-  // Extract data
-  const packages = packagesResponse?.data?.packages || [];
-  const packageMap = Object.fromEntries(
-    packages.map((pkg: any) => [pkg.id, pkg])
+  const packages = useMemo(
+    () => packagesResponse?.data?.packages || [],
+    [packagesResponse]
+  );
+  const packageMap = useMemo(
+    () => Object.fromEntries(packages.map((pkg: any) => [pkg.id, pkg])),
+    [packages]
   );
   const company = companyResponse?.data?.company;
   const selectedPackage = packageMap[formData.subscription_package_id];
@@ -220,14 +223,14 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         </p>
       </div>
 
-      {/* Permission Notice */}
+
       {!isSuperAdmin && (
         <div className="p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-3">
           <AlertCircle size={20} className="text-warning mt-0.5 flex-shrink-0" />
           <div>
             <p className="font-medium text-warning">View-Only Mode</p>
             <p className="text-sm text-warning/80 mt-1">
-              You don't have permission to update subscription. Only Super Admins
+              You don&apos;t have permission to update subscription. Only Super Admins
               can make changes.
             </p>
           </div>
@@ -431,14 +434,13 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         </div>
       </form>
 
-      {/* Info Box */}
       <div className="p-4 rounded-lg bg-success/5 border border-success/20 flex items-start gap-3">
         <CheckCircle size={20} className="text-success mt-0.5 flex-shrink-0" />
         <div>
           <p className="font-medium text-success">Auto-Calculation</p>
           <p className="text-sm text-success/80 mt-1">
             The end date is automatically calculated based on the selected
-            package's duration type. You can also manually adjust it if needed.
+            package&apos;s duration type. You can also manually adjust it if needed.
           </p>
         </div>
       </div>

@@ -61,7 +61,7 @@ export default function CompanyDetailsPage({ params }: PageProps) {
           <div>
             <p className="font-medium text-warning">View-Only Mode</p>
             <p className="text-sm text-warning/80 mt-1">
-              You don't have permission to edit company details.
+              You don&apos;t have permission to edit company details.
             </p>
           </div>
         </div>
