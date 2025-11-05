@@ -52,9 +52,9 @@ export default function CompanySidebar({ companyId, company }: CompanySidebarPro
   };
 
   return (
-    <aside className="hidden lg:flex lg:w-64 bg-white dark:bg-boxdark border-r border-stroke dark:border-strokedark flex-col overflow-y-auto">
-      {/* Sidebar Header */}
-      <div className="sticky top-0 bg-white dark:bg-boxdark border-b border-stroke dark:border-strokedark p-4 md:p-6 z-10">
+    <aside className="hidden lg:flex lg:w-64 flex-shrink-0 flex-col rounded-lg shadow-default border border-stroke dark:border-strokedark bg-white dark:bg-boxdark overflow-hidden">
+      {/* Sidebar Header - Removed sticky top-0, border-b remains for separation */}
+      <div className="bg-white dark:bg-boxdark border-b border-stroke dark:border-strokedark p-4 md:p-6 z-10">
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Navigation
         </p>
@@ -89,8 +89,8 @@ export default function CompanySidebar({ companyId, company }: CompanySidebarPro
         </ul>
       </nav>
 
-      {/* Sidebar Footer - Company Status */}
-      <div className="border-t border-stroke dark:border-strokedark p-4 md:p-6 sticky bottom-0 bg-white dark:bg-boxdark z-10">
+      {/* Sidebar Footer - Company Status - Removed sticky bottom-0 */}
+      <div className="border-t border-stroke dark:border-strokedark p-4 md:p-6 bg-white dark:bg-boxdark z-10">
         <div className="bg-gray-50 dark:bg-meta-4 rounded-lg p-4">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
             Company Status

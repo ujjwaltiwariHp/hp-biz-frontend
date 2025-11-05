@@ -8,6 +8,7 @@ import CompanySidebar from '@/components/Sidebar/CompanySidebar';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Building } from 'lucide-react';
+import DefaultLayout from '@/components/Layouts/DefaultLayout';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,7 +49,11 @@ export default function CompanyDetailLayout({
   }, [isError, error, companyId, router]);
 
   if (isLoading) {
-    return <Loader />;
+    return (
+      <DefaultLayout>
+        <Loader />
+      </DefaultLayout>
+    );
   }
 
   if (isError || !companyResponse?.data?.company) {
@@ -58,15 +63,15 @@ export default function CompanyDetailLayout({
   const company = companyResponse.data.company;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-boxdark-2">
-      {/* Header Bar with Company Info */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-boxdark border-b border-stroke dark:border-strokedark">
-        <div className="flex items-center justify-between px-4 py-4 md:px-6 lg:px-8">
+    <DefaultLayout>
+      {/* Company Info Header Bar */}
+      <div className="mb-6 rounded-lg border border-stroke bg-white dark:bg-boxdark dark:border-strokedark shadow-sm">
+        <div className="flex items-center justify-between px-4 py-4 md:px-6">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push('/companies')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-meta-4 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
-              title="Go back"
+              title="Back to Companies"
             >
               <ArrowLeft size={20} />
             </button>
@@ -75,7 +80,7 @@ export default function CompanyDetailLayout({
               <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
                 <Building size={20} />
               </div>
-              <div className="hidden sm:block">
+              <div>
                 <h1 className="text-lg font-bold text-black dark:text-white">
                   {company.company_name}
                 </h1>
@@ -87,32 +92,28 @@ export default function CompanyDetailLayout({
           </div>
 
           {/* Status Badge */}
-          <div className="flex items-center gap-3">
-            <span
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                company.is_active
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              }`}
-            >
-              {company.is_active ? 'Active' : 'Inactive'}
-            </span>
-          </div>
+          <span
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+              company.is_active
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            }`}
+          >
+            {company.is_active ? 'Active' : 'Inactive'}
+          </span>
         </div>
       </div>
 
       {/* Main Content with Sidebar */}
-      <div className="flex">
+      <div className="flex gap-6">
         {/* Company Sidebar Navigation */}
         <CompanySidebar companyId={companyId} company={company} />
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-4 md:p-6 lg:p-8">
-            {children}
-          </div>
+        <div className="flex-1 min-w-0">
+          {children}
         </div>
       </div>
-    </div>
+    </DefaultLayout>
   );
 }
