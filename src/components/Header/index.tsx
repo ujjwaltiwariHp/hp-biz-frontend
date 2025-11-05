@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, ChevronRight } from 'lucide-react';
 import DropdownUser from './DropdownUser';
 import DarkModeSwitcher from './DarkModeSwitcher';
 import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '../../services/notification.service';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { companyService } from '@/services/company.service';
 
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
@@ -18,6 +21,86 @@ const Header = (props: {
   });
 
   const unreadCount = notificationStats?.unread_count || 0;
+  const pathname = usePathname();
+  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href?: string }>>([]);
+  const [companyName, setCompanyName] = useState<string>('');
+
+  // Extract company ID from pathname
+  useEffect(() => {
+    const companyIdMatch = pathname.match(/\/companies\/(\d+)/);
+    const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
+
+    // Generate breadcrumbs based on pathname
+    let newBreadcrumbs: Array<{ label: string; href?: string }> = [
+      { label: 'Dashboard', href: '/dashboard' },
+    ];
+
+    if (pathname === '/dashboard') {
+      newBreadcrumbs = [{ label: 'Dashboard' }];
+    } else if (pathname === '/companies') {
+      newBreadcrumbs.push({ label: 'Companies' });
+    } else if (pathname.startsWith('/companies/create')) {
+      newBreadcrumbs.push(
+        { label: 'Companies', href: '/companies' },
+        { label: 'Create Company' }
+      );
+    } else if (companyId && pathname.startsWith(`/companies/${companyId}`)) {
+      newBreadcrumbs.push(
+        { label: 'Companies', href: '/companies' },
+        { label: companyName || `Company #${companyId}`, href: `/companies/${companyId}` }
+      );
+
+      // Add specific section to breadcrumb
+      if (pathname.includes('/details')) {
+        newBreadcrumbs.push({ label: 'Details' });
+      } else if (pathname.includes('/invoices')) {
+        newBreadcrumbs.push({ label: 'Invoices' });
+      } else if (pathname.includes('/logs')) {
+        newBreadcrumbs.push({ label: 'Activity Logs' });
+      } else if (pathname.includes('/subscriptions')) {
+        newBreadcrumbs.push({ label: 'Subscriptions' });
+      }
+    } else if (pathname === '/subscriptions') {
+      newBreadcrumbs.push({ label: 'Subscriptions' });
+    } else if (pathname.startsWith('/subscriptions/')) {
+      newBreadcrumbs.push(
+        { label: 'Subscriptions', href: '/subscriptions' },
+        { label: pathname.includes('/create') ? 'Create Package' : 'Edit Package' }
+      );
+    } else if (pathname === '/invoices') {
+      newBreadcrumbs.push({ label: 'Invoices' });
+    } else if (pathname === '/logs') {
+      newBreadcrumbs.push({ label: 'Activity Logs' });
+    } else if (pathname.startsWith('/logs/')) {
+      newBreadcrumbs.push(
+        { label: 'Activity Logs', href: '/logs' },
+        { label: pathname.includes('/all') ? 'All Logs' : pathname.includes('/system') ? 'System Logs' : 'Company Logs' }
+      );
+    } else if (pathname === '/notifications') {
+      newBreadcrumbs.push({ label: 'Notifications' });
+    } else if (pathname === '/settings') {
+      newBreadcrumbs.push({ label: 'Settings' });
+    }
+
+    setBreadcrumbs(newBreadcrumbs);
+  }, [pathname, companyName]);
+
+  // Fetch company name if in company detail page
+  useEffect(() => {
+    const companyIdMatch = pathname.match(/\/companies\/(\d+)/);
+    const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
+
+    if (companyId && pathname.startsWith(`/companies/${companyId}`) && !pathname.includes('/create')) {
+      companyService
+        .getCompany(companyId)
+        .then((response) => {
+          setCompanyName(response.data.company.company_name);
+        })
+        .catch((error) => {
+          console.error('Failed to fetch company:', error);
+        });
+    }
+  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-999 flex w-full bg-white drop-shadow-1 dark:bg-boxdark dark:drop-shadow-none">
@@ -39,10 +122,27 @@ const Header = (props: {
           </Link>
         </div>
 
-        <div className="hidden sm:block">
-          <h1 className="text-title-md2 font-semibold text-black dark:text-white">
-            Super Admin Dashboard
-          </h1>
+        {/* Dynamic Breadcrumb */}
+        <div className="hidden sm:flex items-center gap-1">
+          {breadcrumbs.map((crumb, index) => (
+            <div key={index} className="flex items-center gap-1">
+              {index > 0 && (
+                <ChevronRight size={16} className="text-gray-400 dark:text-gray-600 mx-1" />
+              )}
+              {crumb.href ? (
+                <Link
+                  href={crumb.href}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                >
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-black dark:text-white">
+                  {crumb.label}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
 
         <div className="flex items-center gap-3 2xsm:gap-7">

@@ -17,7 +17,7 @@ export interface Company {
   created_at: string;
   updated_at: string;
   package_name: string;
-  package_price: number;
+  package_price: number | string;
   duration_type: string;
 }
 
@@ -111,6 +111,11 @@ export interface DashboardResponse {
   data: {
     stats: DashboardStats;
   };
+}
+export interface SubscriptionUpdate {
+  subscription_package_id: number;
+  subscription_start_date: string;
+  subscription_end_date: string;
 }
 
 export interface UsageReportResponse {
