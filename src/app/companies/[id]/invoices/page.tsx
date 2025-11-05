@@ -84,8 +84,26 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     downloadMutation.mutate(invoiceId);
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM dd, yyyy');
+  // Fixed formatDate function with proper null/undefined handling
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) {
+      return 'N/A';
+    }
+
+    try {
+      const date = new Date(dateString);
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date value:', dateString);
+        return 'Invalid Date';
+      }
+
+      return format(date, 'MMM dd, yyyy');
+    } catch (error) {
+      console.error('Error parsing date:', dateString, error);
+      return 'Invalid Date';
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -124,8 +142,13 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     }
   };
 
-  const isOverdue = (dueDate: string, status: string) => {
-    return new Date(dueDate) < new Date() && !['paid', 'rejected'].includes(status);
+  const isOverdue = (dueDate: string | null | undefined, status: string) => {
+    if (!dueDate) return false;
+    try {
+      return new Date(dueDate) < new Date() && !['paid', 'rejected'].includes(status);
+    } catch {
+      return false;
+    }
   };
 
   if (companyLoading || invoicesLoading) {

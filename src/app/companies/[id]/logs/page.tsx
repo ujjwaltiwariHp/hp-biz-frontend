@@ -281,21 +281,21 @@ export default function CompanyLogsPage({ params }: PageProps) {
                       </div>
                     </td>
 
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs">
-                          {(log as any).first_name?.charAt(0) || '?'}{(log as any).last_name?.charAt(0) || '?'}
-                        </div>
-                        <div>
-                          <p className="font-medium text-black dark:text-white">
-                            {(log as any).first_name ? `${(log as any).first_name} ${(log as any).last_name || ''}` : 'Unknown User'}
+              <td className="py-4 px-6">
+                 <div className="flex items-center gap-3">
+                     <div>
+                      <p className="font-medium text-black dark:text-white">
+                       {(log as any).first_name
+                        ? `${(log as any).first_name} ${(log as any).last_name || ''}`
+                         : 'Unknown User'}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {(log as any).email || 'N/A'}
-                          </p>
-                        </div>
+                               <p className="text-xs text-gray-500 dark:text-gray-400">
+                               {(log as any).email || 'N/A'}
+                           </p>
+                         </div>
                       </div>
                     </td>
+
 
                     <td className="py-4 px-6">
                       <span
