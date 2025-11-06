@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+import Link from 'next/link';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
@@ -14,6 +16,8 @@ import { useState, useEffect, useMemo, use } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Package, Calendar, DollarSign, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+
+import { CardTitle, Label, Value } from '@/components/common/Typography';
 
 // PARAMS TYPE DEFINITION
 interface UpdatePageProps {
@@ -175,9 +179,10 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   return (
     <DefaultLayout>
       <div className="mb-6">
+        {/* Compact Back Button */}
         <button
           onClick={() => router.push('/companies')}
-          className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-primary mb-4"
+          className="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 hover:text-primary mb-4 transition-colors"
         >
           <ArrowLeft size={16} />
           Back to Companies
@@ -187,32 +192,39 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
 
       <div className="mx-auto max-w-2xl">
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-            <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-                <Package size={20} className="text-primary" />
+          <div className="py-4 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
+            {/* Replaced h4 with CardTitle component */}
+            <CardTitle as="h4" className="flex items-center gap-2">
+                <Package size={16} className="text-primary" /> {/* Smaller Icon */}
                 Update Subscription
-            </h4>
+            </CardTitle>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
                 <div className="space-y-6">
+                    {/* Current Package Info Block - Using Label/Value */}
                     <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Package</p>
-                        <h5 className="text-lg font-semibold text-black dark:text-white">{currentCompany.package_name}</h5>
-                        <p className="text-sm text-primary mt-1">
+                        <Label>Current Package</Label>
+                        <Value as="h5" className="mt-1">
+                            {currentCompany.package_name}
+                        </Value>
+                        <p className="text-xs text-primary mt-1">
                             Current Period: {formatDate(currentCompany.subscription_start_date)} - {formatDate(currentCompany.subscription_end_date)}
                         </p>
                     </div>
 
+                    {/* New Subscription Package Selection */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">New Subscription Package <span className="text-danger">*</span></label>
+                        {/* Replaced label with Label component */}
+                        <Label className="mb-2.5 block">New Subscription Package <span className="text-danger">*</span></Label>
                         <select
                             name="subscription_package_id"
                             value={formData.subscription_package_id}
                             onChange={handleChange}
                             required
-                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                            // Tighter vertical padding py-2.5 -> py-2
+                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                         >
                             <option value={0} disabled>Select a package</option>
                             {packages.map(pkg => (
@@ -229,39 +241,47 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Start Date Input */}
                         <div>
-                            <label className="mb-2.5 block text-black dark:text-white">Start Date <span className="text-danger">*</span></label>
+                            {/* Replaced label with Label component */}
+                            <Label className="mb-2.5 block">Start Date <span className="text-danger">*</span></Label>
                             <input
                                 type="date"
                                 name="subscription_start_date"
                                 value={formData.subscription_start_date}
                                 onChange={handleChange}
                                 required
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                // Tighter vertical padding py-2.5 -> py-2
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                             />
                         </div>
+                        {/* End Date Input */}
                         <div>
-                            <label className="mb-2.5 block text-black dark:text-white">End Date <span className="text-danger">*</span></label>
+                            {/* Replaced label with Label component */}
+                            <Label className="mb-2.5 block">End Date <span className="text-danger">*</span></Label>
                             <input
                                 type="date"
                                 name="subscription_end_date"
                                 value={formData.subscription_end_date}
                                 onChange={handleChange}
                                 required
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                // Tighter vertical padding py-2.5 -> py-2
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                             />
+                            {/* Smaller validation text */}
                             {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
-                                <p className="text-xs text-danger mt-1 flex items-center gap-1"><X size={12} /> End date must be after start date.</p>
+                                <p className="text-xxs text-danger mt-1 flex items-center gap-1"><X size={12} /> End date must be after start date.</p>
                             )}
                         </div>
                     </div>
                 </div>
 
                 <div className="flex justify-end pt-6 mt-6 border-t border-stroke dark:border-strokedark">
+                    {/* Compact submit button text and padding */}
                     <button
                         type="submit"
                         disabled={updateMutation.isPending || formData.subscription_package_id === 0 || (new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date))}
-                        className="rounded bg-success py-3 px-6 font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
+                        className="rounded bg-success py-2 px-4 text-sm font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
                     >
                         {updateMutation.isPending ? 'Updating...' : 'Update Subscription'}
                     </button>

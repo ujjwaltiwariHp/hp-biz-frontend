@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState } from 'react';
+import React, { use, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '@/services/invoice.service';
 import { companyService } from '@/services/company.service';
@@ -12,15 +12,15 @@ import {
   Download,
   Eye,
   AlertCircle,
-  DollarSign,
-  Calendar,
   CheckCircle,
   Clock,
   XCircle,
-  Search,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import Link from 'next/link';
+
+import { PageTitle, Label } from '@/components/common/Typography';
+import { useSearch } from '@/hooks/useSearch';
+import { SearchInput } from '@/components/common/SearchInput';
 
 interface PageProps {
   params: Promise<{
@@ -34,9 +34,32 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // This state is the actual API dependency, updated only by the search hook when conditions are met.
+  const [finalSearchQuery, setFinalSearchQuery] = useState('');
+
   const [viewInvoiceModal, setViewInvoiceModal] = useState<any>(null);
   const queryClient = useQueryClient();
+  const MIN_SEARCH_LENGTH = 3;
+
+  const searchTrigger = useCallback(
+    async (q: string) => {
+      setFinalSearchQuery(q);
+      setCurrentPage(1);
+      // Dummy return since TanStack Query is used below
+      return [];
+    },
+    []
+  );
+
+  const {
+    query: searchInputQuery,
+    handleSearch,
+    handleClear,
+    handleSearchSubmit, // NEW: Search submit function
+    isLoading: isSearchDebouncing,
+    error: searchError,
+  } = useSearch(searchTrigger, 400, MIN_SEARCH_LENGTH, ''); // Empty default query for initial load
 
   // Fetch company data
   const { data: companyResponse, isLoading: companyLoading } = useQuery({
@@ -46,18 +69,17 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch invoices for this company
+  // Fetch invoices for this company (DEPENDS ON finalSearchQuery)
   const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
-    queryKey: ['company-invoices', companyId, currentPage, statusFilter, searchTerm],
+    queryKey: ['company-invoices', companyId, currentPage, statusFilter, finalSearchQuery],
     queryFn: () =>
       invoiceService.getAllInvoices(currentPage, 10, {
-        search: searchTerm || undefined,
+        search: finalSearchQuery || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
       }),
     staleTime: 5 * 60 * 1000,
   });
 
-  // Download invoice mutation
   const downloadMutation = useMutation({
     mutationFn: (invoiceId: number) =>
       invoiceService.downloadInvoice(invoiceId),
@@ -84,7 +106,11 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     downloadMutation.mutate(invoiceId);
   };
 
-  // Fixed formatDate function with proper null/undefined handling
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) {
       return 'N/A';
@@ -92,16 +118,11 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
 
     try {
       const date = new Date(dateString);
-
-      // Check if date is valid
       if (isNaN(date.getTime())) {
-        console.error('Invalid date value:', dateString);
         return 'Invalid Date';
       }
-
       return format(date, 'MMM dd, yyyy');
     } catch (error) {
-      console.error('Error parsing date:', dateString, error);
       return 'Invalid Date';
     }
   };
@@ -159,7 +180,6 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   const invoices = invoicesData?.invoices || [];
   const pagination = invoicesData?.pagination;
 
-  // Filter invoices by company (if needed on frontend)
   const companyInvoices = invoices.filter(
     (inv) => inv.company_id === companyId || !inv.company_id
   );
@@ -168,7 +188,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     return (
       <div className="text-center py-12">
         <AlertCircle size={48} className="mx-auto mb-3 text-danger opacity-50" />
-        <p className="text-lg font-medium text-gray-600 dark:text-gray-400">
+        <p className="text-base font-medium text-gray-600 dark:text-gray-400">
           Company not found
         </p>
       </div>
@@ -177,39 +197,76 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-black dark:text-white">
-          Invoices
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          View and manage invoices for {company.company_name}
-        </p>
+      {/* Header and Page Title */}
+      <div className='flex items-end justify-between'>
+        <div>
+          <PageTitle as="h2">
+            Invoices
+          </PageTitle>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            View and manage invoices for {company.company_name}
+          </p>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search by invoice number..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full rounded border border-stroke py-2.5 pl-10 pr-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
-          />
-        </div>
+      {/* Summary Stats (KPIs - Compact Layout) */}
+      {companyInvoices.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {/* Total Invoices KPI */}
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
+            <Label as="p">
+              Total Invoices
+            </Label>
+            <p className="text-lg font-bold text-black dark:text-white mt-2">
+              {companyInvoices.length}
+            </p>
+          </div>
 
+          {/* Total Amount KPI */}
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
+            <Label as="p">
+              Total Amount
+            </Label>
+            <p className="text-lg font-bold text-primary mt-2">
+              {companyInvoices[0]?.currency}{' '}
+              {companyInvoices
+                .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0)
+                .toFixed(2)}
+            </p>
+          </div>
+
+          {/* Overdue Invoices KPI */}
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
+            <Label as="p">
+              Overdue Invoices
+            </Label>
+            <p className="text-lg font-bold text-danger mt-2">
+              {companyInvoices.filter(
+                (inv) => isOverdue(inv.due_date, inv.status)
+              ).length}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Filters and Search Input */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SearchInput
+            placeholder={`Search by invoice number (min ${MIN_SEARCH_LENGTH} chars)...`}
+            value={searchInputQuery}
+            onChange={handleSearch}
+            onClear={handleClear}
+            onSearchSubmit={handleSearchSubmit} // NEW: Handle Enter key search
+            isLoading={isSearchDebouncing}
+            error={searchError}
+            minLength={MIN_SEARCH_LENGTH}
+        />
+
+        {/* Filter Select: Uses py-2 for smaller size */}
         <select
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
+          onChange={handleStatusChange}
+          className="w-full rounded border border-stroke py-2 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
         >
           <option value="all">All Status</option>
           <option value="draft">Draft</option>
@@ -228,19 +285,19 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-gray-100 text-left dark:bg-meta-4">
-                <th className="py-4 px-6 font-semibold text-black dark:text-white">
+                <th className="py-4 px-6 text-xs font-semibold text-black dark:text-white">
                   Invoice
                 </th>
-                <th className="py-4 px-6 font-semibold text-black dark:text-white">
+                <th className="py-4 px-6 text-xs font-semibold text-black dark:text-white">
                   Amount
                 </th>
-                <th className="py-4 px-6 font-semibold text-black dark:text-white">
+                <th className="py-4 px-6 text-xs font-semibold text-black dark:text-white">
                   Due Date
                 </th>
-                <th className="py-4 px-6 font-semibold text-black dark:text-white">
+                <th className="py-4 px-6 text-xs font-semibold text-black dark:text-white">
                   Status
                 </th>
-                <th className="py-4 px-6 font-semibold text-black dark:text-white">
+                <th className="py-4 px-6 text-xs font-semibold text-black dark:text-white">
                   Actions
                 </th>
               </tr>
@@ -250,8 +307,16 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
                 <tr>
                   <td colSpan={5} className="text-center py-12 text-gray-500 dark:text-gray-400">
                     <FileText size={48} className="mx-auto mb-3 opacity-50" />
-                    <p className="text-lg font-medium">No invoices found</p>
-                    <p className="text-sm mt-1">Try adjusting your filters</p>
+                    <p className="text-base font-medium">
+                      {/* Message is accurate based on the FINAL API query state */}
+                      {finalSearchQuery ? `No invoices match "${finalSearchQuery}"` : "No invoices found"}
+                    </p>
+                    {finalSearchQuery && (
+                        <p className="text-xs mt-1">Try clearing the search or adjusting your filters.</p>
+                    )}
+                    {!finalSearchQuery && (
+                        <p className="text-xs mt-1">Invoice data is currently unavailable.</p>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -262,10 +327,10 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
                   >
                     <td className="py-5 px-6">
                       <div>
-                        <h5 className="font-semibold text-black dark:text-white">
+                        <h5 className="text-sm font-semibold text-black dark:text-white">
                           {invoice.invoice_number}
                         </h5>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                           {formatDate(invoice.billing_period_start)}
                         </p>
                       </div>
@@ -273,24 +338,24 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
 
                     <td className="py-5 px-6">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                           {invoice.currency}
                         </span>
-                        <span className="text-lg font-bold text-primary">
+                        <span className="text-sm font-bold text-primary">
                           {parseFloat(invoice.total_amount).toFixed(2)}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-xxs text-gray-500 dark:text-gray-400 mt-1">
                         +${parseFloat(invoice.tax_amount).toFixed(2)} tax
                       </p>
                     </td>
 
                     <td className="py-5 px-6">
-                      <p className="font-medium text-black dark:text-white">
+                      <p className="text-sm font-medium text-black dark:text-white">
                         {formatDate(invoice.due_date)}
                       </p>
                       {isOverdue(invoice.due_date, invoice.status) && (
-                        <p className="text-xs text-danger font-semibold mt-1">
+                        <p className="text-xxs text-danger font-semibold mt-1">
                           OVERDUE
                         </p>
                       )}
@@ -300,7 +365,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
                       <div className="flex items-center gap-2">
                         {getStatusIcon(invoice.status)}
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full border py-1.5 px-3 text-xs font-semibold ${getStatusBadgeColor(
+                          className={`inline-flex items-center gap-1 rounded-full border py-1.5 px-3 text-xxs font-semibold ${getStatusBadgeColor(
                             invoice.status
                           )}`}
                         >
@@ -312,7 +377,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
                     <td className="py-5 px-6">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setViewInvoiceModal(invoice)}
+                          // onClick={() => setViewInvoiceModal(invoice)}
                           className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
                           title="View Details"
                         >
@@ -339,7 +404,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
       {/* Pagination */}
       {pagination && pagination.totalCount > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
             Showing{' '}
             <span className="font-semibold text-black dark:text-white">
               {(currentPage - 1) * 10 + 1}
@@ -358,11 +423,11 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-medium border border-stroke rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
+              className="px-4 py-2 text-xs font-medium border border-stroke rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
             >
               Previous
             </button>
-            <span className="px-4 py-2 text-sm font-semibold text-black dark:text-white">
+            <span className="px-4 py-2 text-xs font-semibold text-black dark:text-white">
               Page {currentPage} of {pagination.totalPages}
             </span>
             <button
@@ -370,47 +435,10 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
                 setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))
               }
               disabled={currentPage === pagination.totalPages}
-              className="px-4 py-2 text-sm font-medium border border-stroke rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
+              className="px-4 py-2 text-xs font-medium border border-stroke rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
             >
               Next
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Summary Stats */}
-      {companyInvoices.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-stroke dark:border-strokedark">
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Total Invoices
-            </p>
-            <p className="text-2xl font-bold text-black dark:text-white mt-2">
-              {companyInvoices.length}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Total Amount
-            </p>
-            <p className="text-2xl font-bold text-primary mt-2">
-              {companyInvoices[0]?.currency}{' '}
-              {companyInvoices
-                .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0)
-                .toFixed(2)}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Overdue Invoices
-            </p>
-            <p className="text-2xl font-bold text-danger mt-2">
-              {companyInvoices.filter(
-                (inv) => isOverdue(inv.due_date, inv.status)
-              ).length}
-            </p>
           </div>
         </div>
       )}

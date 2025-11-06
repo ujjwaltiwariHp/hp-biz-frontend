@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState, useMemo } from 'react'; // ADDED: useMemo
+import React, { use, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+
+import { PageTitle, CardTitle, Label, Value } from '@/components/common/Typography';
 
 interface PageProps {
   params: Promise<{
@@ -201,7 +203,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
     return (
       <div className="text-center py-12">
         <AlertCircle size={48} className="mx-auto mb-3 text-danger opacity-50" />
-        <p className="text-lg font-medium text-gray-600 dark:text-gray-400">
+        <p className="text-base font-medium text-gray-600 dark:text-gray-400">
           Company not found
         </p>
       </div>
@@ -215,10 +217,11 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-black dark:text-white">
+        <PageTitle as="h2">
           Subscription Management
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        </PageTitle>
+
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
           Update subscription plan and dates for {company.company_name}
         </p>
       </div>
@@ -228,8 +231,10 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         <div className="p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-3">
           <AlertCircle size={20} className="text-warning mt-0.5 flex-shrink-0" />
           <div>
-            <p className="font-medium text-warning">View-Only Mode</p>
-            <p className="text-sm text-warning/80 mt-1">
+
+            <p className="text-sm font-medium text-warning">View-Only Mode</p>
+
+            <p className="text-xs text-warning/80 mt-1">
               You don&apos;t have permission to update subscription. Only Super Admins
               can make changes.
             </p>
@@ -239,67 +244,64 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
       {/* Current Subscription Info */}
       <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-        <h3 className="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2">
+        <CardTitle as="h3" className="mb-4 flex items-center gap-2">
           <Package size={20} className="text-primary" />
           Current Subscription
-        </h3>
+        </CardTitle>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <Label className="mb-2">
               Package Name
-            </p>
-            <p className="text-lg font-semibold text-black dark:text-white">
+            </Label>
+            <Value as="p" className="text-sm font-semibold text-black dark:text-white">
               {company.package_name}
-            </p>
+            </Value>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <Label className="mb-2">
               Price
-            </p>
-            <p className="text-lg font-semibold text-primary">
+            </Label>
+            <Value as="p" className="text-sm font-semibold text-primary">
               ${typeof company.package_price === 'string' ? parseFloat(company.package_price).toFixed(2) : company.package_price.toFixed(2)} / {company.duration_type}
-            </p>
+            </Value>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <Label className="mb-2">
               Start Date
-            </p>
-            <p className="text-base font-semibold text-black dark:text-white">
+            </Label>
+            <Value as="p">
               {format(new Date(company.subscription_start_date), 'MMM dd, yyyy')}
-            </p>
+            </Value>
           </div>
-
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <Label className="mb-2">
               End Date
-            </p>
-            <p className="text-base font-semibold text-black dark:text-white">
+            </Label>
+            <Value as="p">
               {format(new Date(company.subscription_end_date), 'MMM dd, yyyy')}
-            </p>
+            </Value>
           </div>
 
           <div className="md:col-span-2">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <Label className="mb-2">
               Status
-            </p>
+            </Label>
             <div className="flex items-center gap-2">
               <span
                 className={`h-2 w-2 rounded-full ${
                   isSubscriptionExpired ? 'bg-danger' : 'bg-success'
                 }`}
               ></span>
-              <span
-                className={`font-semibold ${
+              <Value as="span" className={`font-semibold ${
                   isSubscriptionExpired ? 'text-danger' : 'text-success'
-                }`}
-              >
+                }`}>
                 {isSubscriptionExpired ? 'Expired' : 'Active'}
-              </span>
+              </Value>
               {!isSubscriptionExpired && (
-                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
                   ({Math.ceil(
                     (new Date(company.subscription_end_date).getTime() -
                       new Date().getTime()) /
@@ -316,16 +318,16 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
       {/* Subscription Update Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-6">
+          <CardTitle as="h3" className="mb-6">
             Update Subscription
-          </h3>
+          </CardTitle>
 
           <div className="space-y-6">
             {/* Package Selection */}
             <div>
-              <label className="mb-2.5 block text-black dark:text-white font-medium">
+              <Label className="mb-2.5 block">
                 Select New Package <span className="text-danger">*</span>
-              </label>
+              </Label>
               <select
                 name="subscription_package_id"
                 value={formData.subscription_package_id}
@@ -346,10 +348,10 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
               {selectedPackage && (
                 <div className="mt-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="text-sm font-medium text-primary mb-2">
+                  <p className="text-xs font-medium text-primary mb-2">
                     Package Features:
                   </p>
-                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     <li>
                       • Max Staff:{' '}
                       <span className="font-semibold">
@@ -370,13 +372,11 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 </div>
               )}
             </div>
-
-            {/* Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-2.5 block text-black dark:text-white font-medium">
+                <Label className="mb-2.5 block">
                   Start Date <span className="text-danger">*</span>
-                </label>
+                </Label>
                 <input
                   type="date"
                   name="subscription_start_date"
@@ -389,9 +389,9 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
               </div>
 
               <div>
-                <label className="mb-2.5 block text-black dark:text-white font-medium">
+                <Label className="mb-2.5 block">
                   End Date <span className="text-danger">*</span>
-                </label>
+                </Label>
                 <input
                   type="date"
                   name="subscription_end_date"
@@ -404,7 +404,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
                 {new Date(formData.subscription_end_date) <=
                   new Date(formData.subscription_start_date) && (
-                  <p className="text-xs text-danger mt-2 flex items-center gap-1">
+                  <p className="text-xxs text-danger mt-2 flex items-center gap-1">
                     <X size={12} /> End date must be after start date.
                   </p>
                 )}
@@ -413,12 +413,11 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Form Actions */}
         <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-3 rounded-lg border border-stroke dark:border-strokedark font-medium text-black dark:text-white hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
+            className="px-6 py-3 rounded-lg border border-stroke dark:border-strokedark font-medium text-sm text-black dark:text-white hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
           >
             Cancel
           </button>
@@ -426,7 +425,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
           <button
             type="submit"
             disabled={updateMutation.isPending || !isSuperAdmin}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-sm text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={18} />
             {updateMutation.isPending ? 'Updating...' : 'Update Subscription'}
@@ -437,8 +436,8 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
       <div className="p-4 rounded-lg bg-success/5 border border-success/20 flex items-start gap-3">
         <CheckCircle size={20} className="text-success mt-0.5 flex-shrink-0" />
         <div>
-          <p className="font-medium text-success">Auto-Calculation</p>
-          <p className="text-sm text-success/80 mt-1">
+          <p className="text-sm font-medium text-success">Auto-Calculation</p>
+          <p className="text-xs text-success/80 mt-1">
             The end date is automatically calculated based on the selected
             package&apos;s duration type. You can also manually adjust it if needed.
           </p>

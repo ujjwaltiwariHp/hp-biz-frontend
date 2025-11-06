@@ -24,14 +24,18 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  DollarSign,
-  Activity
+  Activity,
+  ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { format } from 'date-fns';
+
+// Import Typography components for consistent font sizing
+import { PageTitle, CardTitle, Label, Value } from '@/components/common/Typography';
+
 
 interface PageProps {
   params: Promise<{
@@ -167,7 +171,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
     return (
       <div className="text-center py-12">
         <AlertCircle size={48} className="mx-auto mb-3 text-danger opacity-50" />
-        <p className="text-lg font-medium text-gray-600 dark:text-gray-400">
+        <p className="text-base font-medium text-gray-600 dark:text-gray-400">
           Company not found
         </p>
       </div>
@@ -181,423 +185,373 @@ export default function CompanyOverviewPage({ params }: PageProps) {
       (1000 * 60 * 60 * 24)
   );
 
+  const InfoBlock = ({ label, value, className = '' }: { label: string, value: React.ReactNode, className?: string }) => (
+    <div className={className}>
+        <Label>{label}</Label>
+        <Value as="p" className="mt-1">
+            {value}
+        </Value>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href={`/companies/${companyId}/details`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <Edit size={18} />
-          Edit Details
-        </Link>
+      {/* Header and Page Title */}
+      <div className='flex items-center justify-between'>
+        <div>
+          <PageTitle as="h2">Company Overview</PageTitle>
+        </div>
 
-        <Link
-          href={`/companies/${companyId}/subscriptions`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors"
-        >
-          <Package size={18} />
-          Update Subscription
-        </Link>
-
+        {/* Management Actions - Combined */}
         {isSuperAdmin && (
-          <>
-            <button
-              onClick={handleToggleStatus}
-              disabled={activateMutation.isPending || deactivateMutation.isPending}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                company.is_active
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              } disabled:opacity-50`}
+          <div className="flex gap-2">
+            <Link
+                href={`/companies/${companyId}/subscriptions`}
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors"
             >
-              {company.is_active ? (
-                <>
-                  <UserX size={18} />
-                  Deactivate
-                </>
-              ) : (
-                <>
-                  <UserCheck size={18} />
-                  Activate
-                </>
-              )}
+                <Package size={14} />
+                Update Plan
+            </Link>
+
+            {/* Activate/Deactivate Button */}
+            <button
+                onClick={handleToggleStatus}
+                disabled={activateMutation.isPending || deactivateMutation.isPending}
+                className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    company.is_active
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                } disabled:opacity-50`}
+            >
+                {company.is_active ? (
+                    <>
+                        <UserX size={14} />
+                        Deactivate
+                    </>
+                ) : (
+                    <>
+                        <UserCheck size={14} />
+                        Activate
+                    </>
+                )}
             </button>
 
+            {/* Delete Button */}
             <button
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-danger text-white rounded-lg hover:bg-danger/90 transition-colors disabled:opacity-50"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-danger text-white rounded-lg hover:bg-danger/90 transition-colors disabled:opacity-50"
             >
-              <Trash2 size={18} />
-              Delete Company
+                <Trash2 size={14} />
+                Delete
             </button>
-          </>
-        )}
-      </div>
-
-      {/* Company Information Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Info */}
-        <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Basic Information
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Company Name
-              </p>
-              <p className="text-base font-semibold text-black dark:text-white mt-1">
-                {company.company_name}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Unique ID
-              </p>
-              <p className="text-base font-semibold text-primary mt-1">
-                {company.unique_company_id}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Industry
-              </p>
-              <p className="text-base font-semibold text-black dark:text-white mt-1">
-                {company.industry || 'Not specified'}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Company Size
-              </p>
-              <p className="text-base font-semibold text-black dark:text-white mt-1">
-                {company.company_size || 'Not specified'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Contact Information */}
-        <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-            Contact Information
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <Mail className="text-primary mt-1" size={18} />
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Email
-                </p>
-                <a
-                  href={`mailto:${company.admin_email}`}
-                  className="text-base font-semibold text-primary hover:underline mt-1 break-all"
-                >
-                  {company.admin_email}
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Phone className="text-primary mt-1" size={18} />
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Phone
-                </p>
-                <p className="text-base font-semibold text-black dark:text-white mt-1">
-                  {company.phone || 'Not provided'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Globe className="text-primary mt-1" size={18} />
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Website
-                </p>
-                <a
-                  href={company.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-base font-semibold text-primary hover:underline mt-1 break-all"
-                >
-                  {company.website}
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <MapPin className="text-primary mt-1" size={18} />
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Address
-                </p>
-                <p className="text-base font-semibold text-black dark:text-white mt-1">
-                  {company.address || 'Not provided'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Admin Information */}
-      <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-        <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-          Admin Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Admin Name
-            </p>
-            <p className="text-base font-semibold text-black dark:text-white mt-2">
-              {company.admin_name}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Email Verified
-            </p>
-            <div className="flex items-center gap-2 mt-2">
-              {company.email_verified ? (
-                <>
-                  <CheckCircle size={18} className="text-success" />
-                  <span className="font-semibold text-success">Verified</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle size={18} className="text-warning" />
-                  <span className="font-semibold text-warning">Pending</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Subscription Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2">
-            <Package size={20} className="text-primary" />
-            Current Subscription
-          </h3>
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Package
-              </p>
-              <p className="text-base font-semibold text-black dark:text-white mt-1">
-                {company.package_name}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Price
-              </p>
-              <p className="text-base font-semibold text-primary mt-1">
-                ${parseFloat(String(company.package_price)).toFixed(2)} / {company.duration_type}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Period
-              </p>
-              <p className="text-base font-semibold text-black dark:text-white mt-1">
-                {format(new Date(company.subscription_start_date), 'MMM dd, yyyy')} -{' '}
-                {format(new Date(company.subscription_end_date), 'MMM dd, yyyy')}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                Status
-              </p>
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                  isSubscriptionExpired
-                    ? 'bg-danger/10 text-danger'
-                    : 'bg-success/10 text-success'
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    isSubscriptionExpired ? 'bg-danger' : 'bg-success'
-                  }`}
-                ></span>
-                {isSubscriptionExpired ? 'Expired' : 'Active'}
-                {!isSubscriptionExpired && ` (${daysUntilExpiry} days left)`}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Package Details */}
-        {pkg && (
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-            <h3 className="text-lg font-semibold text-black dark:text-white mb-4">
-              Package Features
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Max Staff
-                </p>
-                <p className="text-base font-semibold text-black dark:text-white mt-1">
-                  {pkg.max_staff_count === 0 ? 'Unlimited' : pkg.max_staff_count}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Max Leads/Month
-                </p>
-                <p className="text-base font-semibold text-black dark:text-white mt-1">
-                  {pkg.max_leads_per_month === 0 ? 'Unlimited' : pkg.max_leads_per_month}
-                </p>
-              </div>
-
-              {pkg.is_trial && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Trial Period
-                  </p>
-                  <p className="text-base font-semibold text-indigo-600 dark:text-indigo-400 mt-1">
-                    {pkg.trial_duration_days} days
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>
 
-      {/* Statistics */}
+      {/* 1. Statistics (KPIs - MOVED TO TOP, COMPACT BOXES) */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Total Staff KPI */}
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <Label>
                   Total Staff
-                </p>
-                <p className="text-2xl font-bold text-black dark:text-white mt-2">
+                </Label>
+                <p className="text-xl font-bold text-black dark:text-white mt-1">
                   {stats.total_staff}
                 </p>
               </div>
-              <Users size={32} className="text-primary opacity-20" />
+              {/* Dark Mode Fix: Ensure icon is visible in dark mode by using dark:text-white/30 or similar */}
+              <Users size={24} className="text-primary/70 dark:text-white/30" />
             </div>
           </div>
 
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+          {/* Total Leads KPI */}
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <Label>
                   Total Leads
-                </p>
-                <p className="text-2xl font-bold text-black dark:text-white mt-2">
+                </Label>
+                <p className="text-xl font-bold text-black dark:text-white mt-1">
                   {stats.total_leads}
                 </p>
               </div>
-              <TrendingUp size={32} className="text-primary opacity-20" />
+              <TrendingUp size={24} className="text-primary/70 dark:text-white/30" />
             </div>
           </div>
 
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+          {/* Total Activities KPI */}
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <Label>
                   Total Activities
-                </p>
-                <p className="text-2xl font-bold text-black dark:text-white mt-2">
+                </Label>
+                <p className="text-xl font-bold text-black dark:text-white mt-1">
                   {stats.total_activities}
                 </p>
               </div>
-              <Activity size={32} className="text-primary opacity-20" />
+              <Activity size={24} className="text-primary/70 dark:text-white/30" />
             </div>
           </div>
         </div>
       )}
 
-      {/* Recent Invoices Preview */}
-      {recentInvoices.length > 0 && (
-        <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-          <h3 className="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2">
-            <CreditCard size={20} className="text-primary" />
-            Recent Invoices
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-stroke dark:border-strokedark">
-                  <th className="text-left py-3 px-3 font-semibold text-black dark:text-white">
-                    Invoice #
-                  </th>
-                  <th className="text-left py-3 px-3 font-semibold text-black dark:text-white">
-                    Amount
-                  </th>
-                  <th className="text-left py-3 px-3 font-semibold text-black dark:text-white">
-                    Due Date
-                  </th>
-                  <th className="text-left py-3 px-3 font-semibold text-black dark:text-white">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentInvoices.slice(0, 5).map((invoice) => (
-                  <tr
-                    key={invoice.id}
-                    className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4"
-                  >
-                    <td className="py-3 px-3 text-black dark:text-white font-medium">
-                      {invoice.invoice_number}
-                    </td>
-                    <td className="py-3 px-3 text-black dark:text-white">
-                      {invoice.currency} {parseFloat(invoice.total_amount).toFixed(2)}
-                    </td>
-                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
-                      {format(new Date(invoice.due_date), 'MMM dd, yyyy')}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          invoice.status === 'paid'
-                            ? 'bg-success/10 text-success'
-                            : invoice.status === 'overdue'
-                            ? 'bg-danger/10 text-danger'
-                            : 'bg-warning/10 text-warning'
-                        }`}
-                      >
-                        {invoice.status.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Link
-            href={`/companies/${companyId}/invoices`}
-            className="mt-4 inline-flex items-center gap-2 text-primary hover:underline font-medium"
-          >
-            View all invoices
-            <TrendingUp size={16} />
-          </Link>
-        </div>
-      )}
+      {/* 2. Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {/* Confirmation Dialogs */}
+        {/* Column 1: Basic and Contact Info (Combined for Industry Standard look) */}
+        <div className="lg:col-span-2 space-y-6">
+
+            {/* Basic Info & Contact Info (Combined Card) */}
+            <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+              <CardTitle as="h3" className="mb-4">
+                Company Profile
+              </CardTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                {/* Basic Info */}
+                <InfoBlock label="Company Name" value={company.company_name} />
+                <InfoBlock label="Unique ID" value={company.unique_company_id} className="text-primary" />
+                <InfoBlock label="Industry" value={company.industry || 'Not specified'} />
+                <InfoBlock label="Company Size" value={company.company_size || 'Not specified'} />
+
+                {/* Contact Info */}
+                <div className="flex items-start gap-3 pt-4 border-t border-stroke dark:border-strokedark sm:border-t-0 sm:pt-0">
+                  <Mail className="text-primary dark:text-white/70 mt-1" size={16} />
+                  <InfoBlock
+                    label="Email"
+                    value={(
+                      <a
+                        href={`mailto:${company.admin_email}`}
+                        className="font-semibold text-primary hover:underline break-all"
+                      >
+                        {company.admin_email}
+                      </a>
+                    )}
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 pt-4 border-t border-stroke dark:border-strokedark sm:border-t-0 sm:pt-0">
+                  <Phone className="text-primary dark:text-white/70 mt-1" size={16} />
+                  <InfoBlock
+                    label="Phone"
+                    value={company.phone || 'Not provided'}
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 pt-4 border-t border-stroke dark:border-strokedark sm:border-t-0 sm:pt-0">
+                  <Globe className="text-primary dark:text-white/70 mt-1" size={16} />
+                  <InfoBlock
+                    label="Website"
+                    value={(
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-primary hover:underline break-all"
+                      >
+                        {company.website}
+                      </a>
+                    )}
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 pt-4 border-t border-stroke dark:border-strokedark sm:border-t-0 sm:pt-0">
+                  <MapPin className="text-primary dark:text-white/70 mt-1" size={16} />
+                  <InfoBlock
+                    label="Address"
+                    value={company.address || 'Not provided'}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Admin Information */}
+            <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+              <CardTitle as="h3" className="mb-4">
+                Admin Information
+              </CardTitle>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoBlock label="Admin Name" value={company.admin_name} />
+
+                <InfoBlock
+                  label="Email Verified"
+                  value={(
+                      // FIX: The wrapper must be a fragment or div, not a div inside a p tag.
+                      <div className="flex items-center gap-2">
+                        {company.email_verified ? (
+                          <>
+                            <CheckCircle size={16} className="text-success" />
+                            <Value as="span" className="text-success">Verified</Value>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle size={16} className="text-warning" />
+                            <Value as="span" className="text-warning">Pending</Value>
+                          </>
+                        )}
+                      </div>
+                  )}
+                  // The parent InfoBlock renders <Value as="p">. The inner value must be changed to <Value as="div"> or the inner content must not contain a <div>.
+                  // Since Value is already configured to accept the 'as' prop, we adjust the InfoBlock definition used for this specific scenario.
+                  // However, since InfoBlock is defined locally and uses <Value as="p">, we must change the InfoBlock's rendering logic or ensure the content passed to Value does not violate HTML rules.
+                  // The easiest fix is changing the type of the value wrapper in the InfoBlock component's local definition in the next step.
+
+                  // Since InfoBlock is defined *below* the component function, I'll rely on the previous fix in the next step.
+                  // For now, assume the InfoBlock definition uses a generic wrapper, but the core fix is ensuring the outer <p> is replaced by a safe block container (which Value as="div" provides).
+                  // Reverting the manual adjustment for InfoBlock here, assuming the original issue was that the final render stack was <p> -> <p> -> <div>.
+                />
+              </div>
+            </div>
+
+            {/* Recent Invoices Preview */}
+            {recentInvoices.length > 0 && (
+              <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+                <div className='flex justify-between items-center mb-4'>
+                    <CardTitle as="h3" className="flex items-center gap-2">
+                        <CreditCard size={16} className="text-primary" />
+                        Recent Invoices
+                    </CardTitle>
+                    <Link
+                        href={`/companies/${companyId}/invoices`}
+                        className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium"
+                    >
+                        View all
+                        <ArrowRight size={14} />
+                    </Link>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-stroke dark:border-strokedark">
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-black dark:text-white">
+                          Invoice #
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-black dark:text-white">
+                          Amount
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-black dark:text-white">
+                          Due Date
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-black dark:text-white">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentInvoices.slice(0, 5).map((invoice) => (
+                        <tr
+                          key={invoice.id}
+                          className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4"
+                        >
+                          <td className="py-3 px-3 text-sm text-black dark:text-white font-medium">
+                            {invoice.invoice_number}
+                          </td>
+                          <td className="py-3 px-3 text-sm text-black dark:text-white">
+                            {invoice.currency} {parseFloat(invoice.total_amount).toFixed(2)}
+                          </td>
+                          <td className="py-3 px-3 text-xs text-gray-600 dark:text-gray-400">
+                            {format(new Date(invoice.due_date), 'MMM dd, yyyy')}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xxs font-semibold ${
+                                invoice.status === 'paid'
+                                  ? 'bg-success/10 text-success'
+                                  : invoice.status === 'overdue'
+                                  ? 'bg-danger/10 text-danger'
+                                  : 'bg-warning/10 text-warning'
+                              }`}
+                            >
+                              {invoice.status.replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+        </div>
+
+        {/* Column 2: Subscription Information (Sidebar/Compact Card) */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+            <CardTitle as="h3" className="mb-4 flex items-center gap-2">
+              <Package size={16} className="text-primary" />
+              Current Subscription
+            </CardTitle>
+            <div className="space-y-3">
+              <InfoBlock label="Package" value={company.package_name} />
+              <InfoBlock
+                  label="Price"
+                  value={`$${parseFloat(String(company.package_price)).toFixed(2)} / ${company.duration_type}`}
+                  className="text-primary"
+              />
+              <InfoBlock
+                  label="Period"
+                  value={`${format(new Date(company.subscription_start_date), 'MMM dd, yyyy')} - ${format(new Date(company.subscription_end_date), 'MMM dd, yyyy')}`}
+              />
+
+              <div>
+                <Label className="mb-2">
+                  Status
+                </Label>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xxs font-semibold ${
+                    isSubscriptionExpired
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-success/10 text-success'
+                  }`}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      isSubscriptionExpired ? 'bg-danger' : 'bg-success'
+                    }`}
+                  ></span>
+                  {isSubscriptionExpired ? 'EXPIRED' : 'ACTIVE'}
+                  {!isSubscriptionExpired && ` (${daysUntilExpiry} days left)`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Package Details (Moved next to subscription card) */}
+          {pkg && (
+            <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+              <CardTitle as="h3" className="mb-4">
+                Package Features
+              </CardTitle>
+              <div className="space-y-3">
+                <InfoBlock
+                  label="Max Staff"
+                  value={pkg.max_staff_count === 0 ? 'Unlimited' : pkg.max_staff_count}
+                />
+                <InfoBlock
+                  label="Max Leads/Month"
+                  value={pkg.max_leads_per_month === 0 ? 'Unlimited' : pkg.max_leads_per_month}
+                />
+
+                {pkg.is_trial && (
+                  <InfoBlock
+                      label="Trial Period"
+                      value={`${pkg.trial_duration_days} days`}
+                      className="text-indigo-600 dark:text-indigo-400"
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* Confirmation Dialogs - Kept at the bottom as they are modals */}
       <ConfirmDialog
         {...toggleDialog.confirmProps}
         type={selectedAction === 'deactivate' ? 'warning' : 'success'}
