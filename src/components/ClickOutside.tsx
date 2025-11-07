@@ -3,9 +3,12 @@ import React, { useRef, useEffect } from 'react';
 interface ClickOutsideProps {
   onOutsideClick: () => void;
   children: React.ReactNode;
+  // ADD: optional className prop for styling the wrapper div
+  className?: string;
 }
 
-const ClickOutside: React.FC<ClickOutsideProps> = ({ children, onOutsideClick }) => {
+// UPDATE: Destructure and accept className
+const ClickOutside: React.FC<ClickOutsideProps> = ({ children, onOutsideClick, className }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +26,8 @@ const ClickOutside: React.FC<ClickOutsideProps> = ({ children, onOutsideClick })
     };
   }, [onOutsideClick]);
 
-  return <div ref={wrapperRef}>{children}</div>;
+  // UPDATE: Apply the className prop to the wrapper div
+  return <div ref={wrapperRef} className={className}>{children}</div>;
 };
 
 export default ClickOutside;
