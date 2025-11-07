@@ -2,16 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
-import { Settings as SettingsIcon, User, Lock, Users, Eye, EyeOff, X, CheckCircle, XCircle, Trash2, Shield, MinusCircle, ChevronDown } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, Users, Eye, EyeOff, X, CheckCircle, XCircle, Trash2, Shield, MinusCircle, ChevronDown, DollarSign } from 'lucide-react';
 import { authService } from '@/services/auth.service';
+import { billingService } from '@/services/billing.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { CreateAdminData, UpdateProfileData, ChangePasswordData, SuperAdmin, SuperAdminPermissions, SuperAdminRole } from '@/types/auth';
+import { BillingSettings, UpdateBillingSettingsPayload } from '@/types/billing';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import Loader from '@/components/common/Loader';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import ClickOutside from '@/components/ClickOutside';
+import ActionCard from '@/components/common/ActionCard';
+// IMPORTED BILLING COMPONENT
+import BillingSettingsModal from '@/components/forms/BillingSettingsModal';
 
 
 const RESOURCE_MAP: { [key: string]: string } = {
@@ -97,7 +103,6 @@ const AdminManagementTable = ({
     });
 
     const handleDelete = (admin: SuperAdmin) => {
-        // Role ID 1 is the Super Admin (Primary Admin) role
         if (admin.super_admin_role_id === 1) {
             toast.error('Cannot delete a primary Super Admin account. You can only deactivate it.');
             return;
@@ -162,69 +167,69 @@ const AdminManagementTable = ({
     };
 
     if (admins.length === 0) {
-        return <p className="py-8 text-center text-gray-500">No administrators found.</p>;
+        return <p className="py-6 text-center text-gray-500 text-sm">No administrators found.</p>;
     }
 
     return (
         <div className="overflow-x-auto">
-            <table className="w-full table-auto">
+            <table className="w-full table-auto text-sm">
                 <thead>
                     <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                        <th className="py-4 px-4 font-medium text-black dark:text-white">Name</th>
-                        <th className="py-4 px-4 font-medium text-black dark:text-white">Email</th>
-                        <th className="py-4 px-4 font-medium text-black dark:text-white">Role</th>
-                        <th className="py-4 px-4 font-medium text-black dark:text-white">Status</th>
-                        <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
+                        <th className="py-2 px-3 font-semibold text-black dark:text-white text-xs sm:text-sm">Name</th>
+                        <th className="py-2 px-3 font-semibold text-black dark:text-white text-xs sm:text-sm">Email</th>
+                        <th className="py-2 px-3 font-semibold text-black dark:text-white text-xs sm:text-sm">Role</th>
+                        <th className="py-2 px-3 font-semibold text-black dark:text-white text-xs sm:text-sm">Status</th>
+                        <th className="py-2 px-3 font-semibold text-black dark:text-white text-xs sm:text-sm">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {admins.map((admin) => (
-                        <tr key={admin.id} className="border-b border-stroke dark:border-strokedark">
-                            <td className="py-4 px-4 text-black dark:text-white font-medium">
-                                {admin.name} {admin.id === profile.id && <span className="text-xs text-primary">(You)</span>}
+                        <tr key={admin.id} className="border-b border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4/50 transition-colors">
+                            <td className="py-2 px-3 text-black dark:text-white text-sm font-medium">
+                                {admin.name} {admin.id === profile.id && <span className="text-xs text-primary font-normal">(You)</span>}
                             </td>
-                            <td className="py-4 px-4 text-black dark:text-white">{admin.email}</td>
-                            <td className="py-4 px-4 text-black dark:text-white">
+                            <td className="py-2 px-3 text-black dark:text-white text-sm">{admin.email}</td>
+                            <td className="py-2 px-3 text-black dark:text-white">
                                 <button
                                      onClick={() => handleViewPermissions(admin)}
-                                     className="hover:text-primary text-left text-sm"
+                                     className="hover:text-primary text-left text-xs"
                                      title="View Role Permissions"
                                 >
-                                    <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
+                                    <span className={`inline-flex items-center gap-1 rounded-full py-0.5 px-2 text-xs font-medium ${
                                         admin.super_admin_role_id === 1 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
                                     }`}>
-                                        <Shield size={12} />
+                                        <Shield size={10} />
                                         {admin.role_name || 'N/A'}
                                     </span>
                                 </button>
                             </td>
-                            <td className="py-4 px-4">
-                                <span className={`inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 text-xs font-medium ${
+                            <td className="py-2 px-3">
+                                <span className={`inline-flex items-center gap-1 rounded-full py-0.5 px-2 text-xs font-medium ${
                                     admin.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
                                 }`}>
                                     <span className={`h-1.5 w-1.5 rounded-full ${admin.status === 'active' ? 'bg-success' : 'bg-danger'}`}></span>
                                     {admin.status}
                                 </span>
                             </td>
-                            <td className="py-4 px-4 flex items-center space-x-2">
+                            <td className="py-2 px-3 flex items-center space-x-1">
                                 {isAdminUpdatable(admin) && (
                                     <button
                                         onClick={() => handleToggleStatus(admin)}
-                                        className={`${admin.status === 'active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'} disabled:opacity-50`}
+                                        className={`${admin.status === 'active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'} disabled:opacity-50 p-1 transition-colors`}
                                         title={`Toggle to ${admin.status === 'active' ? 'Inactive' : 'Active'}`}
                                         disabled={toggleStatusMutation.isPending}
                                     >
-                                        {admin.status === 'active' ? <XCircle size={20} /> : <CheckCircle size={20} />}
+                                        {admin.status === 'active' ? <XCircle size={18} /> : <CheckCircle size={18} />}
                                     </button>
                                 )}
                                 {hasPermission(permissions, 'super_admins', 'delete') && (
                                     <button
                                         onClick={() => handleDelete(admin)}
-                                        className={`text-danger hover:text-danger/80 ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        className={`text-danger hover:text-danger/80 ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''} p-1 transition-colors`}
                                         title={getDeleteTitle(admin)}
                                         disabled={deleteMutation.isPending || toggleStatusMutation.isPending || !isAdminDeletable(admin)}
                                     >
-                                        <Trash2 size={20} />
+                                        <Trash2 size={18} />
                                     </button>
                                 )}
                             </td>
@@ -260,46 +265,48 @@ const AdminManagementTable = ({
 
 const PermissionsModal = ({ role, onClose }: { role: SuperAdminRole, onClose: () => void }) => {
     return (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
-                    <h3 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-                        <Shield size={20} />
-                        Permissions for: {role.role_name}
-                    </h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                        <X size={24} />
-                    </button>
-                </div>
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+            <ClickOutside onOutsideClick={onClose}>
+                <div className="w-full max-w-lg rounded-lg bg-white p-5 dark:bg-boxdark max-h-[90vh] overflow-y-auto transform transition-all duration-300 shadow-2xl">
+                    <div className="flex items-center justify-between mb-3 border-b pb-3 dark:border-strokedark">
+                        <h3 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
+                            <Shield size={18} />
+                            Permissions for: {role.role_name}
+                        </h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={20} />
+                        </button>
+                    </div>
 
-                <div className="space-y-4">
-                    {Object.entries(role.permissions).sort().map(([resource, actions]) => (
-                        <div key={resource} className="p-3 rounded-lg bg-gray-2 dark:bg-meta-4 border border-stroke dark:border-strokedark">
-                            <h4 className="font-bold text-black dark:text-white mb-1">
-                                {RESOURCE_MAP[resource] || resource.toUpperCase()}
-                            </h4>
-                            <div className="flex flex-wrap gap-2 text-sm">
-                                {actions.map((action: string) => (
-                                    <span key={action} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                                        {ACTION_MAP[action] || action.toUpperCase()}
-                                    </span>
-                                ))}
+                    <div className="space-y-3">
+                        {Object.entries(role.permissions).sort().map(([resource, actions]) => (
+                            <div key={resource} className="p-3 rounded-md bg-gray-2 dark:bg-meta-4 border border-stroke dark:border-strokedark">
+                                <h4 className="font-semibold text-black dark:text-white mb-1 text-sm">
+                                    {RESOURCE_MAP[resource] || resource.toUpperCase()}
+                                </h4>
+                                <div className="flex flex-wrap gap-2 text-xs">
+                                    {actions.map((action: string) => (
+                                        <span key={action} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                            {ACTION_MAP[action] || action.toUpperCase()}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    <div className="mt-4 text-right">
+                        <button onClick={onClose} className="rounded bg-primary py-2 px-4 text-white hover:bg-primary/90 text-sm transition-colors">
+                            Close
+                        </button>
+                    </div>
                 </div>
-                <div className="mt-6 text-right">
-                    <button onClick={onClose} className="rounded bg-primary py-2 px-4 text-white hover:bg-primary/90">
-                        Close
-                    </button>
-                </div>
-            </div>
+            </ClickOutside>
         </div>
     );
 };
 
 
-const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminRole[], permissions: SuperAdminPermissions, onClose: () => void }) => {
+const RoleCreationModal = ({ roles, permissions, rolesLoading, onClose }: { roles: SuperAdminRole[], permissions: SuperAdminPermissions, rolesLoading: boolean, onClose: () => void }) => {
     const queryClient = useQueryClient();
 
     const nonSuperAdminRole = roles.find(r => r.role_name !== 'Super Admin');
@@ -343,17 +350,17 @@ const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminR
 
     if (!isCreationAllowed) {
         return (
-             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-                <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-semibold text-black dark:text-white">Access Denied</h3>
-                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                            <X size={24} />
+             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+                <div className="w-full max-w-sm rounded-lg bg-white p-5 dark:bg-boxdark shadow-2xl">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-black dark:text-white">Access Denied</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={20} />
                         </button>
                     </div>
-                    <div className="text-center py-6 text-danger">
-                        <MinusCircle size={40} className="mx-auto mb-3" />
-                        <p className="text-lg">You do not have permission to create new administrators.</p>
+                    <div className="text-center py-4 text-danger">
+                        <MinusCircle size={32} className="mx-auto mb-2" />
+                        <p className="text-base">You do not have permission to create new administrators.</p>
                     </div>
                 </div>
             </div>
@@ -361,82 +368,98 @@ const RoleCreationModal = ({ roles, permissions, onClose }: { roles: SuperAdminR
     }
 
     return (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-                <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
-                    <h3 className="text-xl font-semibold text-black dark:text-white">Create New Administrator</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                        <X size={24} />
-                    </button>
-                </div>
-                <form onSubmit={handleCreateAdmin}>
-                    <div className="mb-4">
-                        <label className="mb-2.5 block text-black dark:text-white">Name</label>
-                        <input
-                            type="text"
-                            value={createAdminData.name}
-                            onChange={(e) => setCreateAdminData({ ...createAdminData, name: e.target.value })}
-                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            required
-                        />
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+            <ClickOutside onOutsideClick={onClose}>
+                <div className="w-full max-w-md rounded-lg bg-white p-5 dark:bg-boxdark max-h-[90vh] overflow-y-auto transform transition-all duration-300 shadow-2xl">
+                    <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                        <h3 className="text-lg font-semibold text-black dark:text-white">Create New Administrator</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={20} />
+                        </button>
                     </div>
-                    <div className="mb-4">
-                        <label className="mb-2.5 block text-black dark:text-white">Email</label>
-                        <input
-                            type="email"
-                            value={createAdminData.email}
-                            onChange={(e) => setCreateAdminData({ ...createAdminData, email: e.target.value })}
-                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            required
-                        />
-                    </div>
-                    <div className="mb-4">
-                        <label className="mb-2.5 block text-black dark:text-white">Assign Role</label>
-                        <div className="relative">
-                            <select
-                                value={createAdminData.role_id}
-                                onChange={(e) => setCreateAdminData({ ...createAdminData, role_id: parseInt(e.target.value) })}
-                                className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                                required
-                            >
-                                {roles.length === 0 && <option value={0} disabled>Loading Roles...</option>}
-                                {roles.map(role => (
-                                    <option key={role.id} value={role.id}>
-                                        {role.role_name}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute top-1/2 right-4 z-10 -translate-y-1/2" size={20} />
-                        </div>
-                    </div>
-                    <div className="mb-6">
-                        <label className="mb-2.5 block text-black dark:text-white">Password</label>
-                        <div className="relative">
+                    <form onSubmit={handleCreateAdmin}>
+                        <div className="mb-3">
+                            <label className="mb-1.5 block text-black dark:text-white text-sm">Name</label>
                             <input
-                                type={showPassword ? 'text' : 'password'}
-                                value={createAdminData.password}
-                                onChange={(e) => setCreateAdminData({ ...createAdminData, password: e.target.value })}
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                type="text"
+                                value={createAdminData.name}
+                                onChange={(e) => setCreateAdminData({ ...createAdminData, name: e.target.value })}
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-sm"
                                 required
                             />
+                        </div>
+                        <div className="mb-3">
+                            <label className="mb-1.5 block text-black dark:text-white text-sm">Email</label>
+                            <input
+                                type="email"
+                                value={createAdminData.email}
+                                onChange={(e) => setCreateAdminData({ ...createAdminData, email: e.target.value })}
+                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-sm"
+                                required
+                            />
+                        </div>
+                        {rolesLoading ? (
+                            <div className="flex justify-center py-4"><Loader /></div>
+                        ) : (
+                            <div className="mb-3">
+                                <label className="mb-1.5 block text-black dark:text-white text-sm">Assign Role</label>
+                                <div className="relative">
+                                    <select
+                                        value={createAdminData.role_id}
+                                        onChange={(e) => setCreateAdminData({ ...createAdminData, role_id: parseInt(e.target.value) })}
+                                        className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-2.5 px-4 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-sm"
+                                        required
+                                    >
+                                        {roles.length === 0 && <option value={0} disabled>No Roles Found</option>}
+                                        {roles.map(role => (
+                                            <option key={role.id} value={role.id}>
+                                                {role.role_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute top-1/2 right-4 z-10 -translate-y-1/2 text-gray-500" size={16} />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mb-4">
+                            <label className="mb-1.5 block text-black dark:text-white text-sm">Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={createAdminData.password}
+                                    onChange={(e) => setCreateAdminData({ ...createAdminData, password: e.target.value })}
+                                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-sm"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white p-1"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-4">
                             <button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-4 text-gray-500 hover:text-black dark:hover:text-white"
+                                onClick={onClose}
+                                className="rounded bg-gray-300 dark:bg-gray-600 py-2.5 px-4 text-black dark:text-white hover:bg-gray-400 dark:hover:bg-gray-700 text-sm transition-colors"
                             >
-                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={createAdminMutation.isPending}
+                                className="rounded bg-success py-2.5 px-4 text-white hover:bg-success/90 disabled:opacity-50 text-sm transition-colors"
+                            >
+                                {createAdminMutation.isPending ? 'Creating...' : 'Create Admin'}
                             </button>
                         </div>
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={createAdminMutation.isPending}
-                        className="w-full rounded bg-success py-3 px-6 text-white hover:bg-success/90 disabled:opacity-50"
-                    >
-                        {createAdminMutation.isPending ? 'Creating...' : 'Create Admin'}
-                    </button>
-                </form>
-            </div>
+                    </form>
+                </div>
+            </ClickOutside>
         </div>
     );
 };
@@ -447,17 +470,17 @@ const AllAdminsModal = ({ admins, profile, roles, permissions, onClose }: { admi
 
     if (!isViewListAllowed) {
         return (
-             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-                <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-semibold text-black dark:text-white">Access Denied</h3>
-                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                            <X size={24} />
+             <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+                <div className="w-full max-w-sm rounded-lg bg-white p-5 dark:bg-boxdark shadow-2xl">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-black dark:text-white">Access Denied</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={20} />
                         </button>
                     </div>
-                    <div className="text-center py-6 text-danger">
-                        <MinusCircle size={40} className="mx-auto mb-3" />
-                        <p className="text-lg">You do not have permission to view the list of administrators.</p>
+                    <div className="text-center py-4 text-danger">
+                        <MinusCircle size={32} className="mx-auto mb-2" />
+                        <p className="text-base">You do not have permission to view the list of administrators.</p>
                     </div>
                 </div>
             </div>
@@ -465,16 +488,21 @@ const AllAdminsModal = ({ admins, profile, roles, permissions, onClose }: { admi
     }
 
     return (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-4xl rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
-                    <h3 className="text-xl font-semibold text-black dark:text-white">All Administrators</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                        <X size={24} />
-                    </button>
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+            <ClickOutside onOutsideClick={onClose}>
+                <div className="w-full max-w-5xl rounded-lg bg-white p-5 dark:bg-boxdark max-h-[90vh] overflow-y-auto transform transition-all duration-300 shadow-2xl">
+                    <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                        <h3 className="text-lg font-semibold text-black dark:text-white">All Administrators</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    {/* Admins loading is checked in the parent component, but adding a fallback just in case */}
+                    {admins.length === 0 ? <div className="flex justify-center py-6"><Loader /></div> : (
+                        <AdminManagementTable admins={admins} profile={profile} roles={roles} permissions={permissions} />
+                    )}
                 </div>
-                <AdminManagementTable admins={admins} profile={profile} roles={roles} permissions={permissions} />
-            </div>
+            </ClickOutside>
         </div>
     );
 };
@@ -488,6 +516,7 @@ export default function SettingsPage() {
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showCreateAdmin, setShowCreateAdmin] = useState(false);
     const [showAllAdmins, setShowAllAdmins] = useState(false);
+    const [showBillingSettings, setShowBillingSettings] = useState(false);
 
     const [profileData, setProfileData] = useState<UpdateProfileData>({ email: '', name: '' });
     const [passwordData, setPasswordData] = useState<ChangePasswordData & { confirmPassword: string }>({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -502,7 +531,7 @@ export default function SettingsPage() {
 
     const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');
     const isCreateAllowed = hasPermission(permissions, 'super_admins', 'create');
-    const isProfileLoading = !isInitialized;
+    const isProfileLoading = !isInitialized || !isAuthenticated || !profile;
 
     const { data: adminsResponse, isLoading: adminsLoading } = useQuery({
         queryKey: ['allAdmins'],
@@ -510,6 +539,14 @@ export default function SettingsPage() {
         enabled: showAllAdmins && isViewAllowed,
     });
     const admins = adminsResponse?.data?.superAdmins || [];
+
+    const { data: billingResponse, isLoading: billingLoading, isError: billingError } = useQuery<BillingSettings>({
+        queryKey: ['billingSettings'],
+        queryFn: billingService.getBillingSettings,
+        enabled: isInitialized && isAuthenticated,
+        retry: 1,
+    });
+    const billingSettings = billingResponse;
 
 
     useEffect(() => {
@@ -546,6 +583,18 @@ export default function SettingsPage() {
         },
     });
 
+    const updateBillingMutation = useMutation({
+        mutationFn: billingService.updateBillingSettings,
+        onSuccess: () => {
+            toast.success('Billing Settings updated successfully');
+            queryClient.invalidateQueries({ queryKey: ['billingSettings'] });
+            setShowBillingSettings(false);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to update billing settings');
+        },
+    });
+
 
     const handleUpdateProfile = (e: React.FormEvent) => {
         e.preventDefault();
@@ -574,138 +623,157 @@ export default function SettingsPage() {
         changePasswordMutation.mutate({ currentPassword, newPassword });
     };
 
-    if (!isInitialized || !isAuthenticated || !profile) {
+    if (isProfileLoading) {
         return <Loader />;
     }
 
     return (
         <DefaultLayout>
-            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-                <div className="py-6 px-4 md:px-6 xl:px-7.5">
-                    <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-                        <SettingsIcon size={24} />
+            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
+                <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
+                    <h4 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
+                        <SettingsIcon size={24} className="text-primary" />
                         Admin Panel Settings
                     </h4>
                 </div>
 
-                <div className="p-4 md:p-6 xl:p-7.5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                                    <User className="h-6 w-6 text-primary" />
-                                </div>
-                                <h3 className="text-lg font-medium text-black dark:text-white">Profile</h3>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                Update your profile information and contact details.
-                            </p>
-                            <button
-                                onClick={() => setShowEditProfile(true)}
-                                className="w-full rounded bg-primary py-2 px-4 text-white hover:bg-primary/90 transition-colors"
-                            >
-                                Edit Profile
-                            </button>
-                        </div>
-
-                        <div className="rounded-lg border-2 border-stroke p-6 dark:border-strokedark hover:shadow-lg transition-shadow bg-white dark:bg-boxdark">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
-                                    <Lock className="h-6 w-6 text-warning" />
-                                </div>
-                                <h3 className="text-lg font-medium text-black dark:text-white">Security</h3>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                Change your account password for better security.
-                            </p>
-                            <button
-                                onClick={() => setShowChangePassword(true)}
-                                className="w-full rounded bg-warning py-2 px-4 text-white hover:bg-warning/90 transition-colors"
-                            >
-                                Change Password
-                            </button>
-                        </div>
-
-                        <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isCreateAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-                                    <Users className="h-6 w-6 text-success" />
-                                </div>
-                                <h3 className="text-lg font-medium text-black dark:text-white">New Admin</h3>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                Add new administrator (Super-Admin/Sub-Admin).
-                            </p>
-                            <button
-                                onClick={() => setShowCreateAdmin(true)}
-                                disabled={!isCreateAllowed}
-                                className="w-full rounded bg-success py-2 px-4 text-white hover:bg-success/90 transition-colors disabled:opacity-50 disabled:hover:bg-success"
-                            >
-                                Create Admin
-                            </button>
-                        </div>
-
-                        <div className={`rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark ${isViewAllowed ? 'hover:shadow-lg' : 'opacity-50 cursor-not-allowed'}`}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-meta-5/10">
-                                    <Users className="h-6 w-6 text-meta-5" />
-                                </div>
-                                <h3 className="text-lg font-medium text-black dark:text-white">Manage Admins</h3>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                View all system administrators and manage status/roles.
-                            </p>
-                            <button
-                                onClick={() => setShowAllAdmins(true)}
-                                disabled={!isViewAllowed}
-                                className="w-full rounded bg-meta-5 py-2 px-4 text-white hover:bg-meta-5/90 transition-colors disabled:opacity-50 disabled:hover:bg-meta-5"
-                            >
-                                View/Manage
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="mt-8 rounded-lg border-2 border-stroke p-6 dark:border-strokedark bg-white dark:bg-boxdark">
-                        <h3 className="text-lg font-medium text-black dark:text-white mb-4">
-                            Your Account Information
+                <div className="p-4 sm:p-6 space-y-6">
+                    {/* Action Cards Section */}
+                    <section className='border border-stroke dark:border-strokedark rounded-lg p-3 dark:bg-boxdark-2/50'>
+                        <h3 className="text-base font-semibold text-black dark:text-white mb-3">
+                           Admin Actions
                         </h3>
-                        {isProfileLoading ? (
-                            <div className="text-center py-4">Loading...</div>
+                        {rolesLoading ? (
+                             <div className="flex justify-center py-6"><Loader /></div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InfoCard title="Name" value={profile?.name} />
-                                <InfoCard title="Email" value={profile?.email} />
-                                <InfoCard title="Created At" value={profile?.created_at} isDate={true} />
-                                <InfoCard title="Last Updated" value={profile?.updated_at} isDate={true} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <ActionCard
+                                    title="Profile"
+                                    description="Update your personal details."
+                                    icon={<User className="h-6 w-6 text-primary" />}
+                                    color="primary"
+                                    onClick={() => setShowEditProfile(true)}
+                                    buttonText="Edit Profile"
+                                />
+
+                                <ActionCard
+                                    title="Security"
+                                    description="Change your account password."
+                                    icon={<Lock className="h-6 w-6 text-warning" />}
+                                    color="warning"
+                                    onClick={() => setShowChangePassword(true)}
+                                    buttonText="Change Password"
+                                />
+
+                                <ActionCard
+                                    title="New Admin"
+                                    description="Add a new administrator to the system."
+                                    icon={<Users className="h-6 w-6 text-success" />}
+                                    color="success"
+                                    onClick={() => setShowCreateAdmin(true)}
+                                    buttonText="Create Admin"
+                                    disabled={!isCreateAllowed}
+                                />
+
+                                <ActionCard
+                                    title="Manage Admins"
+                                    description="View and manage all system administrators."
+                                    icon={<Users className="h-6 w-6 text-meta-5" />}
+                                    color="meta-5"
+                                    onClick={() => setShowAllAdmins(true)}
+                                    buttonText="View/Manage"
+                                    disabled={!isViewAllowed}
+                                />
                             </div>
                         )}
-                    </div>
+                    </section>
+
+                    {/* Account Information Section */}
+                    <section className="rounded-lg border border-stroke p-4 dark:border-strokedark bg-white dark:bg-boxdark shadow-md">
+                        <h3 className="text-base font-semibold text-black dark:text-white mb-3">
+                            Your Account Information
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <InfoCard title="Name" value={profile?.name} />
+                            <InfoCard title="Email" value={profile?.email} />
+                            <InfoCard title="Created At" value={profile?.created_at} isDate={true} />
+                            <InfoCard title="Last Updated" value={profile?.updated_at} isDate={true} />
+                        </div>
+                    </section>
+
+                    {/* Billing Settings Section */}
+                    <section className="rounded-lg border border-stroke p-4 dark:border-strokedark bg-white dark:bg-boxdark shadow-md">
+                        <h3 className="text-base font-semibold text-black dark:text-white flex items-center gap-2 mb-3">
+                            <DollarSign size={18} className='text-success' />
+                            Billing & Invoice Settings (Company)
+                        </h3>
+                        {billingLoading ? (
+                            <div className="flex justify-center py-6"><Loader /></div>
+                        ) : billingError || !billingSettings ? (
+                            <div className="text-center py-3 text-danger text-sm">
+                                Failed to load billing settings.
+                            </div>
+                        ) : (
+                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                 <InfoCard title="Company Name" value={billingSettings.company_name} />
+                                 <InfoCard title="Company Email" value={billingSettings.email} />
+                                 <InfoCard title="Company Phone" value={billingSettings.phone} />
+                                 <InfoCard title="Currency" value={billingSettings.currency} />
+
+                                 <InfoCard title="Tax Rate" value={`${(billingSettings.tax_rate * 100).toFixed(2)} %`} />
+                                 <InfoCard title="Bank Name" value={billingSettings.bank_details?.bank_name || 'N/A'} />
+                                 <InfoCard title="QR Code" value={billingSettings.qr_code_image_url ? 'Available' : 'N/A'} />
+                                 <InfoCard title="Last Updated" value={billingSettings.updated_at} isDate={true} />
+
+                                 <InfoCard title="Address" value={billingSettings.address} fullWidth={true} />
+
+                                 <div className="lg:col-span-3 xl:col-span-4 pt-3 border-t border-stroke dark:border-strokedark flex justify-end">
+                                     <button
+                                        onClick={() => setShowBillingSettings(true)}
+                                        className="rounded bg-success py-2 px-4 text-white hover:bg-success/90 transition-colors text-sm"
+                                     >
+                                         Edit Billing Settings
+                                     </button>
+                                 </div>
+                             </div>
+                        )}
+                    </section>
                 </div>
             </div>
 
             {showEditProfile && <EditProfileModal profileData={profileData} setProfileData={setProfileData} mutation={updateProfileMutation} onClose={() => setShowEditProfile(false)} />}
             {showChangePassword && <ChangePasswordModal passwordData={passwordData} setPasswordData={setPasswordData} mutation={changePasswordMutation} showPasswords={showPasswords} setShowPasswords={setShowPasswords} onClose={() => setShowChangePassword(false)} />}
-            {showCreateAdmin && <RoleCreationModal roles={roles} permissions={permissions} onClose={() => setShowCreateAdmin(false)} />}
+            {showCreateAdmin && <RoleCreationModal roles={roles} permissions={permissions} rolesLoading={rolesLoading} onClose={() => setShowCreateAdmin(false)} />}
+
+            {/* Conditional Loader for AllAdminsModal */}
             {showAllAdmins && isViewAllowed && adminsLoading && (
                  <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-                    <div className="text-white text-lg">Loading Admin Data...</div>
+                    <Loader />
                 </div>
             )}
+
             {showAllAdmins && isViewAllowed && !adminsLoading && (
              <AllAdminsModal admins={admins} profile={profile!} roles={roles} permissions={permissions} onClose={() => setShowAllAdmins(false)} />
+            )}
+
+            {showBillingSettings && billingSettings && (
+                 <BillingSettingsModal settings={billingSettings} mutation={updateBillingMutation} onClose={() => setShowBillingSettings(false)} />
             )}
         </DefaultLayout>
     );
 }
 
+// InfoCard definition remains locally defined
 const InfoCard = ({
     title,
     value,
     isDate = false,
+    fullWidth = false,
 }: {
     title: string;
     value?: string | boolean;
     isDate?: boolean;
+    fullWidth?: boolean;
 }) => {
     let displayValue: string = value?.toString() || 'N/A';
     if (isDate && value && typeof value === 'string') {
@@ -713,9 +781,9 @@ const InfoCard = ({
     }
 
     return (
-        <div className="p-4 rounded bg-gray-2 dark:bg-meta-4">
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block">{title}</label>
-            <p className="text-base mt-1 font-medium text-black dark:text-white">
+        <div className={`p-3 rounded bg-gray-2 dark:bg-meta-4/50 border border-stroke dark:border-strokedark/50 ${fullWidth ? 'col-span-full' : ''}`}>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block truncate">{title}</label>
+            <p className="text-sm mt-0.5 font-semibold text-black dark:text-white break-words">
                 {displayValue}
             </p>
         </div>
@@ -723,6 +791,7 @@ const InfoCard = ({
 };
 
 
+// MODAL 1: Edit Profile (Updated max-w to lg)
 const EditProfileModal = ({
     profileData,
     setProfileData,
@@ -740,46 +809,63 @@ const EditProfileModal = ({
     };
 
     return (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-black dark:text-white">Edit Profile</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                        <X size={24} />
-                    </button>
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+            <ClickOutside onOutsideClick={onClose}>
+                {/* Increased size: max-w-lg */}
+                <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto transform transition-all duration-300 shadow-2xl">
+                    <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                        <h3 className="text-xl font-semibold text-black dark:text-white">Edit Profile</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    {mutation.isPending ? (
+                        <div className="flex justify-center py-12"><Loader /></div>
+                    ) : (
+                        <form onSubmit={handleUpdateProfile}>
+                            <div className="mb-4">
+                                <label className="mb-1.5 block text-black dark:text-white text-base font-medium">Name</label>
+                                <input
+                                    type="text"
+                                    value={profileData.name}
+                                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
+                                />
+                            </div>
+                            <div className="mb-6">
+                                <label className="mb-1.5 block text-black dark:text-white text-base font-medium">Email</label>
+                                <input
+                                    type="email"
+                                    value={profileData.email}
+                                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-3 border-t dark:border-strokedark">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="rounded-lg bg-gray-300 dark:bg-gray-600 py-2.5 px-6 text-black dark:text-white hover:bg-gray-400 dark:hover:bg-gray-700 text-sm transition-colors font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={mutation.isPending}
+                                    className="rounded-lg bg-primary py-2.5 px-6 text-white hover:bg-primary/90 disabled:opacity-50 text-sm transition-colors font-medium"
+                                >
+                                    {mutation.isPending ? 'Updating...' : 'Update Profile'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </div>
-                <form onSubmit={handleUpdateProfile}>
-                    <div className="mb-4">
-                        <label className="mb-2.5 block text-black dark:text-white">Name</label>
-                        <input
-                            type="text"
-                            value={profileData.name}
-                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                        />
-                    </div>
-                    <div className="mb-6">
-                        <label className="mb-2.5 block text-black dark:text-white">Email</label>
-                        <input
-                            type="email"
-                            value={profileData.email}
-                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={mutation.isPending}
-                        className="w-full rounded bg-primary py-3 px-6 text-white hover:bg-primary/90 disabled:opacity-50"
-                    >
-                        {mutation.isPending ? 'Updating...' : 'Update Profile'}
-                    </button>
-                </form>
-            </div>
+            </ClickOutside>
         </div>
     );
 };
 
+// MODAL 2: Change Password (Updated max-w to lg)
 const ChangePasswordModal = ({
     passwordData,
     setPasswordData,
@@ -814,78 +900,94 @@ const ChangePasswordModal = ({
     };
 
     return (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-black dark:text-white">Change Password</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
-                        <X size={24} />
-                    </button>
+        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4 sm:p-6">
+            <ClickOutside onOutsideClick={onClose}>
+                {/* Increased size: max-w-lg */}
+                <div className="w-full max-w-lg rounded-lg bg-white p-6 dark:bg-boxdark max-h-[90vh] overflow-y-auto transform transition-all duration-300 shadow-2xl">
+                    <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
+                        <h3 className="text-xl font-semibold text-black dark:text-white">Change Password</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    {mutation.isPending ? (
+                        <div className="flex justify-center py-12"><Loader /></div>
+                    ) : (
+                        <form onSubmit={handleChangePassword}>
+                            <div className="mb-4">
+                                <label className="mb-1.5 block text-black dark:text-white text-base font-medium">Current Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPasswords.current ? 'text' : 'password'}
+                                        value={passwordData.currentPassword}
+                                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white p-1"
+                                    >
+                                        {showPasswords.current ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="mb-4">
+                                <label className="mb-1.5 block text-black dark:text-white text-base font-medium">New Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPasswords.new ? 'text' : 'password'}
+                                        value={passwordData.newPassword}
+                                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white p-1"
+                                    >
+                                        {showPasswords.new ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="mb-6">
+                                <label className="mb-1.5 block text-black dark:text-white text-base font-medium">Confirm New Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPasswords.confirm ? 'text' : 'password'}
+                                        value={passwordData.confirmPassword}
+                                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white p-1"
+                                    >
+                                        {showPasswords.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-3 border-t dark:border-strokedark">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="rounded-lg bg-gray-300 dark:bg-gray-600 py-2.5 px-6 text-black dark:text-white hover:bg-gray-400 dark:hover:bg-gray-700 text-sm transition-colors font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={mutation.isPending}
+                                    className="rounded-lg bg-warning py-2.5 px-6 text-white hover:bg-warning/90 disabled:opacity-50 text-sm transition-colors font-medium"
+                                >
+                                    {mutation.isPending ? 'Changing...' : 'Change Password'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </div>
-                <form onSubmit={handleChangePassword}>
-                    <div className="mb-4">
-                        <label className="mb-2.5 block text-black dark:text-white">Current Password</label>
-                        <div className="relative">
-                            <input
-                                type={showPasswords.current ? 'text' : 'password'}
-                                value={passwordData.currentPassword}
-                                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                                className="absolute right-4 top-4"
-                            >
-                                {showPasswords.current ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </button>
-                        </div>
-                    </div>
-                    <div className="mb-4">
-                        <label className="mb-2.5 block text-black dark:text-white">New Password</label>
-                        <div className="relative">
-                            <input
-                                type={showPasswords.new ? 'text' : 'password'}
-                                value={passwordData.newPassword}
-                                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                                className="absolute right-4 top-4"
-                            >
-                                {showPasswords.new ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </button>
-                        </div>
-                    </div>
-                    <div className="mb-6">
-                        <label className="mb-2.5 block text-black dark:text-white">Confirm New Password</label>
-                        <div className="relative">
-                            <input
-                                type={showPasswords.confirm ? 'text' : 'password'}
-                                value={passwordData.confirmPassword}
-                                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                                className="absolute right-4 top-4"
-                            >
-                                {showPasswords.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </button>
-                        </div>
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={mutation.isPending}
-                        className="w-full rounded bg-warning py-3 px-6 text-white hover:bg-warning/90 disabled:opacity-50"
-                    >
-                        {mutation.isPending ? 'Changing...' : 'Change Password'}
-                    </button>
-                </form>
-            </div>
+            </ClickOutside>
         </div>
     );
 };
