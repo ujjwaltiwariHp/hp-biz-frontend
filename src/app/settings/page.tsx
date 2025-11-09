@@ -149,8 +149,8 @@ export default function SettingsPage() {
   if (!isInitialized || !profile) {
     return (
       <DefaultLayout>
-        <div className="flex justify-center py-12">
-          <Loader />
+        <div className="flex items-center justify-center h-screen">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
         </div>
       </DefaultLayout>
     );
@@ -164,136 +164,135 @@ export default function SettingsPage() {
 
   return (
     <DefaultLayout>
-      <div className="space-y-6">
-        {/* Header Card */}
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
-            <h4 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
-              <SettingsIcon size={24} className="text-primary" />
-              Admin Panel Settings
-            </h4>
-          </div>
-
-          {/* Action Cards */}
-          <div className="p-4 sm:p-6">
-            <h3 className="text-base font-semibold text-black dark:text-white mb-4">
-              Admin Actions
-            </h3>
-            {rolesLoading ? (
-              <div className="flex justify-center py-6">
-                <Loader />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <ActionCard
-                  title="Profile"
-                  description="Update your personal details."
-                  icon={<User size={24} className="text-primary" />}
-                  color="primary"
-                  onClick={() => setShowEditProfile(true)}
-                  buttonText="Edit Profile"
-                />
-                <ActionCard
-                  title="Security"
-                  description="Change your account password."
-                  icon={<Lock size={24} className="text-warning" />}
-                  color="warning"
-                  onClick={() => setShowChangePassword(true)}
-                  buttonText="Change Password"
-                />
-                <ActionCard
-                  title="New Admin"
-                  description="Add a new administrator."
-                  icon={<UserPlus size={24} className="text-success" />}
-                  color="success"
-                  onClick={() => setShowCreateAdmin(true)}
-                  buttonText="Create Admin"
-                  disabled={!isCreateAllowed}
-                />
-                <ActionCard
-                  title="Manage Admins"
-                  description="View and manage administrators."
-                  icon={<Users size={24} className="text-meta-5" />}
-                  color="danger"
-                  onClick={() => setShowViewAdmins(true)}
-                  buttonText="View/Manag"
-                  disabled={!isViewAllowed}
-                />
-              </div>
-            )}
-          </div>
+      <div className="mx-auto max-w-screen-2xl">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-title-md2 font-semibold text-black dark:text-white">
+            Settings
+          </h2>
         </div>
 
-        {/* Account Information */}
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
-            <h4 className="text-lg font-semibold text-black dark:text-white">
-              Your Account Information
-            </h4>
-          </div>
-          <div className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <InfoCard title="Name" value={profile?.name} />
-              <InfoCard title="Email" value={profile?.email} />
-              <InfoCard title="Created At" value={profile?.created_at} isDate />
-              <InfoCard title="Last Updated" value={profile?.updated_at} isDate />
+        <div className="space-y-6">
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
+              <h4 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
+                <SettingsIcon size={24} className="text-primary" />
+                Admin Panel Settings
+              </h4>
+            </div>
+
+            <div className="p-4 sm:p-6">
+              <h3 className="text-base font-semibold text-black dark:text-white mb-4">
+                Admin Actions
+              </h3>
+              {rolesLoading ? (
+                <Loader size="md" variant="modal" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <ActionCard
+                    title="Profile"
+                    description="Update your personal details."
+                    icon={<User size={24} className="text-primary" />}
+                    color="primary"
+                    onClick={() => setShowEditProfile(true)}
+                    buttonText="Edit Profile"
+                  />
+                  <ActionCard
+                    title="Security"
+                    description="Change your account password."
+                    icon={<Lock size={24} className="text-warning" />}
+                    color="warning"
+                    onClick={() => setShowChangePassword(true)}
+                    buttonText="Change Password"
+                  />
+                  <ActionCard
+                    title="New Admin"
+                    description="Add a new administrator."
+                    icon={<UserPlus size={24} className="text-success" />}
+                    color="success"
+                    onClick={() => setShowCreateAdmin(true)}
+                    buttonText="Create Admin"
+                    disabled={!isCreateAllowed}
+                  />
+                  <ActionCard
+                    title="Manage Admins"
+                    description="View and manage administrators."
+                    icon={<Users size={24} className="text-meta-5" />}
+                    color="danger"
+                    onClick={() => setShowViewAdmins(true)}
+                    buttonText="View/Manage"
+                    disabled={!isViewAllowed}
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Billing Settings */}
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
-            <h4 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
-              <DollarSign size={20} className="text-success" />
-              Billing & Invoice Settings
-            </h4>
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
+              <h4 className="text-lg font-semibold text-black dark:text-white">
+                Your Account Information
+              </h4>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard title="Name" value={profile?.name} />
+                <InfoCard title="Email" value={profile?.email} />
+                <InfoCard title="Created At" value={profile?.created_at} isDate />
+                <InfoCard title="Last Updated" value={profile?.updated_at} isDate />
+              </div>
+            </div>
           </div>
-          <div className="p-4 sm:p-6">
-            {billingLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader />
-              </div>
-            ) : !billingSettings ? (
-              <div className="text-center py-8 text-danger">
-                <p className="text-sm font-medium">Failed to load billing settings.</p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  <InfoCard title="Company Name" value={billingSettings.company_name} />
-                  <InfoCard title="Email" value={billingSettings.email} />
-                  <InfoCard title="Phone" value={billingSettings.phone} />
-                  <InfoCard title="Currency" value={billingSettings.currency} />
-                  <InfoCard
-                    title="Tax Rate"
-                    value={`${(billingSettings.tax_rate * 100).toFixed(2)}%`}
-                  />
-                  <InfoCard
-                    title="Bank Name"
-                    value={billingSettings.bank_details?.bank_name || 'N/A'}
-                  />
-                  <InfoCard
-                    title="QR Code"
-                    value={billingSettings.qr_code_image_url ? 'Available' : 'N/A'}
-                  />
-                  <InfoCard title="Last Updated" value={billingSettings.updated_at} isDate />
+
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-4 sm:px-6 border-b border-stroke dark:border-strokedark">
+              <h4 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
+                <DollarSign size={20} className="text-success" />
+                Billing & Invoice Settings
+              </h4>
+            </div>
+            <div className="p-4 sm:p-6">
+              {billingLoading ? (
+                <Loader size="md" variant="modal" />
+              ) : !billingSettings ? (
+                <div className="text-center py-8 text-danger">
+                  <p className="text-sm font-medium">Failed to load billing settings.</p>
                 </div>
-                <div className="border-t border-stroke dark:border-strokedark pt-4 flex justify-end">
-                  <button
-                    onClick={() => setShowBillingSettings(true)}
-                    className="rounded bg-success py-2 px-6 text-white hover:bg-success/90 transition-colors text-sm font-medium"
-                  >
-                    Edit Billing Settings
-                  </button>
-                </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <InfoCard title="Company Name" value={billingSettings.company_name} />
+                    <InfoCard title="Email" value={billingSettings.email} />
+                    <InfoCard title="Phone" value={billingSettings.phone} />
+                    <InfoCard title="Currency" value={billingSettings.currency} />
+                    <InfoCard
+                      title="Tax Rate"
+                      value={`${(billingSettings.tax_rate * 100).toFixed(2)}%`}
+                    />
+                    <InfoCard
+                      title="Bank Name"
+                      value={billingSettings.bank_details?.bank_name || 'N/A'}
+                    />
+                    <InfoCard
+                      title="QR Code"
+                      value={billingSettings.qr_code_image_url ? 'Available' : 'N/A'}
+                    />
+                    <InfoCard title="Last Updated" value={billingSettings.updated_at} isDate />
+                  </div>
+                  <div className="border-t border-stroke dark:border-strokedark pt-4 flex justify-end">
+                    <button
+                      onClick={() => setShowBillingSettings(true)}
+                      className="rounded bg-success py-2 px-6 text-white hover:bg-success/90 transition-colors text-sm font-medium"
+                    >
+                      Edit Billing Settings
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
       <EditProfileModal
         isOpen={showEditProfile}
         onClose={() => setShowEditProfile(false)}
@@ -303,7 +302,6 @@ export default function SettingsPage() {
         isLoading={updateProfileMutation.isPending}
       />
 
-      {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={showChangePassword}
         onClose={() => setShowChangePassword(false)}
@@ -313,7 +311,6 @@ export default function SettingsPage() {
         setPasswordData={setPasswordData}
       />
 
-      {/* Create Admin Modal */}
       <CreateAdminModal
         isOpen={showCreateAdmin}
         onClose={() => setShowCreateAdmin(false)}
@@ -324,7 +321,6 @@ export default function SettingsPage() {
         isLoading={createAdminMutation.isPending}
       />
 
-      {/* View Admins Modal */}
       <ViewAdminsModal
         isOpen={showViewAdmins}
         onClose={() => setShowViewAdmins(false)}
@@ -335,7 +331,6 @@ export default function SettingsPage() {
         isLoading={adminsLoading}
       />
 
-      {/* Billing Settings Modal */}
       {billingSettings && showBillingSettings && (
         <BillingSettingsModal
           settings={billingSettings}
@@ -347,7 +342,6 @@ export default function SettingsPage() {
   );
 }
 
-// Helper Component (left as is)
 function InfoCard({
   title,
   value,

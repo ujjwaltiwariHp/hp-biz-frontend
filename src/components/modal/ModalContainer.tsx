@@ -29,15 +29,12 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   if (!isOpen) return null;
 
   return (
-    // Outer Overlay: fixed, full-screen, uses flex for perfect centering, and padding-top/bottom
-    // We keep p-4 for general padding, which handles the vertical space.
     <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/600 backdrop-blur-sm p-4">
 
       {/* Removed w-full from ClickOutside to allow centering */}
       <ClickOutside onOutsideClick={onClose}>
         <div
-          // UPDATED: Changed max-h-[95vh] to max-h-[90vh] to leave more margin for header/footer elements.
-          // The modal size is controlled by the dynamically chosen sizeClasses[size]
+
           className={`w-full ${sizeClasses[size]} rounded-xl bg-white dark:bg-boxdark max-h-[90vh] overflow-y-auto transform transition-all duration-300 shadow-2xl`}
           onClick={(e) => e.stopPropagation()}
         >
