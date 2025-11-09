@@ -48,8 +48,10 @@ const NotificationsPage = () => {
 
   const approveSubscriptionMutation = useMutation({
     mutationFn: (companyId: number) => {
-      return invoiceService.approveSubscription(companyId, {
+      const subscriptionId = selectedNotification?.metadata?.subscription_id || selectedNotification?.metadata?.subscriptionId || 0;
+      return invoiceService.approveSubscription(companyId, subscriptionId, {
         invoice_id: selectedNotification?.metadata?.invoice_id || 0,
+        start_date_override: selectedNotification?.updated_at || '',
       });
     },
     onSuccess: () => {

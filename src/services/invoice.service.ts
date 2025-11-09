@@ -86,14 +86,16 @@ export const invoiceService = {
 
   approveSubscription: async (
     companyId: number,
+    subscriptionId: number,
     data: ApproveRejectData
   ): Promise<any> => {
     const response = await apiClient.post(
-      `${COMPANY_URL}/${companyId}/subscription/approve`,
+      `${COMPANY_URL}/${companyId}/subscription/approve?id=${subscriptionId}`,
       data
     );
     return response.data;
   },
+
 
   rejectSubscription: async (
     companyId: number,

@@ -7,6 +7,7 @@ export interface SuperAdminNotification {
   priority: 'low' | 'normal' | 'high';
   is_read: boolean;
   created_at: string;
+  updated_at: string;
   metadata: {
     invoice_id?: number;
     company_name?: string;
