@@ -82,8 +82,10 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                             <X size={24} />
                         </button>
                     </div>
-                    {mutation.isPending ? (
-                        <div className="flex justify-center py-12"><Loader /></div>
+                   {mutation.isPending ? (
+                   <div className="flex justify-center py-12">
+                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  </div>
                     ) : (
                         <form onSubmit={handleSubmit}>
                             {/* Grid layout for responsiveness */}
