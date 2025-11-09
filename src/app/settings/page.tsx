@@ -321,7 +321,7 @@ export default function SettingsPage() {
         isLoading={createAdminMutation.isPending}
       />
 
-      <ViewAdminsModal
+     { showViewAdmins && (<ViewAdminsModal
         isOpen={showViewAdmins}
         onClose={() => setShowViewAdmins(false)}
         admins={admins}
@@ -329,7 +329,7 @@ export default function SettingsPage() {
         roles={roles}
         permissions={permissions}
         isLoading={adminsLoading}
-      />
+      />)}
 
       {billingSettings && showBillingSettings && (
         <BillingSettingsModal

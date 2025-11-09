@@ -1,8 +1,8 @@
 import React from 'react';
 import { ModalContainer } from './ModalContainer';
-import Loader from '@/components/common/Loader';
 import AdminManagementTable from '@/components/tables/AdminManagementTable';
 import { SuperAdmin, SuperAdminRole, SuperAdminPermissions } from '@/types/auth';
+import Loader from '../common/Loader';
 
 interface ViewAdminsModalProps {
   isOpen: boolean;
@@ -26,23 +26,13 @@ export const ViewAdminsModal: React.FC<ViewAdminsModalProps> = ({
   const isViewAllowed =
     permissions.all?.includes('crud') ||
     permissions.super_admins?.includes('view');
-    console.log("admin");
-    console.log(admins);
 
-  if (!isViewAllowed) {
+  // Full-screen loader overlay when loading
+  if (isLoading) {
     return (
-      <ModalContainer
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Access Denied"
-        size="sm"
-      >
-        <div className="text-center py-4 text-danger">
-          <p className="text-base">
-            You do not have permission to view the list of administrators.
-          </p>
-        </div>
-      </ModalContainer>
+      <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-[9999]">
+        <Loader />
+      </div>
     );
   }
 
@@ -50,14 +40,14 @@ export const ViewAdminsModal: React.FC<ViewAdminsModalProps> = ({
     <ModalContainer
       isOpen={isOpen}
       onClose={onClose}
-      title="All Administrators"
-      size="lg"
-      isLoading={isLoading}
+      title={isViewAllowed ? 'All Administrators' : 'Access Denied'}
+      size={isViewAllowed ? 'lg' : 'sm'}
     >
-
-      {isLoading ? (
-        <div className="flex justify-center h-[400px] w-full">
-          <Loader />
+      {!isViewAllowed ? (
+        <div className="text-center py-4 text-danger">
+          <p className="text-base">
+            You do not have permission to view the list of administrators.
+          </p>
         </div>
       ) : !admins || admins.length === 0 ? (
         <div className="text-center py-8 text-gray-500">

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { X, UploadCloud } from 'lucide-react';
 import ClickOutside from '@/components/ClickOutside';
-import Loader from '@/components/common/Loader';
-import BankDetailsForm from './BankDetailsForm'; // Imported local component
+import BankDetailsForm from './BankDetailsForm';
 import { BillingSettings, UpdateBillingSettingsPayload, BankDetails } from '@/types/billing';
 import { billingService } from '@/services/billing.service';
 
@@ -36,174 +35,181 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            setQrCodeFile(e.target.files[0]);
-        }
+        if (e.target.files?.[0]) setQrCodeFile(e.target.files[0]);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const payload: UpdateBillingSettingsPayload = { ...formData };
 
-        const payload: UpdateBillingSettingsPayload = {
-            ...formData,
-        };
+        const cleanedBankDetails = bankDetails
+            ? Object.fromEntries(Object.entries(bankDetails).filter(([_, v]) => v?.toString().trim()))
+            : {};
 
-        const cleanedBankDetails = bankDetails ? Object.entries(bankDetails).reduce((acc: Partial<BankDetails>, [key, value]) => {
-            if (value && String(value).trim() !== '') {
-                acc[key as keyof BankDetails] = value as string;
-            }
-            return acc;
-        }, {}) : {};
-
-        if (Object.keys(cleanedBankDetails).length > 0) {
-            payload.bank_details = cleanedBankDetails;
-        } else if (bankDetails) {
-            payload.bank_details = {};
-        }
+        if (Object.keys(cleanedBankDetails).length > 0) payload.bank_details = cleanedBankDetails;
+        else if (bankDetails) payload.bank_details = {};
 
         if (qrCodeFile) {
-            toast.info("QR Code file upload requires an API structure that supports file uploads (e.g., FormData). Only text fields will be saved.");
+            toast.info("QR Code upload requires FormData support on backend.");
         }
 
         mutation.mutate(payload);
     };
 
-    const taxRatePercent = (formData.tax_rate !== undefined ? formData.tax_rate! * 100 : settings.tax_rate * 100).toFixed(2);
+    const taxRatePercent = (formData.tax_rate ?? settings.tax_rate) * 100;
 
     return (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4">
             <ClickOutside onOutsideClick={onClose}>
-                {/* Responsive modal container: max-w-lg on mobile/default, larger on md+ */}
-                <div className="w-full max-w-lg sm:max-w-xl md:max-w-2xl rounded-xl bg-white p-6 dark:bg-boxdark max-h-[95vh] overflow-y-auto transform transition-all duration-300 shadow-2xl">
-                    <div className="flex items-center justify-between mb-4 border-b pb-3 dark:border-strokedark">
-                        {/* Ensure title is responsive and doesn't hide/overflow */}
-                        <h3 className="text-xl font-bold text-black dark:text-white truncate mr-4">Edit Billing Settings</h3>
-                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white p-1 flex-shrink-0">
-                            <X size={24} />
+                {/* Wider, shorter, compact modal */}
+                <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-boxdark shadow-2xl max-h-[85vh] overflow-y-auto">
+                    {/* Compact header */}
+                    <div className="flex items-center justify-between border-b dark:border-strokedark px-5 py-3">
+                        <h3 className="text-lg font-semibold text-black dark:text-white">Edit Billing Settings</h3>
+                        <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
+                            <X size={20} />
                         </button>
                     </div>
-                   {mutation.isPending ? (
-                   <div className="flex justify-center py-12">
-                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                  </div>
-                    ) : (
-                        <form onSubmit={handleSubmit}>
-                            {/* Grid layout for responsiveness */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                <div className="mb-1">
-                                    <label className="mb-1.5 block text-black dark:text-white text-sm font-medium">Company Name</label>
+                        <form onSubmit={handleSubmit} className="p-5">
+                            {/* 3-column tight grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                                {/* Company & Contact */}
+                                <div>
+                                    <label className="block font-medium text-black dark:text-white mb-1">Company Name</label>
                                     <input
                                         type="text"
                                         name="company_name"
                                         value={formData.company_name || ''}
                                         onChange={handleChange}
-                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
                                         required
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
                                     />
                                 </div>
-                                <div className="mb-1">
-                                    <label className="mb-1.5 block text-black dark:text-white text-sm font-medium">Email</label>
+
+                                <div>
+                                    <label className="block font-medium text-black dark:text-white mb-1">Email</label>
                                     <input
                                         type="email"
                                         name="email"
                                         value={formData.email || ''}
                                         onChange={handleChange}
-                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
                                         required
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
                                     />
                                 </div>
-                                <div className="mb-1">
-                                    <label className="mb-1.5 block text-black dark:text-white text-sm font-medium">Phone</label>
+
+                                <div>
+                                    <label className="block font-medium text-black dark:text-white mb-1">Phone</label>
                                     <input
                                         type="text"
                                         name="phone"
                                         value={formData.phone || ''}
                                         onChange={handleChange}
-                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
                                         required
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
                                     />
                                 </div>
-                                <div className="mb-1">
-                                    <label className="mb-1.5 block text-black dark:text-white text-sm font-medium">Tax Rate (%)</label>
+
+                                <div>
+                                    <label className="block font-medium text-black dark:text-white mb-1">Tax Rate (%)</label>
                                     <input
                                         type="number"
                                         name="tax_rate"
                                         step="0.01"
                                         min="0"
                                         max="100"
-                                        value={taxRatePercent}
+                                        value={taxRatePercent.toFixed(2)}
                                         onChange={handleChange}
-                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
                                         required
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
                                     />
                                 </div>
-                                <div className="mb-1 md:col-span-2">
-                                    <label className="mb-1.5 block text-black dark:text-white text-sm font-medium">Currency</label>
+
+                                <div>
+                                    <label className="block font-medium text-black dark:text-white mb-1">Currency</label>
                                     <input
                                         type="text"
                                         name="currency"
                                         value={formData.currency || ''}
                                         onChange={handleChange}
-                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
                                         required
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
                                     />
                                 </div>
-                                <div className="mb-3 md:col-span-2">
-                                    <label className="mb-1.5 block text-black dark:text-white text-sm font-medium">Address</label>
+
+                                {/* Full-width fields */}
+                                <div className="sm:col-span-2 lg:col-span-3">
+                                    <label className="block font-medium text-black dark:text-white mb-1">Address</label>
                                     <textarea
                                         name="address"
-                                        rows={3}
+                                        rows={2}
                                         value={formData.address || ''}
                                         onChange={handleChange}
-                                        className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-base"
                                         required
-                                    ></textarea>
-                                </div>
-                            </div>
-
-                            <BankDetailsForm bankDetails={bankDetails} setBankDetails={setBankDetails} />
-
-                            {/* Enhanced QR Code File Input Styling */}
-                            <div className="mt-6 md:col-span-2">
-                                <label htmlFor="qr-code-file" className="mb-1.5 block text-black dark:text-white text-sm font-medium">QR Code Image</label>
-                                {settings.qr_code_image_url && (
-                                    <a href={settings.qr_code_image_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline block mb-2">View Current QR Code</a>
-                                )}
-                                <div className="relative border-2 border-dashed border-stroke dark:border-strokedark rounded-lg p-6 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-meta-4/30 transition-colors">
-                                    <input
-                                        type="file"
-                                        id="qr-code-file"
-                                        accept="image/*"
-                                        onChange={handleFileChange}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none resize-none"
                                     />
-                                    <UploadCloud size={24} className="mx-auto text-gray-500 dark:text-gray-400 mb-2" />
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                                        {qrCodeFile ? qrCodeFile.name : 'Click to upload or drag & drop (Max 5MB)'}
-                                    </p>
                                 </div>
-                                <p className='text-xs text-gray-500 mt-1 text-center'>Only PNG, JPG, or SVG files are accepted.</p>
                             </div>
 
-                            <div className="flex gap-4 mt-6 justify-end border-t pt-4 dark:border-strokedark md:col-span-2">
+                            {/* Bank Details - Compact */}
+                            <div className="mt-4 border-t dark:border-strokedark pt-4">
+                                <BankDetailsForm bankDetails={bankDetails} setBankDetails={setBankDetails} />
+                            </div>
+
+                            {/* QR Code Upload - Compact */}
+                            <div className="mt-5">
+                                <label className="block text-sm font-medium text-black dark:text-white mb-1.5">
+                                    QR Code Image
+                                </label>
+
+                                {settings.qr_code_image_url && (
+                                    <a
+                                        href={settings.qr_code_image_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-primary hover:underline block mb-2"
+                                    >
+                                        View current QR code
+                                    </a>
+                                )}
+
+                                {/* This div is NOW the only clickable area */}
+                                <div className="relative inline-block w-full">
+                                    <div className="border-2 border-dashed border-stroke dark:border-strokedark rounded-lg p-2 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/svg+xml"
+                                            onChange={handleFileChange}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        // ← Now safely contained
+                                        />
+                                        <UploadCloud size={20} className="mx-auto text-gray-500 dark:text-gray-400 mb-1" />
+                                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                                            {qrCodeFile ? qrCodeFile.name : 'Click to upload QR code'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, SVG up to 5MB</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-3 mt-5 pt-4 border-t dark:border-strokedark">
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="rounded-lg bg-gray-300 dark:bg-gray-600 py-2.5 px-6 text-black dark:text-white hover:bg-gray-400 dark:hover:bg-gray-700 text-base transition-colors font-medium"
+                                    className="px-5 py-2 text-sm font-medium rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={mutation.isPending}
-                                    className="rounded-lg bg-success py-2.5 px-6 text-white hover:bg-success/90 disabled:opacity-50 text-base transition-colors font-medium shadow-md"
+                                    className="px-5 py-2 text-sm font-medium rounded bg-success text-white hover:bg-success/90 disabled:opacity-50 transition-colors shadow-md"
                                 >
                                     {mutation.isPending ? 'Saving...' : 'Save Settings'}
                                 </button>
                             </div>
                         </form>
-                    )}
                 </div>
             </ClickOutside>
         </div>
