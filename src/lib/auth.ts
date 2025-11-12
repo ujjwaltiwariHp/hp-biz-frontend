@@ -1,23 +1,21 @@
 import Cookies from 'js-cookie';
 
-/**
- * Retrieves the JWT token from the cookie storage.
- * @returns {string | undefined} The auth token string.
- */
-export const getAuthToken = (): string | undefined => {
-  if (typeof window === 'undefined') {
+const AUTH_TOKEN_KEY = 'auth-token';
 
-    const cookieString = document.cookie;
-    const tokenMatch = cookieString.match(/auth-token=([^;]+)/);
-    return tokenMatch ? tokenMatch[1] : undefined;
-  }
-
-
-  return Cookies.get('auth-token');
+export const setAuthToken = (token: string) => {
+  Cookies.set(AUTH_TOKEN_KEY, token, { expires: 7, secure: process.env.NODE_ENV === 'production' });
 };
 
+export const getAuthToken = (): string | undefined => {
+  if (typeof window !== 'undefined') {
 
-export const removeAuthToken = (): void => {
+    const cookieToken = Cookies.get(AUTH_TOKEN_KEY);
 
-  Cookies.remove('auth-token', { path: '/' });
+    return cookieToken;
+  }
+  return undefined;
+};
+
+export const removeAuthToken = () => {
+  Cookies.remove(AUTH_TOKEN_KEY);
 };
