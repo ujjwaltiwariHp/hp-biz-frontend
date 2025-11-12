@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { Typography } from '@/components/common/Typography';
+import { useSSE } from '@/hooks/useSSE';
 
 const formatDurationType = (type: string) => {
   if (type === 'one_time') return 'One-Time';
@@ -20,7 +22,7 @@ const formatDurationType = (type: string) => {
 const FeatureItem = ({ feature, Icon = CheckCircle }: { feature: string, Icon?: any }) => (
     <li className="text-sm text-gray-700 dark:text-gray-300 flex items-start">
         <Icon size={14} className={`mr-2 flex-shrink-0 mt-0.5 ${Icon === CheckCircle ? 'text-green-500' : 'text-gray-500'}`} />
-        {feature.replace(/_/g, ' ')}
+        <Typography variant="body" as="span">{feature.replace(/_/g, ' ')}</Typography>
     </li>
 );
 
@@ -29,19 +31,25 @@ export default function SubscriptionsPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const queryClient = useQueryClient();
 
-  // Dialog hooks and state
   const deleteDialog = useConfirmDialog();
   const toggleDialog = useConfirmDialog();
   const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
   const [actionType, setActionType] = useState<'activate' | 'deactivate'>('deactivate');
 
+  const packagesQueryKey = ['packages', activeFilter];
+
   const { data: packagesData, isLoading } = useQuery({
-    queryKey: ['packages', activeFilter],
+    queryKey: packagesQueryKey,
     queryFn: () => subscriptionService.getPackages({
       active_only: activeFilter === 'active' ? true : activeFilter === 'inactive' ? false : undefined,
     }),
     staleTime: 60000,
   });
+
+  // --- SSE Integration for Real-time Refresh ---
+  useSSE('sa_subscription_status_update', ['packages']);
+  // ----------------------------------------------
+
 
   const toggleStatusMutation = useMutation({
     mutationFn: subscriptionService.toggleStatus,
@@ -132,7 +140,6 @@ export default function SubscriptionsPage() {
 
   const packages = packagesData?.data?.packages || [];
 
-  // Calculate dialog props only when rendering
   const toggleDialogProps = selectedPackage
     ? {
         type: selectedPackage.is_active ? 'warning' : 'success' as 'warning' | 'success',
@@ -148,12 +155,12 @@ export default function SubscriptionsPage() {
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="py-6 px-4 md:px-6 xl:px-7.5 flex justify-between items-center">
           <div>
-            <h4 className="text-xl font-semibold text-black dark:text-white">
+            <Typography variant="page-title" as="h4">
               Subscription Packages
-            </h4>
-            <p className="text-sm text-gray-500 mt-1">
+            </Typography>
+            <Typography variant="caption" className="mt-1">
               Manage subscription packages and pricing
-            </p>
+            </Typography>
           </div>
           {isSuperAdmin && (
             <Link
@@ -161,7 +168,7 @@ export default function SubscriptionsPage() {
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
             >
               <Plus size={20} />
-              Create Package
+              <Typography variant="body" as="span" className="text-white">Create Package</Typography>
             </Link>
           )}
         </div>
@@ -176,7 +183,7 @@ export default function SubscriptionsPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
-              All Packages ({packages.length})
+              All Packages (<Typography variant="caption" as="span" className={activeFilter !== 'all' ? 'text-black dark:text-white' : 'text-white'}>{packages.length}</Typography>)
             </button>
             <button
               onClick={() => setActiveFilter('active')}
@@ -204,13 +211,13 @@ export default function SubscriptionsPage() {
         <div className="px-4 md:px-6 xl:px-7.5 pb-6">
           {packages.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg mb-4">No packages found matching the filter.</p>
+              <Typography variant="body1" className="text-gray-500 text-lg mb-4">No packages found matching the filter.</Typography>
               {isSuperAdmin && (
                   <Link
                     href="/subscriptions/create"
                     className="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
                   >
-                    Create Your First Package
+                    <Typography variant="body" as="span" className="text-white">Create Your First Package</Typography>
                   </Link>
               )}
             </div>
@@ -231,9 +238,9 @@ export default function SubscriptionsPage() {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-black dark:text-white">
+                      <Typography variant="value" as="h3" className="text-lg font-semibold text-black dark:text-white">
                         {pkg.name}
-                      </h3>
+                      </Typography>
                       <div className="flex items-center gap-2 mt-1">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
@@ -242,47 +249,48 @@ export default function SubscriptionsPage() {
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           }`}
                         >
-                          {pkg.is_active ? 'Active' : 'Inactive'}
+                          <Typography variant="badge">{pkg.is_active ? 'Active' : 'Inactive'}</Typography>
                         </span>
                         {pkg.is_trial && (
                             <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-800 rounded-full dark:bg-indigo-900 dark:text-indigo-200 font-bold">
-                                TRIAL ({pkg.trial_duration_days} DAYS)
+                                <Typography variant="badge">TRIAL ({pkg.trial_duration_days} DAYS)</Typography>
                             </span>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
+                      {/* FIX: Use variant='value' and a valid 'as' prop */}
+                      <Typography variant="value" as="p" className="text-2xl font-bold text-primary">
                         ${pkg.price.toFixed(2)}
-                      </div>
-                      <div className="text-sm text-gray-500">
+                      </Typography>
+                      <Typography variant="caption" className="text-sm text-gray-500">
                         per {formatDurationType(pkg.duration_type)}
-                      </div>
+                      </Typography>
                     </div>
                   </div>
 
                   <div className="space-y-3 mb-4">
-                    <div className="text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Max Staff:</span>
-                      <span className="ml-2 font-medium text-black dark:text-white">
+                    <div className="text-sm flex justify-between">
+                      <Typography variant="caption" as="span">Max Staff:</Typography>
+                      <Typography variant="body" as="span" className="ml-2 font-medium text-black dark:text-white">
                         {pkg.max_staff_count === 0 ? 'Unlimited' : pkg.max_staff_count}
-                      </span>
+                      </Typography>
                     </div>
-                    <div className="text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Max Leads/Month:</span>
-                      <span className="ml-2 font-medium text-black dark:text-white">
+                    <div className="text-sm flex justify-between">
+                      <Typography variant="caption" as="span">Max Leads/Month:</Typography>
+                      <Typography variant="body" as="span" className="ml-2 font-medium text-black dark:text-white">
                         {pkg.max_leads_per_month === 0 ? 'Unlimited' : pkg.max_leads_per_month}
-                      </span>
+                      </Typography>
                     </div>
-                    <div className="text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Clients Using:</span>
-                      <span className={`ml-2 font-medium ${pkg.company_count > 0 ? 'text-danger' : 'text-success'}`}>
+                    <div className="text-sm flex justify-between">
+                      <Typography variant="caption" as="span">Clients Using:</Typography>
+                      <Typography variant="body" as="span" className={`ml-2 font-medium ${pkg.company_count > 0 ? 'text-danger' : 'text-success'}`}>
                         {pkg.company_count}
-                      </span>
+                      </Typography>
                     </div>
 
                     <div>
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Key Features:</span>
+                      <Typography variant="label" as="span" className="font-medium">Key Features:</Typography>
                       <ul className="mt-2 space-y-1">
                         {pkg.features.slice(0, 4).map((feature, index) => (
                           <FeatureItem key={index} feature={feature} />
@@ -290,20 +298,20 @@ export default function SubscriptionsPage() {
                         {pkg.features.length > 4 && (
                             <li className="text-xs text-gray-500 mt-1 flex items-center">
                                 <MinusCircle size={14} className="text-gray-500 mr-2 flex-shrink-0 mt-0.5" />
-                                + {pkg.features.length - 4} more features
+                                <Typography variant="caption" as="span">+ {pkg.features.length - 4} more features</Typography>
                             </li>
                         )}
                       </ul>
                       {pkg.features.length === 0 && (
-                          <p className="text-xs text-gray-500 mt-1">No features defined.</p>
+                          <Typography variant="caption" className="text-xs text-gray-500 mt-1">No features defined.</Typography>
                       )}
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-600">
-                    <div className="text-xs text-gray-500">
+                    <Typography variant="caption" className="text-xs text-gray-500">
                       Created: {new Date(pkg.created_at).toLocaleDateString()}
-                    </div>
+                    </Typography>
                     {isSuperAdmin && (
                         <div className="flex items-center gap-2">
                           <button

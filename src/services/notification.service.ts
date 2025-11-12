@@ -1,11 +1,8 @@
 import { apiClient } from '@/lib/api';
-import {
-  SuperAdminNotification,
-  NotificationListResponse,
-  UnreadCountResponse
-} from '@/types/notification';
+import { SuperAdminNotification, NotificationListResponse, UnreadCountResponse } from '@/types/notification';
 
-const BASE_URL = '/super-admin/notifications';
+const BASE_URL = '/notifications';
+const SA_BASE_URL = '/super-admin/notifications';
 
 export const notificationService = {
 
@@ -14,101 +11,39 @@ export const notificationService = {
     limit: number = 10,
     filters: Record<string, string | number | boolean | undefined> = {}
   ): Promise<NotificationListResponse> => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiClient.get(
+      `${SA_BASE_URL}?${params.toString()}`
+    );
+
+    if (response.data.data && Array.isArray(response.data.data.notifications)) {
+        return response.data.data;
+    }
+
+    return { notifications: [], pagination: { totalCount: 0, totalPages: 0, currentPage: 1 } };
+  },
+
+  getCompanyUnreadCount: async (): Promise<UnreadCountResponse> => {
     try {
-      const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', limit.toString());
-
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, String(value));
-        }
-      });
-
-      const response = await apiClient.get(
-        `${BASE_URL}?${params.toString()}`
-      );
-
-      if (!response.data) {
-        return {
-          notifications: [],
-          pagination: { totalCount: 0, totalPages: 0, currentPage: 1 }
-        };
-      }
-
-      if (Array.isArray(response.data)) {
-        return {
-          notifications: response.data,
-          pagination: { totalCount: response.data.length, totalPages: 1, currentPage: 1 }
-        };
-      }
-
-      if (response.data.data) {
-        const dataObj = response.data.data;
-
-        if (Array.isArray(dataObj)) {
-          return {
-            notifications: dataObj,
-            pagination: { totalCount: dataObj.length, totalPages: 1, currentPage: 1 }
-          };
-        }
-
-        if (dataObj.notifications && Array.isArray(dataObj.notifications)) {
-          return {
-            notifications: dataObj.notifications,
-            pagination: dataObj.pagination || {
-              totalCount: dataObj.notifications.length,
-              totalPages: 1,
-              currentPage: 1
-            }
-          };
-        }
-
-        return dataObj;
-      }
-
-      if (response.data.notifications && Array.isArray(response.data.notifications)) {
-        return {
-          notifications: response.data.notifications,
-          pagination: response.data.pagination || {
-            totalCount: response.data.notifications.length,
-            totalPages: 1,
-            currentPage: 1
-          }
-        };
-      }
-
-      return {
-        notifications: [],
-        pagination: { totalCount: 0, totalPages: 0, currentPage: 1 }
-      };
-
+      const response = await apiClient.get(`${BASE_URL}/unread-count`);
+      return response.data;
     } catch (error: any) {
-      if (error instanceof SyntaxError) {
-        return {
-          notifications: [],
-          pagination: { totalCount: 0, totalPages: 0, currentPage: 1 }
-        };
-      }
-
-      throw error;
+      return { unread_count: 0 };
     }
   },
 
-  getUnreadCount: async (): Promise<UnreadCountResponse> => {
+  getSuperAdminUnreadCount: async (): Promise<UnreadCountResponse> => {
     try {
-      const response = await apiClient.get(`${BASE_URL}/stats`);
-
-      if (response.data.data) {
-        return response.data.data;
-      }
-
-      if (response.data.unread_count !== undefined) {
-        return {
-          unread_count: response.data.unread_count
-        };
-      }
-
+      const response = await apiClient.get(`${SA_BASE_URL}/stats`);
       return response.data;
     } catch (error: any) {
       return { unread_count: 0 };
@@ -116,44 +51,19 @@ export const notificationService = {
   },
 
   markAsRead: async (id: number): Promise<SuperAdminNotification> => {
-    try {
-      const response = await apiClient.put(`${BASE_URL}/${id}/mark-read`);
-
-      if (response.data.data?.notification) {
-        return response.data.data.notification;
-      }
-
-      if (response.data.notification) {
-        return response.data.notification;
-      }
-
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await apiClient.put(`${SA_BASE_URL}/${id}/mark-read`);
+    return response.data;
   },
 
   markAllAsRead: async (): Promise<void> => {
-    try {
-      await apiClient.put(`${BASE_URL}/mark-all-read`);
-    } catch (error: any) {
-      throw error;
-    }
+    await apiClient.put(`${SA_BASE_URL}/mark-all-read`);
   },
 
   deleteNotification: async (id: number): Promise<void> => {
-    try {
-      await apiClient.delete(`${BASE_URL}/${id}`);
-    } catch (error: any) {
-      throw error;
-    }
+    await apiClient.delete(`${SA_BASE_URL}/${id}`);
   },
 
   clearAllNotifications: async (): Promise<void> => {
-    try {
-      await apiClient.delete(`${BASE_URL}`);
-    } catch (error: any) {
-      throw error;
-    }
+    await apiClient.delete(`${SA_BASE_URL}`);
   },
 };

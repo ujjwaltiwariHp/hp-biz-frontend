@@ -9,26 +9,49 @@ import { toast } from 'react-toastify';
 import {
   FileText,
   Download,
-  Eye,
   Search,
   Building,
   CheckCircle,
   Clock,
   AlertCircle,
   XCircle,
-  X,
   DollarSign,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { Typography } from '@/components/common/Typography';
+import { useSSE } from '@/hooks/useSSE';
+import Link from 'next/link'; // FIX 1: Imported Link component
+
+const formatStatusText = (status: string) => {
+    return status.replace(/_/g, ' ').toUpperCase();
+}
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'paid':
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+    case 'payment_received':
+      return 'bg-warning/10 text-warning border-warning/20';
+    case 'sent':
+    case 'pending':
+      return 'bg-primary/10 text-primary border-primary/20';
+    case 'overdue':
+      return 'bg-danger/10 text-danger border-danger/20';
+    case 'rejected':
+      return 'bg-danger/10 text-danger border-danger/20';
+    default:
+      return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
+};
 
 export default function InvoicesPage() {
   const { isSuperAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewInvoiceModal, setViewInvoiceModal] = useState<Invoice | null>(null);
   const queryClient = useQueryClient();
 
   const paymentDialog = useConfirmDialog();
@@ -39,8 +62,10 @@ export default function InvoicesPage() {
     payment_notes: '',
   });
 
+  const invoicesQueryKey = ['invoices', currentPage, searchTerm, statusFilter];
+
   const { data: invoicesData, isLoading } = useQuery({
-    queryKey: ['invoices', currentPage, searchTerm, statusFilter],
+    queryKey: invoicesQueryKey,
     queryFn: () =>
       invoiceService.getAllInvoices(currentPage, 10, {
         search: searchTerm || undefined,
@@ -48,36 +73,51 @@ export default function InvoicesPage() {
       }),
   });
 
-const markPaymentMutation = useMutation({
-  mutationFn: (invoiceId: number) =>
-    invoiceService.markPaymentReceived(invoiceId, paymentData),
-  onSuccess: () => {
-    toast.success('Payment marked as received successfully');
-    queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    paymentDialog.closeDialog();
-    setSelectedInvoice(null);
-    setPaymentData({
-      payment_method: 'N/A',
-      payment_reference: 'N/A',
-      payment_notes: '',
-    });
-  },
-  onError: (error: any) => {
-    let errorMessage = 'Failed to mark payment as received';
+  // --- SSE Integration for Real-time Refresh ---
+  useSSE('sa_finance_update', invoicesQueryKey);
+  // ----------------------------------------------
 
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.message) {
-      errorMessage = error.message;
+
+  const markPaymentMutation = useMutation({
+    mutationFn: (invoiceId: number) =>
+      invoiceService.markPaymentReceived(invoiceId, paymentData),
+    onSuccess: () => {
+      toast.success('Payment marked as received successfully');
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      paymentDialog.closeDialog();
+      setSelectedInvoice(null);
+      setPaymentData({
+        payment_method: 'N/A',
+        payment_reference: 'N/A',
+        payment_notes: '',
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = 'Failed to mark payment as received';
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    },
+  });
+
+  const confirmMarkPayment = () => {
+    if (selectedInvoice?.id) {
+      markPaymentMutation.mutate(selectedInvoice.id);
     }
-
-    toast.error(errorMessage);
-  },
-});
+  };
 
   const handleMarkPaymentReceived = (invoice: Invoice) => {
+    if (!isSuperAdmin) {
+      toast.error('Permission Denied.');
+      return;
+    }
     if (invoice.status !== 'sent' && invoice.status !== 'overdue') {
       toast.error('This invoice cannot be marked as payment received');
       return;
@@ -89,17 +129,6 @@ const markPaymentMutation = useMutation({
       payment_notes: '',
     });
     paymentDialog.openDialog();
-  };
-
-  const confirmMarkPayment = () => {
-
-    if (selectedInvoice?.id) {
-      markPaymentMutation.mutate(selectedInvoice.id);
-    }
-  };
-
-  const handleViewInvoice = (invoice: Invoice) => {
-    setViewInvoiceModal(invoice);
   };
 
   const handleDownloadInvoice = async (invoiceId: number, invoiceNumber: string) => {
@@ -120,7 +149,8 @@ const markPaymentMutation = useMutation({
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | number | Date) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -128,44 +158,8 @@ const markPaymentMutation = useMutation({
     });
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <CheckCircle size={18} className="text-success" />;
-      case 'payment_received':
-        return <Clock size={18} className="text-warning" />;
-      case 'sent':
-      case 'pending':
-        return <Clock size={18} className="text-primary" />;
-      case 'overdue':
-        return <AlertCircle size={18} className="text-danger" />;
-      case 'rejected':
-        return <XCircle size={18} className="text-danger" />;
-      default:
-        return <FileText size={18} className="text-gray-500" />;
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-success/10 text-success border-success/20';
-      case 'payment_received':
-        return 'bg-warning/10 text-warning border-warning/20';
-      case 'sent':
-      case 'pending':
-        return 'bg-primary/10 text-primary border-primary/20';
-      case 'overdue':
-        return 'bg-danger/10 text-danger border-danger/20';
-      case 'rejected':
-        return 'bg-danger/10 text-danger border-danger/20';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
   const isOverdue = (dueDate: string, status: string) => {
-    return new Date(dueDate) < new Date() && !['paid', 'rejected'].includes(status);
+    return new Date(dueDate) < new Date() && !['paid', 'rejected', 'cancelled'].includes(status);
   };
 
   const canMarkPayment = (status: string) => {
@@ -192,14 +186,22 @@ const markPaymentMutation = useMutation({
         <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
           <div className="flex justify-between items-start">
             <div>
-              <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-                <FileText size={24} />
-                Invoices & Payments
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Manage all invoices and payment records
-              </p>
+              <Typography variant="page-title" as="h4">
+                Invoice Management
+              </Typography>
+              <Typography variant="caption" className="mt-1">
+                Track and manage all invoices and payment records
+              </Typography>
             </div>
+            {isSuperAdmin && (
+               <Link
+                href="/companies"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+              >
+                <Plus size={20} />
+                <Typography variant="body" as="span" className="text-white">Generate Invoice</Typography>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -207,7 +209,7 @@ const markPaymentMutation = useMutation({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Search Invoices
+              <Typography variant="label" as="span">Search Invoices</Typography>
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -226,7 +228,7 @@ const markPaymentMutation = useMutation({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Filter by Status
+              <Typography variant="label" as="span">Filter by Status</Typography>
             </label>
             <select
               value={statusFilter}
@@ -237,13 +239,9 @@ const markPaymentMutation = useMutation({
               className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
             >
               <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="sent">Sent</option>
-              <option value="payment_received">Payment Received</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-              <option value="rejected">Rejected</option>
+              {['draft', 'pending', 'sent', 'payment_received', 'paid', 'overdue', 'rejected'].map(status => (
+                <option key={status} value={status}>{formatStatusText(status)}</option>
+              ))}
             </select>
           </div>
 
@@ -265,24 +263,25 @@ const markPaymentMutation = useMutation({
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
             <thead>
-              <tr className="bg-gray-100 text-left dark:bg-meta-4">
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Invoice
+              {/* Table Header Styling and Typography */}
+              <tr className="bg-gray-100 text-left dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
+                <th className="py-4 px-4 xl:pl-7">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Invoice ID</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Company
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Customer</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Amount
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Amount</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Due Date
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Due Date</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Status
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Status</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Actions
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Actions</Typography>
                 </th>
               </tr>
             </thead>
@@ -291,8 +290,8 @@ const markPaymentMutation = useMutation({
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-gray-500 dark:text-gray-400">
                     <FileText size={48} className="mx-auto mb-3 opacity-50" />
-                    <p className="text-lg font-medium">No invoices found</p>
-                    <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                    <Typography variant="value" className="text-lg font-medium">No invoices found</Typography>
+                    <Typography variant="caption" className="text-sm mt-1">Try adjusting your filters</Typography>
                   </td>
                 </tr>
               ) : (
@@ -301,86 +300,83 @@ const markPaymentMutation = useMutation({
                     key={invoice.id}
                     className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
                   >
-                    <td className="py-5 px-4">
-                      <div>
-                        <h5 className="font-semibold text-black dark:text-white">
+                    <td className="py-5 px-4 xl:pl-7">
+                      {/* Stacking Invoice Number and Package Name */}
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="value" as="h5" className="font-semibold text-black dark:text-white">
                           {invoice.invoice_number}
-                        </h5>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                          {formatDate(invoice.billing_period_start)}
-                        </p>
+                        </Typography>
+                        <Typography variant="caption" className="text-sm text-gray-500 dark:text-gray-400">
+                          {invoice.package_name || 'N/A'}
+                        </Typography>
                       </div>
                     </td>
                     <td className="py-5 px-4">
-                      <div>
-                        <h5 className="font-semibold text-black dark:text-white flex items-center gap-2">
-                          <Building size={16} />
-                          {invoice.company_name}
-                        </h5>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                          {invoice.package_name}
-                        </p>
+                      {/* Stacking Company Name and ID */}
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="value" className="font-medium text-black dark:text-white">{invoice.company_name}</Typography>
+                        <Typography variant="body" className="text-sm text-gray-600 dark:text-gray-400">
+                            {/* FIX 3: Safely access unique_company_id */}
+                            ID: {(invoice as any).unique_company_id || 'N/A'}
+                        </Typography>
                       </div>
                     </td>
                     <td className="py-5 px-4">
                       <div className="flex items-baseline gap-1">
-                        <span className="font-semibold text-black dark:text-white">
+                        <Typography variant="value" as="span" className="font-semibold text-black dark:text-white">
                           {invoice.currency}
-                        </span>
-                        <span className="text-lg font-bold text-primary">
+                        </Typography>
+                        <Typography variant="value" as="span" className="text-lg font-bold text-primary">
                           {parseFloat(invoice.total_amount).toFixed(2)}
-                        </span>
+                        </Typography>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Inc. ${parseFloat(invoice.tax_amount).toFixed(2)} tax
-                      </p>
+                      <Typography variant="caption" className="text-xs text-gray-500 mt-1">
+                        Inc. {invoice.currency} {parseFloat(invoice.tax_amount).toFixed(2)} tax
+                      </Typography>
                     </td>
                     <td className="py-5 px-4">
-                      <div>
-                        <p className="font-medium text-black dark:text-white">
+                      {/* Stacking Due Date and Overdue status */}
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="value" className="font-medium text-black dark:text-white">
                           {formatDate(invoice.due_date)}
-                        </p>
+                        </Typography>
                         {isOverdue(invoice.due_date, invoice.status) && (
-                          <p className="text-xs text-danger font-semibold mt-1">
+                          <Typography variant="caption" className="text-xs text-danger font-semibold">
                             OVERDUE
-                          </p>
+                          </Typography>
                         )}
                       </div>
                     </td>
                     <td className="py-5 px-4">
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(invoice.status)}
+                        {/* REMOVED: Status icon before the badge (as requested) */}
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full border py-1.5 px-3 text-xs font-semibold ${getStatusBadgeColor(
+                          className={`inline-flex items-center gap-1 rounded-full border py-1.5 px-3 text-xs font-semibold ${getStatusColor(
                             invoice.status
                           )}`}
                         >
-                          {invoice.status.replace(/_/g, ' ').toUpperCase()}
+                          <Typography variant="badge">{formatStatusText(invoice.status)}</Typography>
                         </span>
                       </div>
                     </td>
                     <td className="py-5 px-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewInvoice(invoice)}
-                          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
-                          title="View Invoice"
-                        >
-                          <Eye size={18} />
-                        </button>
+                        {/* Download Button */}
                         <button
                           onClick={() =>
                             handleDownloadInvoice(invoice.id, invoice.invoice_number)
                           }
-                          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-success dark:hover:text-success"
+                          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
                           title="Download PDF"
                         >
                           <Download size={18} />
                         </button>
+
+                        {/* Mark Payment Received - Only visible if status is pending/sent/overdue */}
                         {canMarkPayment(invoice.status) ? (
                           <button
                             onClick={() => handleMarkPaymentReceived(invoice)}
-                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-warning hover:text-warning disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Mark Payment Received"
                             disabled={markPaymentMutation.isPending}
                           >
@@ -400,19 +396,9 @@ const markPaymentMutation = useMutation({
         {pagination && pagination.totalCount > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stroke py-4 px-4 dark:border-strokedark md:px-6 xl:px-7.5 bg-gray-50 dark:bg-meta-4">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing{' '}
-              <span className="font-semibold text-black dark:text-white">
-                {(currentPage - 1) * 10 + 1}
-              </span>{' '}
-              to{' '}
-              <span className="font-semibold text-black dark:text-white">
-                {Math.min(currentPage * 10, pagination.totalCount)}
-              </span>{' '}
-              of{' '}
-              <span className="font-semibold text-black dark:text-white">
-                {pagination.totalCount}
-              </span>{' '}
-              results
+              <Typography variant="caption">
+                Showing <span className="font-semibold text-black dark:text-white">{((currentPage - 1) * 10) + 1}</span> to <span className="font-semibold text-black dark:text-white">{Math.min(currentPage * 10, pagination.totalCount)}</span> of <span className="font-semibold text-black dark:text-white">{pagination.totalCount}</span> results
+              </Typography>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -438,182 +424,6 @@ const markPaymentMutation = useMutation({
           </div>
         )}
       </div>
-
-      {/* Invoice Details Modal */}
-      {viewInvoiceModal && (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white dark:bg-boxdark shadow-xl m-4">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-stroke bg-white dark:bg-boxdark dark:border-strokedark p-6">
-              <h3 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
-                <FileText size={24} />
-                Invoice Details
-              </h3>
-              <button
-                onClick={() => setViewInvoiceModal(null)}
-                className="text-gray-500 hover:text-black dark:hover:text-white transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Invoice Header Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Invoice Number
-                    </p>
-                    <p className="text-lg font-bold text-black dark:text-white">
-                      {viewInvoiceModal.invoice_number}
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Company
-                    </p>
-                    <p className="font-semibold text-black dark:text-white">
-                      {viewInvoiceModal.company_name}
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Package
-                    </p>
-                    <p className="font-semibold text-black dark:text-white">
-                      {viewInvoiceModal.package_name}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Status
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(viewInvoiceModal.status)}
-                      <span
-                        className={`inline-flex rounded-full py-1 px-2.5 text-xs font-semibold border ${getStatusBadgeColor(
-                          viewInvoiceModal.status
-                        )}`}
-                      >
-                        {viewInvoiceModal.status.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Billing Period
-                    </p>
-                    <p className="font-semibold text-black dark:text-white">
-                      {formatDate(viewInvoiceModal.billing_period_start)} -{' '}
-                      {formatDate(viewInvoiceModal.billing_period_end)}
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Due Date
-                    </p>
-                    <p className="font-semibold text-black dark:text-white">
-                      {formatDate(viewInvoiceModal.due_date)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Amount Breakdown */}
-              <div className="border-t border-stroke dark:border-strokedark pt-6">
-                <h4 className="text-lg font-semibold text-black dark:text-white mb-4">
-                  Amount Breakdown
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                    <span className="font-semibold text-black dark:text-white">
-                      {viewInvoiceModal.currency}{' '}
-                      {(
-                        parseFloat(viewInvoiceModal.total_amount) -
-                        parseFloat(viewInvoiceModal.tax_amount)
-                      ).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <span className="text-gray-600 dark:text-gray-400">Tax (10%):</span>
-                    <span className="font-semibold text-black dark:text-white">
-                      {viewInvoiceModal.currency}{' '}
-                      {parseFloat(viewInvoiceModal.tax_amount).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 rounded-lg bg-primary/10 border border-primary/20">
-                    <span className="font-semibold text-primary">Total Amount:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      {viewInvoiceModal.currency}{' '}
-                      {parseFloat(viewInvoiceModal.total_amount).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Removed Payment Information Section */}
-
-
-              {/* Rejection Information */}
-              {viewInvoiceModal.rejection_reason && (
-                <div className="border-t border-stroke dark:border-strokedark pt-6">
-                  <h4 className="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2">
-                    <AlertCircle size={20} className="text-danger" />
-                    Rejection Details
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-danger/10 border border-danger/20">
-                      <p className="text-xs font-medium text-danger mb-1">Rejection Reason</p>
-                      <p className="text-sm text-black dark:text-white">
-                        {viewInvoiceModal.rejection_reason}
-                      </p>
-                    </div>
-                    {viewInvoiceModal.rejection_note && (
-                      <div className="p-3 rounded-lg bg-gray-50 dark:bg-meta-4">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          Additional Notes
-                        </p>
-                        <p className="text-sm text-black dark:text-white">
-                          {viewInvoiceModal.rejection_note}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="sticky bottom-0 border-t border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 flex gap-3">
-              <button
-                onClick={() =>
-                  handleDownloadInvoice(
-                    viewInvoiceModal.id,
-                    viewInvoiceModal.invoice_number
-                  )
-                }
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-3 px-6 font-medium text-white hover:bg-primary/90 transition-colors"
-              >
-                <Download size={18} />
-                Download PDF
-              </button>
-              <button
-                onClick={() => setViewInvoiceModal(null)}
-                className="flex-1 rounded-lg bg-gray-200 py-3 px-6 font-medium text-black hover:bg-gray-300 transition-colors dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mark Payment Received Dialog */}
       <ConfirmDialog

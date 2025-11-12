@@ -3,29 +3,28 @@
 import { useState } from 'react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import CardDataStats from '@/components/CardDataStats';
-import { Building, Users, UserCheck, UserX, TrendingUp, Calendar, Activity, BarChart3, Clock, DollarSign, MinusCircle } from 'lucide-react';
+import { Typography } from '@/components/common/Typography';
+import { Building, Users, UserCheck, UserX, TrendingUp, Calendar, Clock, BarChart3 } from 'lucide-react';
 import { companyService } from '@/services/company.service';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { toast } from 'react-toastify';
-import { formatCurrency } from '@/lib/utils';
+import { getAuthToken } from '@/lib/auth';
+import { useSSE } from '@/hooks/useSSE';
 
-// Helper to handle potential string conversion from API response
 const parseNumeric = (value: any, defaultValue = 0) => {
     return Number(value) || defaultValue;
 };
 
-// Custom Tooltip for Bar Chart (Updated to show Leads and Staff)
 const CustomBarChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
       <div className="rounded-lg bg-boxdark text-white border border-strokedark p-3 shadow-md text-sm">
-        <p className="font-bold mb-1">{data.full_name}</p>
+        <Typography variant="body1" as="h6" className="font-bold mb-1">{data.full_name}</Typography>
         {payload.map((item: any) => (
-            <p key={item.name} style={{ color: item.color }}>
+            <Typography key={item.name} variant="body" style={{ color: item.color }}>
                 {item.name}: {item.value.toLocaleString()}
-            </p>
+            </Typography>
         ))}
       </div>
     );
@@ -39,21 +38,42 @@ export default function Dashboard() {
     endDate: new Date().toISOString().split('T')[0]
   });
 
+  // Although the token is retrieved, it is *not* passed explicitly to these service calls.
+  // The global apiClient is responsible for its injection via interceptors.
+  const token = getAuthToken();
+  const companiesQueryKey = ['companies', { page: 1, limit: 10, recent: true }];
+  const dashboardQueryKey = ['dashboard'];
+  const usageQueryKey = ['usageReport', dateRange];
+
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: companyService.getDashboard,
+    queryKey: dashboardQueryKey,
+    // FIX 1: Removed token argument
+    queryFn: () => companyService.getDashboard(),
+    enabled: !!token,
   });
 
-  const { data: companiesData } = useQuery({
-    queryKey: ['companies', { page: 1, limit: 10 }],
+  const { data: companiesData, isLoading: companiesLoading } = useQuery({
+    queryKey: companiesQueryKey,
+    // FIX 2: Removed token argument
     queryFn: () => companyService.getCompanies({ page: 1, limit: 10 }),
+    enabled: !!token,
   });
 
   const { data: usageData, isLoading: usageLoading } = useQuery({
-    queryKey: ['usageReport', dateRange],
+    queryKey: usageQueryKey,
+    // FIX 3: Removed token argument
     queryFn: () => companyService.getUsageReport(dateRange),
-    enabled: !!dateRange.startDate && !!dateRange.endDate,
+    enabled: !!token && !!dateRange.startDate && !!dateRange.endDate,
   });
+
+  // --- SSE Listeners for Real-time Dashboard Refresh ---
+  useSSE('sa_company_list_refresh', companiesQueryKey);
+  useSSE('sa_company_list_refresh', dashboardQueryKey);
+  useSSE('sa_company_list_refresh', usageQueryKey);
+
+  useSSE('sa_finance_update', dashboardQueryKey);
+  // ----------------------------------------------------
+
 
   const stats = dashboardData?.data?.stats || {
     total_companies: 0,
@@ -62,7 +82,7 @@ export default function Dashboard() {
     new_companies_this_month: 0
   };
 
-  const recentCompanies = (companiesData?.data?.companies || []).slice(0, 4);
+  const recentCompanies = (companiesData?.data?.companies || []).slice(0, 5);
   const usageReport = usageData?.data?.report || [];
   const usageSummary = usageData?.data?.summary || { totalCompanies: 0, totalLeads: 0, totalActivities: 0 };
 
@@ -94,11 +114,10 @@ export default function Dashboard() {
     .map((company: any) => ({
         name: company.company_name.substring(0, 10) + '...',
         leads: company.leads_count,
-        staff: company.staff_count, // Use staff count here
+        staff: company.staff_count,
         full_name: company.company_name
     }));
 
-  // Determine max value across leads and staff for Y-axis domain
   const maxLeads = barChartData.reduce((max, item) => Math.max(max, item.leads), 0);
   const maxStaff = barChartData.reduce((max, item) => Math.max(max, item.staff), 0);
   const dataMax = Math.max(maxLeads, maxStaff);
@@ -114,15 +133,15 @@ export default function Dashboard() {
     );
   }
 
-  const isDataLoading = usageLoading;
+  const isDataLoading = usageLoading || companiesLoading;
 
   return (
     <DefaultLayout>
       <div className="mx-auto max-w-screen-2xl">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-title-md2 font-semibold text-black dark:text-white">
+          <Typography variant="page-title" as="h2">
             Dashboard Overview
-          </h2>
+          </Typography>
           <div className="flex gap-2">
             <input
               type="date"
@@ -141,11 +160,11 @@ export default function Dashboard() {
 
         {isDataLoading && (
             <div className="flex items-center gap-2 p-3 mb-4 text-sm text-primary rounded-lg bg-primary/10">
-                <Clock size={16} className="animate-spin" /> Loading usage report data...
+                <Clock size={16} className="animate-spin" />
+                <Typography variant="body2">Loading usage report data...</Typography>
             </div>
         )}
 
-        {/* Global Stats Cards (Updated Card 3) */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
           <CardDataStats
             title="Total Companies"
@@ -166,7 +185,6 @@ export default function Dashboard() {
           </CardDataStats>
 
           <CardDataStats
-            // SWAP: Inactive Companies (Stable metric)
             title="Inactive Companies"
             total={stats.inactive_companies.toLocaleString()}
             rate={stats.total_companies > 0 ? `${inactivePercent}%` : '0%'}
@@ -176,7 +194,6 @@ export default function Dashboard() {
           </CardDataStats>
 
           <CardDataStats
-            // SWAP: Total Activities Logged (Unstable metric) -> Total Leads Tracked
             title="Total Leads Tracked"
             total={usageSummary.totalLeads.toLocaleString()}
             rate={`Avg: ${usageSummary.totalCompanies > 0 ? Math.round(usageSummary.totalLeads / usageSummary.totalCompanies) : 0} / company`}
@@ -186,16 +203,14 @@ export default function Dashboard() {
           </CardDataStats>
         </div>
 
-        {/* Charts and Status */}
         <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
-          {/* Top Company Activity Performance - Takes more space (7/12) */}
           <div className="col-span-12 xl:col-span-7">
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5">
               <div className="flex items-center justify-between mb-6">
-                <h4 className="text-xl font-semibold text-black dark:text-white flex items-center gap-2">
+                <Typography variant="card-title" as="h4" className="text-black dark:text-white flex items-center gap-2">
                   <BarChart3 size={24} />
                   Top Company Performance (Leads vs Staff)
-                </h4>
+                </Typography>
               </div>
 
               {barChartData.length > 0 ? (
@@ -212,37 +227,33 @@ export default function Dashboard() {
                       height={75}
                     />
                     <YAxis
-                      dataKey="leads" // YAxis is scaled based on Leads value (the largest number)
+                      dataKey="leads"
                       stroke="#6B7280"
                       tick={{ fill: '#6B7280', fontSize: 12 }}
-                      // Adjust domain based on calculated dataMax
                       domain={[0, (dataMax: number) => (dataMax > 0 ? dataMax * 1.15 : 100)]}
                       tickFormatter={(value) => value.toLocaleString()}
                     />
                     <Tooltip content={<CustomBarChartTooltip />} />
 
-                    {/* BAR FIX 1: Leads (Blue) */}
                     <Bar dataKey="leads" fill="#3B82F6" name="Leads Created/Logged" radius={[8, 8, 0, 0]} />
 
-                    {/* BAR FIX 2: Staff (Green) */}
                     <Bar dataKey="staff" fill="#10B981" name="Active Staff Count" radius={[8, 8, 0, 0]} />
 
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-[350px] text-gray-500 dark:text-gray-400">
-                  No activity data found for selected period.
+                  <Typography variant="body1">No activity data found for selected period.</Typography>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Company Status Distribution - Takes less space (5/12) */}
           <div className="col-span-12 xl:col-span-5">
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5">
-              <h4 className="mb-6 text-xl font-semibold text-black dark:text-white">
+              <Typography variant="card-title" as="h4" className="mb-6 text-black dark:text-white">
                 Company Status Distribution
-              </h4>
+              </Typography>
 
               {stats.total_companies > 0 ? (
                 <ResponsiveContainer width="100%" height={350}>
@@ -267,22 +278,20 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-[350px] text-gray-500 dark:text-gray-400">
-                  No companies data available
+                  <Typography variant="body1">No companies data available</Typography>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Usage Summary and Recent Companies List - Same Size Fix */}
         <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
-          {/* Top 5 Usage Leaders (Table) - Takes 5/12 space */}
           <div className="col-span-12 xl:col-span-5">
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 h-full">
-              <h4 className="mb-6 text-xl font-semibold text-black dark:text-white flex items-center gap-2">
+              <Typography variant="card-title" as="h4" className="mb-6 text-black dark:text-white flex items-center gap-2">
                 <TrendingUp size={24} />
                 Top 5 Usage Leaders
-              </h4>
+              </Typography>
 
               {topCompaniesList.length > 0 ? (
                 <div className="space-y-3">
@@ -296,32 +305,31 @@ export default function Dashboard() {
                           {index + 1}
                         </div>
                         <div>
-                          <h5 className="font-semibold text-black dark:text-white text-sm">{company.company_name}</h5>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{company.package_name}</p>
+                          <Typography variant="value" className="font-semibold text-black dark:text-white text-sm">{company.company_name}</Typography>
+                          <Typography variant="caption" className="text-gray-500 dark:text-gray-400 text-xs">{company.package_name}</Typography>
                         </div>
                       </div>
                       <div className="text-right">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Leads + Activities</p>
-                          <p className="text-lg font-bold text-primary">{(company.leads_count + company.activities_count).toLocaleString()}</p>
+                          <Typography variant="caption" className="text-gray-500 dark:text-gray-400 text-xs">Leads + Activities</Typography>
+                          <Typography variant="value" as="h5" className="font-bold text-primary">{(company.leads_count + company.activities_count).toLocaleString()}</Typography>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-48 text-gray-500 dark:text-gray-400">
-                  No usage data available for selected period
+                  <Typography variant="body1">No usage data available for selected period</Typography>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Recently Added Companies List - Takes 7/12 space */}
           <div className="col-span-12 xl:col-span-7">
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 h-full">
-              <h4 className="mb-6 text-xl font-semibold text-black dark:text-white flex items-center gap-2">
+              <Typography variant="card-title" as="h4" className="mb-6 text-black dark:text-white flex items-center gap-2">
                 <Calendar size={24} />
                 Recently Added Companies
-              </h4>
+              </Typography>
 
               {recentCompanies.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -339,12 +347,12 @@ export default function Dashboard() {
                       {recentCompanies.map((company: any) => (
                         <tr key={company.id} className="border-b border-stroke dark:border-strokedark">
                           <td className="py-3 px-3">
-                            <p className="font-medium text-black dark:text-white text-sm">{company.company_name}</p>
-                            <p className="text-xs text-gray-500">{company.unique_company_id}</p>
+                            <Typography variant="value" className="font-medium text-black dark:text-white text-sm">{company.company_name}</Typography>
+                            <Typography variant="caption" className="text-xs text-gray-500">{company.unique_company_id}</Typography>
                           </td>
                           <td className="py-3 px-3">
-                            <p className="text-black dark:text-white text-sm">{company.admin_name}</p>
-                            <p className="text-xs text-gray-500">{company.admin_email}</p>
+                            <Typography variant="body" className="text-black dark:text-white text-sm">{company.admin_name}</Typography>
+                            <Typography variant="caption" className="text-xs text-gray-500">{company.admin_email}</Typography>
                           </td>
                           <td className="py-3 px-3">
                             <span className="inline-flex rounded-full bg-primary/10 py-0.5 px-2 text-xs font-medium text-primary">
@@ -360,8 +368,10 @@ export default function Dashboard() {
                               {company.is_active ? 'Active' : 'Inactive'}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-black dark:text-white text-sm">
-                            {new Date(company.created_at).toLocaleDateString()}
+                          <td className="py-3 px-3">
+                            <Typography variant="body" className="text-black dark:text-white text-sm">
+                              {new Date(company.created_at).toLocaleDateString()}
+                            </Typography>
                           </td>
                         </tr>
                       ))}
@@ -370,7 +380,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400">
-                  No companies found
+                  <Typography variant="body1">No companies found</Typography>
                 </div>
               )}
             </div>
