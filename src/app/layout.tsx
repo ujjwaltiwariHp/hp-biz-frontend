@@ -1,10 +1,14 @@
-import "@/css/satoshi.css";
-import "@/css/style.css";
-import QueryProvider from "@/context/QueryProvider";
+import '@/css/style.css';
+import '@/css/satoshi.css';
+import '@/css/typography.css';
+import React, { ReactNode } from 'react';
+import DefaultLayout from '@/components/Layouts/DefaultLayout';
+import QueryProvider  from '@/context/QueryProvider';
+import { SSEProvider } from '@/context/SSEContext';
 
 export const metadata = {
-  title: "Hp-Biz",
-  description: "Super Admin Dashboard",
+  title: 'Hp-Biz',
+  description: 'Super Admin Dashboard',
 };
 
 export default function RootLayout({
@@ -16,9 +20,11 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning={true}>
         <QueryProvider>
-          <div className="dark:bg-boxdark-2 dark:text-bodydark">
-            {children}
-          </div>
+          <SSEProvider>
+            <div className="dark:bg-boxdark-2 dark:text-bodydark">
+              {children}
+            </div>
+          </SSEProvider>
         </QueryProvider>
       </body>
     </html>

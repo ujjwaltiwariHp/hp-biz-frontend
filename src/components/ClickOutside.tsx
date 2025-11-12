@@ -1,51 +1,30 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect } from 'react';
 
-interface Props {
+interface ClickOutsideProps {
+  onOutsideClick: () => void;
   children: React.ReactNode;
-  exceptionRef?: React.RefObject<HTMLElement>;
-  onClick: () => void;
   className?: string;
 }
 
-const ClickOutside: React.FC<Props> = ({
-  children,
-  exceptionRef,
-  onClick,
-  className,
-}) => {
+const ClickOutside: React.FC<ClickOutsideProps> = ({ children, onOutsideClick, className }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickListener = (event: MouseEvent) => {
-      let clickedInside: null | boolean = false;
-      if (exceptionRef) {
-        clickedInside =
-          (wrapperRef.current &&
-            wrapperRef.current.contains(event.target as Node)) ||
-          (exceptionRef.current && exceptionRef.current === event.target) ||
-          (exceptionRef.current &&
-            exceptionRef.current.contains(event.target as Node));
-      } else {
-        clickedInside =
-          wrapperRef.current &&
-          wrapperRef.current.contains(event.target as Node);
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        onOutsideClick();
       }
+    }
 
-      if (!clickedInside) onClick();
-    };
-
-    document.addEventListener("mousedown", handleClickListener);
-
+    // Bind the event listener
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickListener);
+      // Unbind the event listener on cleanup
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [exceptionRef, onClick]);
+  }, [onOutsideClick]);
 
-  return (
-    <div ref={wrapperRef} className={`${className || ""}`}>
-      {children}
-    </div>
-  );
+  return <div ref={wrapperRef} className={className || ''}>{children}</div>;
 };
 
 export default ClickOutside;

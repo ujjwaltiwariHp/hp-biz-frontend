@@ -1,0 +1,111 @@
+/* Font Size Variables */
+:root {
+  --font-xxs: 0.625rem;   /* 10px - Badges, tiny labels */
+  --font-xs: 0.6875rem;   /* 11px - Labels, captions */
+  --font-sm: 0.75rem;     /* 12px - Body text, descriptions */
+  --font-base: 0.875rem;  /* 14px - Default text */
+  --font-lg: 1rem;        /* 16px - Headers */
+  --font-xl: 1.125rem;    /* 18px - Page titles */
+}
+
+/* Labels (Forms, Cards) */
+.label-text {
+  font-size: var(--font-xs);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Value Display */
+.value-text {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Card Titles */
+.card-title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.card-subtitle {
+  font-size: var(--font-xs);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Page Headers */
+.page-title {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.page-subtitle {
+  font-size: var(--font-xs);
+  line-height: 1.4;
+}
+
+/* Table Styles */
+.table-header {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.table-cell {
+  font-size: var(--font-xs);
+  line-height: 1.4;
+}
+
+/* Status Badges */
+.badge {
+  font-size: var(--font-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.625rem;
+  line-height: 1;
+}
+
+/* Button Text */
+.btn-text-sm {
+  font-size: var(--font-xs);
+  font-weight: 500;
+}
+
+.btn-text-base {
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+/* Compact Mode (Optional - add to specific sections) */
+.compact-mode {
+  font-size: var(--font-xs);
+}
+
+.compact-mode h1,
+.compact-mode h2,
+.compact-mode h3 {
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.compact-mode label {
+  font-size: var(--font-xxs);
+}
+
+
+@media (min-width: 768px) {
+  .page-title {
+    font-size: var(--font-xl);
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --font-base: 0.8125rem;
+  }
+}

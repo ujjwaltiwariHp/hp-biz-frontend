@@ -46,6 +46,17 @@ module.exports = {
         warning: '#FFA70B',
       },
       fontSize: {
+
+        'xxs': ['0.625rem', { lineHeight: '0.875rem' }],   // 10px
+        'xs': ['0.6875rem', { lineHeight: '1rem' }],       // 11px
+        'sm': ['0.75rem', { lineHeight: '1.125rem' }],     // 12px
+        'base': ['0.875rem', { lineHeight: '1.25rem' }],   // 14px (NEW DEFAULT)
+        'lg': ['1rem', { lineHeight: '1.5rem' }],          // 16px
+        'xl': ['1.125rem', { lineHeight: '1.75rem' }],     // 18px
+        '2xl': ['1.25rem', { lineHeight: '1.875rem' }],    // 20px
+        '3xl': ['1.5rem', { lineHeight: '2rem' }],         // 24px
+
+        // ===== EXISTING: Keep Your Title Sizes =====
         'title-xxl': ['44px', '55px'],
         'title-xl': ['36px', '45px'],
         'title-xl2': ['33px', '45px'],
@@ -173,6 +184,7 @@ module.exports = {
         999: '999',
         9999: '9999',
         99999: '99999',
+        999999: '999999',
       },
     },
   },

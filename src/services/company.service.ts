@@ -1,5 +1,3 @@
-// services/company.service.ts (Final Corrected Content)
-
 import { apiClient } from '@/lib/api';
 import {
   Company,

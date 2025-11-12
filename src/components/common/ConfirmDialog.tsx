@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 const dialogConfig = {
@@ -58,12 +59,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmText = "Confirm",
   cancelText = "Cancel",
   isLoading = false,
+  children,
 }) => {
-  if (!isOpen) return null;
-
-  const config = dialogConfig[type];
-  const IconComponent = config.icon;
-
   // Prevent background scroll when dialog is open
   React.useEffect(() => {
     if (isOpen) {
@@ -73,6 +70,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const config = dialogConfig[type];
+  const IconComponent = config.icon;
 
   return (
     <div
@@ -105,9 +107,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {message}
           </p>
+
+          {/* Children Content */}
+          {children && (
+            <div className="mt-4 mb-6">{children}</div>
+          )}
+
 
           {/* Action Buttons */}
           <div className="flex gap-3 justify-center">

@@ -6,20 +6,23 @@ import { companyService } from '@/services/company.service';
 import { useState } from 'react';
 import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
-import { Eye, UserCheck, UserX, Trash2, X, Building, Mail, Phone, Globe, Calendar, Package, Plus } from 'lucide-react';
+import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight } from 'lucide-react';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { Typography } from '@/components/common/Typography';
+import { useSSE } from '@/hooks/useSSE';
 
 export default function CompaniesPage() {
   const { isSuperAdmin } = useAuth();
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [viewCompanyModal, setViewCompanyModal] = useState<Company | null>(null);
 
-  // Dialog hooks
   const deleteDialog = useConfirmDialog();
   const toggleDialog = useConfirmDialog();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -27,8 +30,10 @@ export default function CompaniesPage() {
 
   const queryClient = useQueryClient();
 
+  const companiesQueryKey = ['companies', currentPage, searchTerm, statusFilter];
+
   const { data: companiesData, isLoading } = useQuery({
-    queryKey: ['companies', currentPage, searchTerm, statusFilter],
+    queryKey: companiesQueryKey,
     queryFn: () => companyService.getCompanies({
       page: currentPage,
       limit: 10,
@@ -36,6 +41,8 @@ export default function CompaniesPage() {
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
   });
+
+  useSSE('sa_company_list_refresh', ['companies']);
 
   const activateMutation = useMutation({
     mutationFn: companyService.activateCompanyAccount,
@@ -70,7 +77,6 @@ export default function CompaniesPage() {
     },
   });
 
-  // NEW HANDLER: Opens the toggle status confirmation dialog
   const handleToggleStatus = (company: Company) => {
     if (!isSuperAdmin) {
       toast.error('Permission Denied: View-only access.');
@@ -81,7 +87,6 @@ export default function CompaniesPage() {
     toggleDialog.openDialog();
   };
 
-  // NEW HANDLER: Confirms and executes the status toggle action
   const confirmToggleStatus = () => {
     if (!selectedCompany) return;
 
@@ -94,7 +99,6 @@ export default function CompaniesPage() {
     setSelectedCompany(null);
   };
 
-  // UPDATED HANDLER: Opens the delete confirmation dialog
   const handleDelete = (company: Company) => {
     if (!isSuperAdmin) {
       toast.error('Permission Denied: View-only access.');
@@ -104,7 +108,6 @@ export default function CompaniesPage() {
     deleteDialog.openDialog();
   };
 
-  // NEW HANDLER: Confirms and executes the delete action
   const confirmDelete = () => {
     if (!selectedCompany) return;
     deleteMutation.mutate(selectedCompany.id);
@@ -113,7 +116,7 @@ export default function CompaniesPage() {
   };
 
   const handleViewCompany = (company: Company) => {
-    setViewCompanyModal(company);
+    router.push(`/companies/${company.id}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -148,12 +151,12 @@ export default function CompaniesPage() {
         {/* Header with Provisioning Button */}
         <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex justify-between items-center">
           <div>
-            <h4 className="text-xl font-semibold text-black dark:text-white">
+            <Typography variant="page-title" as="h4">
               Companies Management
-            </h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            </Typography>
+            <Typography variant="caption" className="mt-1">
               Manage all registered companies and their subscriptions
-            </p>
+            </Typography>
           </div>
           {isSuperAdmin && (
             <Link
@@ -162,7 +165,7 @@ export default function CompaniesPage() {
               title="Provision a new company account and assign subscription"
             >
               <Plus size={20} />
-              Provision Company
+              <Typography variant="body" as="span" className="text-white">Provision Company</Typography>
             </Link>
           )}
         </div>
@@ -171,7 +174,7 @@ export default function CompaniesPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Search Companies
+              <Typography variant="label" as="span">Search Companies</Typography>
             </label>
             <input
               type="text"
@@ -187,7 +190,7 @@ export default function CompaniesPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Filter by Status
+              <Typography variant="label" as="span">Filter by Status</Typography>
             </label>
             <select
               value={statusFilter}
@@ -220,24 +223,25 @@ export default function CompaniesPage() {
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
             <thead>
-              <tr className="bg-gray-100 text-left dark:bg-meta-4">
-                <th className="py-4 px-4 font-semibold text-black dark:text-white xl:pl-7">
-                  Company
+              {/* FIX 3: Apply styling to make the table header look like a box */}
+              <tr className="bg-gray-100 text-left dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
+                <th className="py-4 px-4 xl:pl-7">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Company</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Admin
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Admin</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Package
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Package</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Status
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Status</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Subscription
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Subscription</Typography>
                 </th>
-                <th className="py-4 px-4 font-semibold text-black dark:text-white">
-                  Actions
+                <th className="py-4 px-4">
+                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Actions</Typography>
                 </th>
               </tr>
             </thead>
@@ -246,39 +250,46 @@ export default function CompaniesPage() {
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-gray-500 dark:text-gray-400">
                     <Building size={48} className="mx-auto mb-3 opacity-50" />
-                    <p className="text-lg font-medium">No companies found</p>
-                    <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                    <Typography variant="value" className="text-lg font-medium">No companies found</Typography>
+                    <Typography variant="caption" className="text-sm mt-1">Try adjusting your search or filters</Typography>
                   </td>
                 </tr>
               ) : (
                 companies.map((company: Company) => (
-                  <tr key={company.id} className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors">
+                  <tr
+                    key={company.id}
+                    className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors cursor-pointer"
+                    onClick={() => handleViewCompany(company)}
+                  >
                     <td className="py-5 px-4 xl:pl-7">
-                      <div>
-                        <h5 className="font-semibold text-black dark:text-white">
+                      {/* FIX: Stacking Company Name, ID, Industry/Size */}
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="value" as="h5" className="font-semibold text-black dark:text-white">
                           {company.company_name}
-                        </h5>
-                        <p className="text-sm text-primary font-medium mt-0.5">
+                        </Typography>
+                        <Typography variant="body" className="text-sm text-primary font-medium">
                           ID: {company.unique_company_id}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        </Typography>
+                        <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
                           {company.industry} • {company.company_size}
-                        </p>
+                        </Typography>
                       </div>
                     </td>
                     <td className="py-5 px-4">
-                      <div>
-                        <p className="font-medium text-black dark:text-white">{company.admin_name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{company.admin_email}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{company.phone}</p>
+                      {/* FIX: Stacking Admin Name, Email, Phone */}
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="value" className="font-medium text-black dark:text-white">{company.admin_name}</Typography>
+                        <Typography variant="body" className="text-sm text-gray-600 dark:text-gray-400">{company.admin_email}</Typography>
+                        <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">{company.phone}</Typography>
                       </div>
                     </td>
                     <td className="py-5 px-4">
-                      <div>
-                        <p className="font-semibold text-black dark:text-white">{company.package_name}</p>
-                        <p className="text-sm text-primary font-medium mt-0.5">
+                      {/* FIX: Stacking Package Name and Price */}
+                      <div className="flex flex-col space-y-1">
+                        <Typography variant="value" className="font-semibold text-black dark:text-white">{company.package_name}</Typography>
+                        <Typography variant="body" className="text-sm text-primary font-medium">
                           ${company.package_price}/{company.duration_type}
-                        </p>
+                        </Typography>
                       </div>
                     </td>
                     <td className="py-5 px-4">
@@ -290,25 +301,26 @@ export default function CompaniesPage() {
                               : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                           }`}
                         >
-                          {company.is_active ? 'Active' : 'Inactive'}
+                          <Typography variant="badge">{company.is_active ? 'Active' : 'Inactive'}</Typography>
                         </span>
                         {company.email_verified && (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
-                            Email Verified
+                            <Typography variant="caption">Email Verified</Typography>
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="py-5 px-4">
-                      <div className="text-sm">
-                        <p className="text-black dark:text-white font-medium">
-                          <span className="text-gray-500 dark:text-gray-400 font-normal">Start:</span> {formatDate(company.subscription_start_date)}
-                        </p>
-                        <p className="text-black dark:text-white font-medium mt-1">
-                          <span className="text-gray-500 dark:text-gray-400 font-normal">End:</span> {formatDate(company.subscription_end_date)}
-                        </p>
-                        <span className={`inline-flex items-center gap-1 mt-2 text-xs font-semibold ${
+                      {/* FIX: Stacking Start Date, End Date, and Status */}
+                      <div className="flex flex-col space-y-1 text-sm">
+                        <Typography variant="body" className="text-black dark:text-white font-medium">
+                          <Typography variant="caption" as="span" className="font-normal text-gray-500 dark:text-gray-400">Start:</Typography> {formatDate(company.subscription_start_date)}
+                        </Typography>
+                        <Typography variant="body" className="text-black dark:text-white font-medium">
+                          <Typography variant="caption" as="span" className="font-normal text-gray-500 dark:text-gray-400">End:</Typography> {formatDate(company.subscription_end_date)}
+                        </Typography>
+                        <span className={`inline-flex items-center gap-1 mt-2 text-xs font-semibold w-fit ${
                           isSubscriptionExpired(company.subscription_end_date)
                             ? 'text-red-600 dark:text-red-400'
                             : 'text-green-600 dark:text-green-400'
@@ -318,31 +330,31 @@ export default function CompaniesPage() {
                               ? 'bg-red-600 dark:bg-red-400'
                               : 'bg-green-600 dark:bg-green-400'
                           }`}></span>
-                          {isSubscriptionExpired(company.subscription_end_date) ? 'Expired' : 'Active'}
+                          <Typography variant="caption" as="span" className="font-semibold">{isSubscriptionExpired(company.subscription_end_date) ? 'Expired' : 'Active'}</Typography>
                         </span>
                       </div>
                     </td>
-                    <td className="py-5 px-4">
+                    <td className="py-5 px-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleViewCompany(company)}
                           className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
                           title="View Details"
                         >
-                          <Eye size={18} />
+                          <ArrowRight size={18} />
                         </button>
                         {isSuperAdmin && (
                           <>
                             {/* Subscription Update Link */}
                             <Link
-                                href={`/companies/${company.id}/subscription-update`}
+                                href={`/companies/${company.id}/subscriptions`}
                                 className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
                                 title="Update Subscription"
                             >
                                 <Package size={18} />
                             </Link>
                             <button
-                              onClick={() => handleToggleStatus(company)} // UPDATED to use new handler
+                              onClick={() => handleToggleStatus(company)}
                               className={`p-2 rounded-lg transition-colors ${
                                 activateMutation.isPending || deactivateMutation.isPending
                                   ? 'opacity-50 cursor-not-allowed'
@@ -358,7 +370,7 @@ export default function CompaniesPage() {
                               {company.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
                             </button>
                             <button
-                              onClick={() => handleDelete(company)} // UPDATED to use new handler (opens dialog)
+                              onClick={() => handleDelete(company)}
                               className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${
                                 deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
@@ -381,7 +393,9 @@ export default function CompaniesPage() {
         {pagination && pagination.totalCount > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stroke py-4 px-4 dark:border-strokedark md:px-6 xl:px-7.5 bg-gray-50 dark:bg-meta-4">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-semibold text-black dark:text-white">{((currentPage - 1) * 10) + 1}</span> to <span className="font-semibold text-black dark:text-white">{Math.min(currentPage * 10, pagination.totalCount)}</span> of <span className="font-semibold text-black dark:text-white">{pagination.totalCount}</span> results
+              <Typography variant="caption">
+                Showing <span className="font-semibold text-black dark:text-white">{((currentPage - 1) * 10) + 1}</span> to <span className="font-semibold text-black dark:text-white">{Math.min(currentPage * 10, pagination.totalCount)}</span> of <span className="font-semibold text-black dark:text-white">{pagination.totalCount}</span> results
+              </Typography>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -405,177 +419,6 @@ export default function CompaniesPage() {
           </div>
         )}
       </div>
-
-      {/* View Company Modal - KEPT AS IS */}
-      {viewCompanyModal && (
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white dark:bg-boxdark shadow-xl m-4">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-stroke bg-white dark:bg-boxdark dark:border-strokedark p-6">
-              <h3 className="text-xl font-semibold text-black dark:text-white">Company Details</h3>
-              <button
-                onClick={() => setViewCompanyModal(null)}
-                className="text-gray-500 hover:text-black dark:hover:text-white transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <Building className="text-primary mt-1" size={20} />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Company Name</p>
-                      <p className="font-semibold text-black dark:text-white">{viewCompanyModal.company_name}</p>
-                      <p className="text-sm text-primary font-medium mt-1">ID: {viewCompanyModal.unique_company_id}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <Mail className="text-primary mt-1" size={20} />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Admin Email</p>
-                      <p className="font-medium text-black dark:text-white break-all">{viewCompanyModal.admin_email}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{viewCompanyModal.admin_name}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <Phone className="text-primary mt-1" size={20} />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phone</p>
-                      <p className="font-medium text-black dark:text-white">{viewCompanyModal.phone}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <Globe className="text-primary mt-1" size={20} />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Website</p>
-                      <a
-                        href={viewCompanyModal.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-primary hover:underline break-all"
-                      >
-                        {viewCompanyModal.website}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Industry</p>
-                    <p className="font-semibold text-black dark:text-white">{viewCompanyModal.industry}</p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Company Size</p>
-                    <p className="font-semibold text-black dark:text-white">{viewCompanyModal.company_size}</p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Address</p>
-                    <p className="font-medium text-black dark:text-white">{viewCompanyModal.address}</p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Account Status</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full py-1.5 px-3 text-sm font-semibold ${
-                        viewCompanyModal.is_active
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                        <span className={`h-2 w-2 rounded-full ${
-                          viewCompanyModal.is_active ? 'bg-green-700 dark:bg-green-400' : 'bg-red-700 dark:bg-red-400'
-                        }`}></span>
-                        {viewCompanyModal.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                      {viewCompanyModal.email_verified && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 py-1.5 px-3 text-sm font-semibold text-blue-700 dark:text-blue-400">
-                          Email Verified
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-stroke dark:border-strokedark pt-6">
-                <h4 className="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2">
-                  <Package size={20} className="text-primary" />
-                  Subscription Details
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                    <p className="text-xs font-medium text-primary mb-1">Package</p>
-                    <p className="text-lg font-bold text-primary">{viewCompanyModal.package_name}</p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                    <p className="text-xs font-medium text-primary mb-1">Price</p>
-                    <p className="text-lg font-bold text-primary">${viewCompanyModal.package_price}/{viewCompanyModal.duration_type}</p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Start Date</p>
-                    </div>
-                    <p className="font-semibold text-black dark:text-white">{formatDate(viewCompanyModal.subscription_start_date)}</p>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">End Date</p>
-                    </div>
-                    <p className="font-semibold text-black dark:text-white">{formatDate(viewCompanyModal.subscription_end_date)}</p>
-                    <span className={`inline-flex items-center gap-1 mt-2 text-xs font-semibold ${
-                      isSubscriptionExpired(viewCompanyModal.subscription_end_date)
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-green-600 dark:text-green-400'
-                    }`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${
-                        isSubscriptionExpired(viewCompanyModal.subscription_end_date)
-                          ? 'bg-red-600 dark:bg-red-400'
-                          : 'bg-green-600 dark:bg-green-400'
-                      }`}></span>
-                      {isSubscriptionExpired(viewCompanyModal.subscription_end_date) ? 'Expired' : 'Active'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-stroke dark:border-strokedark pt-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created At</p>
-                    <p className="font-medium text-black dark:text-white">{formatDate(viewCompanyModal.created_at)}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</p>
-                    <p className="font-medium text-black dark:text-white">{formatDate(viewCompanyModal.updated_at)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="sticky bottom-0 border-t border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-              <button
-                onClick={() => setViewCompanyModal(null)}
-                className="w-full rounded-lg bg-primary py-3 px-6 font-medium text-white hover:bg-primary/90 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
