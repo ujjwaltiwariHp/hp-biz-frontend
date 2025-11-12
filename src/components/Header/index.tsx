@@ -14,18 +14,20 @@ const Header = (props: {
   sidebarOpen: string | boolean | undefined;
   setSidebarOpen: (arg0: boolean) => void;
 }) => {
-  const { data: notificationStats } = useQuery({
-    queryKey: ['superAdminNotificationsStats'],
-    queryFn: notificationService.getUnreadCount,
-    refetchInterval: 60000,
-  });
+
+
+const { data: notificationStats } = useQuery({
+  queryKey: ['superAdminNotificationsStats'],
+
+  queryFn: notificationService.getSuperAdminUnreadCount,
+  refetchInterval: 60000,
+});
 
   const unreadCount = notificationStats?.unread_count || 0;
   const pathname = usePathname();
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href?: string }>>([]);
   const [companyName, setCompanyName] = useState<string>('');
 
-  // Extract company ID from pathname
   useEffect(() => {
     const companyIdMatch = pathname.match(/\/companies\/(\d+)/);
     const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
