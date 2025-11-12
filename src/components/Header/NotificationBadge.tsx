@@ -6,13 +6,15 @@ import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '@/services/notification.service';
 import { useAuth } from '@/hooks/useAuth';
 import { useSSE } from '@/hooks/useSSE';
-import { UnreadCountResponse } from '@/types/notification';
 
 const NotificationBadge = () => {
+
     const { isSuperAdmin: isSA } = useAuth();
+
 
     const queryKey = ['notifications', 'unreadCount', isSA];
 
+    // Select the correct service function based on user role (This fixes the TS error)
     const queryFn = () => {
         return isSA
             ? notificationService.getSuperAdminUnreadCount()
@@ -23,15 +25,17 @@ const NotificationBadge = () => {
         queryKey,
         queryFn,
         enabled: true,
-        select: (responsePayload: UnreadCountResponse) => {
-            const data = responsePayload as any;
+
+        select: (data) => {
+
+            const responsePayload = data as any;
 
             if (isSA) {
 
-                return data?.stats?.unread_notifications || 0;
+                return responsePayload?.stats?.unread_notifications || 0;
             }
 
-            return data?.unread_count || 0;
+            return responsePayload?.unread_count || 0;
         },
         refetchInterval: 300000,
     });
@@ -39,7 +43,6 @@ const NotificationBadge = () => {
     const unreadCount = data || 0;
 
     useSSE('new_staff_notification', queryKey);
-
     useSSE('new_sa_notification', queryKey);
 
     return (
