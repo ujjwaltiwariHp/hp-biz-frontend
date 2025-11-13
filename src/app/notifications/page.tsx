@@ -12,6 +12,7 @@ import { SuperAdminNotification } from '@/types/notification';
 import { toast } from 'react-toastify';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useSSE } from '@/hooks/useSSE';
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
@@ -29,6 +30,15 @@ const NotificationsPage = () => {
     staleTime: 30000,
   });
 
+  const { data: statsData } = useQuery({
+    queryKey: ['notifications', 'unreadCount', true],
+    queryFn: notificationService.getSuperAdminUnreadCount,
+    refetchInterval: 60000,
+  });
+
+  useSSE('new_sa_notification', ['superAdminNotifications', page, limit, queryFilters]);
+  useSSE('new_sa_notification', ['notifications', 'unreadCount', true]);
+
   const approveDialog = useConfirmDialog();
   const rejectDialog = useConfirmDialog();
   const [selectedNotification, setSelectedNotification] = useState<SuperAdminNotification | null>(null);
@@ -38,7 +48,7 @@ const NotificationsPage = () => {
     mutationFn: (id: number) => notificationService.markAsRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
-      queryClient.invalidateQueries({ queryKey: ['superAdminNotificationsStats'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
       toast.success('Notification marked as read');
     },
     onError: (error: any) => {
@@ -60,6 +70,7 @@ const NotificationsPage = () => {
         markAsReadMutate(selectedNotification.id);
       }
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
       approveDialog.closeDialog();
       setSelectedNotification(null);
     },
@@ -81,6 +92,7 @@ const NotificationsPage = () => {
         markAsReadMutate(selectedNotification.id);
       }
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
       rejectDialog.closeDialog();
       setSelectedNotification(null);
       setRejectReason('');
@@ -217,6 +229,7 @@ const NotificationsPage = () => {
   }
 
   const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+  const totalUnreadCount = (statsData as any)?.stats?.unread_notifications || (statsData as any)?.unread_count || 0;
 
   return (
     <DefaultLayout>
@@ -242,9 +255,11 @@ const NotificationsPage = () => {
                 >
                   <RefreshCw size={20} className="text-primary" />
                 </button>
-                <div className="px-4 py-2 rounded-full bg-warning/10 text-warning font-bold text-lg">
-                  {notifications.filter(n => !n.is_read).length}
-                </div>
+                {totalUnreadCount > 0 && (
+                  <div className="px-4 py-2 rounded-full bg-warning/10 text-warning font-bold text-lg">
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  </div>
+                )}
               </div>
             </div>
           </div>

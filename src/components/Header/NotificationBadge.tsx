@@ -11,10 +11,8 @@ const NotificationBadge = () => {
 
     const { isSuperAdmin: isSA } = useAuth();
 
-
     const queryKey = ['notifications', 'unreadCount', isSA];
 
-    // Select the correct service function based on user role (This fixes the TS error)
     const queryFn = () => {
         return isSA
             ? notificationService.getSuperAdminUnreadCount()
@@ -25,16 +23,11 @@ const NotificationBadge = () => {
         queryKey,
         queryFn,
         enabled: true,
-
         select: (data) => {
-
             const responsePayload = data as any;
-
             if (isSA) {
-
-                return responsePayload?.stats?.unread_notifications || 0;
+                return responsePayload?.stats?.unread_notifications || responsePayload?.unread_count || 0;
             }
-
             return responsePayload?.unread_count || 0;
         },
         refetchInterval: 300000,
