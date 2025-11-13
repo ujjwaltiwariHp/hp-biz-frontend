@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -10,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { getAuthToken } from '@/lib/auth';
 import { useSSE } from '@/hooks/useSSE';
+import DateRangePicker from '@/components/common/DateRangePicker';
 
 const parseNumeric = (value: any, defaultValue = 0) => {
     return Number(value) || defaultValue;
@@ -38,8 +40,8 @@ export default function Dashboard() {
     endDate: new Date().toISOString().split('T')[0]
   });
 
-  // Although the token is retrieved, it is *not* passed explicitly to these service calls.
-  // The global apiClient is responsible for its injection via interceptors.
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
   const token = getAuthToken();
   const companiesQueryKey = ['companies', { page: 1, limit: 10, recent: true }];
   const dashboardQueryKey = ['dashboard'];
@@ -47,33 +49,27 @@ export default function Dashboard() {
 
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
     queryKey: dashboardQueryKey,
-    // FIX 1: Removed token argument
     queryFn: () => companyService.getDashboard(),
     enabled: !!token,
   });
 
   const { data: companiesData, isLoading: companiesLoading } = useQuery({
     queryKey: companiesQueryKey,
-    // FIX 2: Removed token argument
     queryFn: () => companyService.getCompanies({ page: 1, limit: 10 }),
     enabled: !!token,
   });
 
   const { data: usageData, isLoading: usageLoading } = useQuery({
     queryKey: usageQueryKey,
-    // FIX 3: Removed token argument
     queryFn: () => companyService.getUsageReport(dateRange),
     enabled: !!token && !!dateRange.startDate && !!dateRange.endDate,
   });
 
-  // --- SSE Listeners for Real-time Dashboard Refresh ---
   useSSE('sa_company_list_refresh', companiesQueryKey);
   useSSE('sa_company_list_refresh', dashboardQueryKey);
   useSSE('sa_company_list_refresh', usageQueryKey);
 
   useSSE('sa_finance_update', dashboardQueryKey);
-  // ----------------------------------------------------
-
 
   const stats = dashboardData?.data?.stats || {
     total_companies: 0,
@@ -122,7 +118,6 @@ export default function Dashboard() {
   const maxStaff = barChartData.reduce((max, item) => Math.max(max, item.staff), 0);
   const dataMax = Math.max(maxLeads, maxStaff);
 
-
   if (dashboardLoading) {
     return (
       <DefaultLayout>
@@ -142,18 +137,24 @@ export default function Dashboard() {
           <Typography variant="page-title" as="h2">
             Dashboard Overview
           </Typography>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button onClick={() => setIsDatePickerOpen(true)} className="flex items-center gap-2 rounded border-[1.5px] border-stroke bg-transparent py-2 px-4 text-black dark:text-white text-sm hover:bg-gray-50 dark:hover:bg-meta-4">
+              <Calendar size={16} />
+              <span>
+                {dateRange.startDate && dateRange.endDate ? `${dateRange.startDate} → ${dateRange.endDate}` : 'Select Date Range'}
+              </span>
+            </button>
             <input
               type="date"
               value={dateRange.startDate}
               onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-              className="rounded border-[1.5px] border-stroke bg-transparent py-2 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-sm"
+              className="hidden"
             />
             <input
               type="date"
               value={dateRange.endDate}
               onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-              className="rounded border-[1.5px] border-stroke bg-transparent py-2 px-4 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white text-sm"
+              className="hidden"
             />
           </div>
         </div>
@@ -304,9 +305,9 @@ export default function Dashboard() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white font-bold text-sm">
                           {index + 1}
                         </div>
-                        <div>
+                        <div className="flex flex-col">
                           <Typography variant="value" className="font-semibold text-black dark:text-white text-sm">{company.company_name}</Typography>
-                          <Typography variant="caption" className="text-gray-500 dark:text-gray-400 text-xs">{company.package_name}</Typography>
+                          <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">{company.package_name}</Typography>
                         </div>
                       </div>
                       <div className="text-right">
@@ -336,23 +337,27 @@ export default function Dashboard() {
                   <table className="w-full table-auto">
                     <thead>
                       <tr className="bg-gray-2 text-left dark:bg-meta-4 text-xs">
-                        <th className="py-3 px-3 font-medium text-black dark:text-white">Company Name</th>
-                        <th className="py-3 px-3 font-medium text-black dark:text-white">Admin</th>
-                        <th className="py-3 px-3 font-medium text-black dark:text-white">Package</th>
-                        <th className="py-3 px-3 font-medium text-black dark:text-white">Status</th>
-                        <th className="py-3 px-3 font-medium text-black dark:text-white">Created</th>
+                        <th className="py-3 px-3 font-bold text-black dark:text-white">Company Name</th>
+                        <th className="py-3 px-3 font-bold text-black dark:text-white">Admin</th>
+                        <th className="py-3 px-3 font-bold text-black dark:text-white">Package</th>
+                        <th className="py-3 px-3 font-bold text-black dark:text-white">Status</th>
+                        <th className="py-3 px-3 font-bold text-black dark:text-white">Created</th>
                       </tr>
                     </thead>
                     <tbody>
                       {recentCompanies.map((company: any) => (
                         <tr key={company.id} className="border-b border-stroke dark:border-strokedark">
                           <td className="py-3 px-3">
-                            <Typography variant="value" className="font-medium text-black dark:text-white text-sm">{company.company_name}</Typography>
-                            <Typography variant="caption" className="text-xs text-gray-500">{company.unique_company_id}</Typography>
+                            <div className="flex flex-col">
+                              <Typography variant="value" className="font-medium text-black dark:text-white text-sm">{company.company_name}</Typography>
+                              <Typography variant="caption" className="text-xs text-gray-500">{company.unique_company_id}</Typography>
+                            </div>
                           </td>
                           <td className="py-3 px-3">
-                            <Typography variant="body" className="text-black dark:text-white text-sm">{company.admin_name}</Typography>
-                            <Typography variant="caption" className="text-xs text-gray-500">{company.admin_email}</Typography>
+                            <div className="flex flex-col">
+                              <Typography variant="body" className="text-black dark:text-white text-sm">{company.admin_name}</Typography>
+                              <Typography variant="caption" className="text-xs text-gray-500">{company.admin_email}</Typography>
+                            </div>
                           </td>
                           <td className="py-3 px-3">
                             <span className="inline-flex rounded-full bg-primary/10 py-0.5 px-2 text-xs font-medium text-primary">
@@ -387,6 +392,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <DateRangePicker isOpen={isDatePickerOpen} dateRange={dateRange} setDateRange={setDateRange} onClose={() => setIsDatePickerOpen(false)} />
     </DefaultLayout>
   );
 }
