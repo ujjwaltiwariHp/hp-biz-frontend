@@ -9,28 +9,46 @@ import { notificationService } from '../../services/notification.service';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { companyService } from '@/services/company.service';
+import { useSSE } from '@/hooks/useSSE';
 
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
   setSidebarOpen: (arg0: boolean) => void;
 }) => {
-  const { data: notificationStats } = useQuery({
-    queryKey: ['superAdminNotificationsStats'],
-    queryFn: notificationService.getUnreadCount,
-    refetchInterval: 60000,
+
+  const { data: notificationStats, refetch: refetchStats } = useQuery({
+    queryKey: ['notifications', 'unreadCount', true],
+    queryFn: async () => {
+      const result = await notificationService.getSuperAdminUnreadCount();
+      return result;
+    },
+select: (data) => {
+      const responsePayload = data as any;
+      const actualPayload = responsePayload?.data || responsePayload;
+      const count = actualPayload?.stats?.unread_notifications || actualPayload?.unread_count || 0;
+      return count;
+    },
+    refetchInterval: 300000,
   });
 
-  const unreadCount = notificationStats?.unread_count || 0;
+  useSSE('new_sa_notification', ['notifications', 'unreadCount', true]);
+
+  const unreadCount = notificationStats || 0;
   const pathname = usePathname();
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href?: string }>>([]);
   const [companyName, setCompanyName] = useState<string>('');
 
-  // Extract company ID from pathname
+  useEffect(() => {
+  }, [unreadCount]);
+
+  useEffect(() => {
+    refetchStats();
+  }, []);
+
   useEffect(() => {
     const companyIdMatch = pathname.match(/\/companies\/(\d+)/);
     const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
 
-    // Generate breadcrumbs based on pathname
     let newBreadcrumbs: Array<{ label: string; href?: string }> = [
       { label: 'Dashboard', href: '/dashboard' },
     ];
@@ -50,7 +68,6 @@ const Header = (props: {
         { label: companyName || `Company #${companyId}`, href: `/companies/${companyId}` }
       );
 
-      // Add specific section to breadcrumb
       if (pathname.includes('/details')) {
         newBreadcrumbs.push({ label: 'Details' });
       } else if (pathname.includes('/invoices')) {
@@ -85,7 +102,6 @@ const Header = (props: {
     setBreadcrumbs(newBreadcrumbs);
   }, [pathname, companyName]);
 
-  // Fetch company name if in company detail page
   useEffect(() => {
     const companyIdMatch = pathname.match(/\/companies\/(\d+)/);
     const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
@@ -122,7 +138,6 @@ const Header = (props: {
           </Link>
         </div>
 
-        {/* Dynamic Breadcrumb */}
         <div className="hidden sm:flex items-center gap-1">
           {breadcrumbs.map((crumb, index) => (
             <div key={index} className="flex items-center gap-1">
@@ -155,8 +170,8 @@ const Header = (props: {
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
               >
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 z-10 inline-flex items-center justify-center rounded-full bg-meta-1 p-1 text-xs font-medium text-white ring-2 ring-white dark:ring-boxdark">
-                    {unreadCount}
+                  <span className="absolute -top-1 -right-1 z-10 inline-flex items-center justify-center rounded-full bg-meta-1 p-1 text-xs font-medium text-white ring-2 ring-white dark:ring-boxdark min-w-[20px] h-5">
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
                 <Bell className="w-5 h-5" />

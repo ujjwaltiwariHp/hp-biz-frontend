@@ -41,12 +41,12 @@ export const notificationService = {
     }
   },
 
-  getSuperAdminUnreadCount: async (): Promise<UnreadCountResponse> => {
+  getSuperAdminUnreadCount: async () => {
     try {
       const response = await apiClient.get(`${SA_BASE_URL}/stats`);
       return response.data;
     } catch (error: any) {
-      return { unread_count: 0 };
+      return { stats: { unread_notifications: 0 }, unread_count: 0 };
     }
   },
 

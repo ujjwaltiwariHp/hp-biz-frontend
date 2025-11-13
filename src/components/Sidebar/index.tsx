@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { useAuth } from '@/hooks/useAuth';
+import { Typography } from '@/components/common/Typography';
 
 interface MenuItem {
     label: string;
@@ -110,22 +111,30 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     >
       {/* Sidebar Header/Logo */}
       <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5 border-b border-gray-800 dark:border-gray-700">
-        <Link href="/dashboard" className="text-white text-xl font-bold tracking-wider">
-          HP-BIZ
+        <Link href="/dashboard">
+          <Typography
+            as="span"
+            variant="page-title"
+            className="!text-white tracking-wider"
+          >
+            HP-BIZ
+          </Typography>
         </Link>
+
+        {/* Removed 'block' class to fix Tailwind conflict */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-controls="sidebar"
-          className="block lg:hidden text-white hover:text-primary transition-colors"
+          className="lg:hidden text-white w-8 h-8 rounded-full flex items-center justify-center opacity-70
+                     bg-gradient-to-r from-primary to-meta-4 hover:opacity-100 transition-all duration-200 shadow-lg"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={16} className="text-white" />
         </button>
       </div>
 
       {/* Navigation */}
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear flex-1">
         <nav className="mt-5 py-4 px-4 lg:mt-9 lg:px-4">
-          {/* <h3 className="mb-4 ml-4 text-sm font-semibold text-gray-500 uppercase">MENU</h3> */}
           <ul className="mb-6 flex flex-col gap-1.5">
             {filteredMenuItems.map((item) => (
               <li key={item.route}>
@@ -139,26 +148,44 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   `}
                 >
                   <item.icon size={18} />
-                  {item.label}
+                  <Typography
+                    as="span"
+                    variant="body1"
+                    className="text-inherit"
+                  >
+                    {item.label}
+                  </Typography>
                 </Link>
               </li>
             ))}
           </ul>
           {filteredMenuItems.length === 0 && (
-              <p className="text-sm text-gray-500 p-4 text-center">No permissions granted.</p>
+              <Typography
+                as="p"
+                variant="body1"
+                className="text-gray-500 dark:text-gray-400 p-4 text-center"
+              >
+                No permissions granted.
+              </Typography>
           )}
         </nav>
       </div>
 
-      {/* Logout/Profile at the Bottom */}
+      {/* Logout at the Bottom */}
       <div className="p-4 border-t border-gray-800 dark:border-gray-700">
-
         <button
           onClick={handleLogout}
-          className="mt-2 flex w-full items-center gap-2.5 rounded-lg py-3 px-4 font-bold text-danger transition-colors hover:bg-danger/10 dark:hover:bg-danger/20"
+         className="mt-2 flex w-full items-center  gap-2.5 rounded-lg py-3 px-4 font-bold text-danger text-lg transition-colors hover:bg-danger/10 dark:hover:bg-danger/20"
+
         >
           <LogOut size={18} />
-          Logout
+          <Typography
+            as="span"
+            variant="body"
+            className="text-inherit text-base"
+          >
+            Logout
+          </Typography>
         </button>
       </div>
     </aside>
