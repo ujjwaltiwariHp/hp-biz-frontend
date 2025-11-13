@@ -3,7 +3,16 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle, XCircle, Clock, AlertCircle, Eye, RefreshCw } from 'lucide-react';
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Eye,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { notificationService } from '@/services/notification.service';
@@ -16,12 +25,11 @@ import { useSSE } from '@/hooks/useSSE';
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
-  const [page] = useState(1);
-  const [limit] = useState(10);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'normal' | 'low'>('all');
 
-  const queryFilters = {
-    is_read: false
-  };
+  const queryFilters = { is_read: false };
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['superAdminNotifications', page, limit, queryFilters],
@@ -51,352 +59,279 @@ const NotificationsPage = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
       toast.success('Notification marked as read');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to mark as read');
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to mark as read');
     },
   });
 
   const approveSubscriptionMutation = useMutation({
     mutationFn: (companyId: number) => {
-      const subscriptionId = selectedNotification?.metadata?.subscription_id || selectedNotification?.metadata?.subscriptionId || 0;
-      return invoiceService.approveSubscription(companyId, subscriptionId, {
+      const subId =
+        selectedNotification?.metadata?.subscription_id ||
+        selectedNotification?.metadata?.subscriptionId ||
+        0;
+      return invoiceService.approveSubscription(companyId, subId, {
         invoice_id: selectedNotification?.metadata?.invoice_id || 0,
         start_date_override: selectedNotification?.updated_at || '',
       });
     },
     onSuccess: () => {
       toast.success('Subscription approved successfully');
-      if (selectedNotification?.id) {
-        markAsReadMutate(selectedNotification.id);
-      }
+      if (selectedNotification?.id) markAsReadMutate(selectedNotification.id);
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
       approveDialog.closeDialog();
       setSelectedNotification(null);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to approve subscription');
-    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Approval failed'),
   });
 
   const rejectSubscriptionMutation = useMutation({
-    mutationFn: (companyId: number) => {
-      return invoiceService.rejectSubscription(companyId, {
+    mutationFn: (companyId: number) =>
+      invoiceService.rejectSubscription(companyId, {
         invoice_id: selectedNotification?.metadata?.invoice_id || 0,
         rejection_reason: rejectReason || 'Not specified',
-      });
-    },
+      }),
     onSuccess: () => {
       toast.success('Subscription rejected successfully');
-      if (selectedNotification?.id) {
-        markAsReadMutate(selectedNotification.id);
-      }
+      if (selectedNotification?.id) markAsReadMutate(selectedNotification.id);
       queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
       rejectDialog.closeDialog();
       setSelectedNotification(null);
       setRejectReason('');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to reject subscription');
-    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Rejection failed'),
   });
 
-  const handleApprove = (notification: SuperAdminNotification) => {
-    if (!notification.metadata?.company_id) {
-      toast.error('Company ID not found in notification');
-      return;
-    }
-    setSelectedNotification(notification);
+  const handleApprove = (n: SuperAdminNotification) => {
+    if (!n.metadata?.company_id) return toast.error('Company ID missing');
+    setSelectedNotification(n);
     approveDialog.openDialog();
   };
 
-  const handleReject = (notification: SuperAdminNotification) => {
-    if (!notification.metadata?.company_id) {
-      toast.error('Company ID not found in notification');
-      return;
-    }
-    setSelectedNotification(notification);
+  const handleReject = (n: SuperAdminNotification) => {
+    if (!n.metadata?.company_id) return toast.error('Company ID missing');
+    setSelectedNotification(n);
     setRejectReason('');
     rejectDialog.openDialog();
   };
 
   const confirmApprove = () => {
-    if (!selectedNotification?.metadata?.company_id) {
-      toast.error('Company ID is required');
-      return;
-    }
+    if (!selectedNotification?.metadata?.company_id) return toast.error('Company ID required');
     approveSubscriptionMutation.mutate(selectedNotification.metadata.company_id);
   };
 
   const confirmReject = () => {
-    if (!rejectReason.trim()) {
-      toast.error('Please provide a rejection reason');
-      return;
-    }
-    if (!selectedNotification?.metadata?.company_id) {
-      toast.error('Company ID is required');
-      return;
-    }
+    if (!rejectReason.trim()) return toast.error('Enter rejection reason');
+    if (!selectedNotification?.metadata?.company_id) return toast.error('Company ID required');
     rejectSubscriptionMutation.mutate(selectedNotification.metadata.company_id);
-  };
-
-  const handleMarkRead = (id: number) => {
-    markAsReadMutate(id);
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'payment_pending':
-        return <Clock className="text-warning" size={20} />;
+        return <Clock className="text-yellow-500" size={20} />;
       case 'payment_received':
-        return <CheckCircle className="text-success" size={20} />;
       case 'subscription_activated':
-        return <CheckCircle className="text-success" size={20} />;
+        return <CheckCircle className="text-green-500" size={20} />;
       case 'invoice_overdue':
-        return <AlertCircle className="text-danger" size={20} />;
+        return <AlertCircle className="text-red-500" size={20} />;
       default:
-        return <AlertCircle className="text-primary" size={20} />;
-    }
-  };
-
-  const getNotificationBadgeColor = (type: string) => {
-    switch (type) {
-      case 'payment_pending':
-        return 'bg-warning/10 border-warning/20';
-      case 'payment_received':
-        return 'bg-success/10 border-success/20';
-      case 'subscription_activated':
-        return 'bg-success/10 border-success/20';
-      case 'invoice_overdue':
-        return 'bg-danger/10 border-danger/20';
-      default:
-        return 'bg-primary/10 border-primary/20';
+        return <AlertCircle className="text-blue-500" size={20} />;
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-      case 'urgent':
-        return 'text-danger font-bold';
+        return 'text-red-600 font-semibold';
       case 'normal':
-        return 'text-warning';
+        return 'text-yellow-500';
       case 'low':
-        return 'text-success';
+        return 'text-green-500';
       default:
         return 'text-gray-500';
     }
   };
 
-  if (isLoading) {
+  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+  const normalized = notifications.map((n) => ({
+    ...n,
+    priority:
+      n.notification_type === 'payment_pending' ||
+      n.notification_type === 'invoice_overdue'
+        ? 'high'
+        : (n.priority as 'low' | 'normal' | 'high') || 'normal',
+  }));
+
+  const filtered =
+    priorityFilter === 'all'
+      ? normalized
+      : normalized.filter((n) => n.priority === priorityFilter);
+
+  const totalPages = Math.ceil((data?.pagination?.totalCount || 0) / limit);
+  const unreadCount =
+    (statsData as any)?.stats?.unread_notifications ||
+    (statsData as any)?.unread_count ||
+    0;
+
+  if (isLoading)
     return (
       <DefaultLayout>
-        <Breadcrumb pageName="Subscription Notifications" />
+        <Breadcrumb pageName=" Notifications" />
         <div className="flex justify-center items-center h-40">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </DefaultLayout>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <DefaultLayout>
-        <Breadcrumb pageName="Subscription Notifications" />
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-            <h4 className="text-xl font-semibold text-black dark:text-white">
-              Error Loading Notifications
-            </h4>
-          </div>
-          <div className="p-6 text-center">
-            <AlertCircle size={48} className="mx-auto mb-3 text-danger opacity-50" />
-            <p className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-4">
-              Failed to load notifications
-            </p>
-            <button
-              onClick={() => refetch()}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <RefreshCw size={16} />
-              Try Again
-            </button>
-          </div>
+        <Breadcrumb pageName="Notifications" />
+        <div className="text-center py-16">
+          <AlertCircle size={48} className="mx-auto mb-4 text-red-400" />
+          <p className="text-gray-600 mb-4">Failed to load notifications</p>
+          <button
+            onClick={() => refetch()}
+            className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            <RefreshCw size={16} className="inline mr-2" />
+            Retry
+          </button>
         </div>
       </DefaultLayout>
     );
-  }
-
-  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
-  const totalUnreadCount = (statsData as any)?.stats?.unread_notifications || (statsData as any)?.unread_count || 0;
 
   return (
     <DefaultLayout>
-      <Breadcrumb pageName="Subscription Notifications" />
+      <Breadcrumb pageName=" Notifications" />
 
-      <div className="space-y-6">
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-          <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-xl font-semibold text-black dark:text-white">
-                  Payment Verification Requests
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Review and approve/reject pending company subscriptions
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => refetch()}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                  title="Refresh notifications"
-                >
-                  <RefreshCw size={20} className="text-primary" />
-                </button>
-                {totalUnreadCount > 0 && (
-                  <div className="px-4 py-2 rounded-full bg-warning/10 text-warning font-bold text-lg">
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex gap-2 flex-wrap">
+          {['all', 'high', 'normal', 'low'].map((level) => (
+            <button
+              key={level}
+              onClick={() => setPriorityFilter(level as any)}
+              className={`px-4 py-1.5 rounded-md border text-sm font-medium transition ${
+                priorityFilter === level
+                  ? 'bg-primary text-white border-primary'
+                  : 'hover:bg-gray-100 border-gray-300 dark:border-gray-600'
+              }`}
+            >
+              {level === 'all' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1)}
+            </button>
+          ))}
+        </div>
 
-          <div className="divide-y divide-stroke dark:divide-strokedark">
-            {notifications && notifications.length > 0 ? (
-              notifications.map((notification: SuperAdminNotification) => {
-                const invoiceId = notification.metadata?.invoice_id;
-                const companyName = notification.metadata?.company_name || 'Unknown Company';
-                const companyId = notification.metadata?.company_id;
-
-                const ActionableType = 'payment_received';
-                const isPaymentReceived = notification.notification_type === ActionableType;
-                const isFinalAction = ['subscription_activated', 'rejected'].includes(notification.notification_type);
-
-                return (
-                  <div
-                    key={`notification-${notification.id}`}
-                    className={`p-6 transition-all hover:bg-gray-50 dark:hover:bg-meta-4 ${
-                      notification.is_read ? 'opacity-60' : isPaymentReceived ? 'bg-success/5' : 'bg-warning/5'
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      <div
-                        className={`flex-shrink-0 p-3 rounded-lg border ${getNotificationBadgeColor(
-                          notification.notification_type
-                        )}`}
-                      >
-                        {getNotificationIcon(notification.notification_type)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h5 className="text-base font-semibold text-black dark:text-white">
-                              {notification.title}
-                            </h5>
-                            <p className="text-sm text-primary font-medium mt-0.5">
-                              {companyName}
-                            </p>
-                          </div>
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-2 ${getPriorityColor(
-                              notification.priority
-                            )}`}
-                          >
-                            {notification.priority.toUpperCase()} PRIORITY
-                          </span>
-                        </div>
-
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                          {notification.message}
-                          <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
-                            {new Date(notification.created_at).toLocaleDateString()}
-                          </span>
-                        </p>
-
-                        <div className="flex flex-wrap gap-2">
-                          {invoiceId && (
-                            <Link
-                              href={`/invoices?invoice_id=${invoiceId}`}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
-                            >
-                              <Eye size={16} />
-                              View Invoice
-                            </Link>
-                          )}
-                          <button
-                            onClick={() => handleApprove(notification)}
-                            disabled={
-                              !isPaymentReceived ||
-                              isFinalAction ||
-                              approveSubscriptionMutation.isPending ||
-                              !notification.metadata?.company_id
-                            }
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-success text-white text-sm rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={
-                              !isPaymentReceived
-                                ? 'Awaiting payment verification (Status: Pending Payment Verification)'
-                                : isFinalAction ? 'Subscription already processed' : 'Approve this subscription'
-                            }
-                          >
-                            <CheckCircle size={16} />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(notification)}
-                            disabled={
-                              isFinalAction ||
-                              rejectSubscriptionMutation.isPending ||
-                              approveSubscriptionMutation.isPending ||
-                              !notification.metadata?.company_id
-                            }
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-danger text-white text-sm rounded-lg hover:bg-danger/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={
-                              !notification.metadata?.company_id
-                                ? 'Company ID not available'
-                                : 'Reject this subscription'
-                            }
-                          >
-                            <XCircle size={16} />
-                            Reject
-                          </button>
-                          {!notification.is_read && (
-                            <button
-                              onClick={() => handleMarkRead(notification.id)}
-                              className="inline-flex items-center gap-2 px-4 py-2 border border-stroke dark:border-strokedark text-gray-600 dark:text-gray-400 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                            >
-                              Mark as Read
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="p-12 text-center">
-                <CheckCircle size={48} className="mx-auto mb-3 text-success opacity-50" />
-                <p className="text-lg font-medium text-gray-600 dark:text-gray-400">
-                  All caught up!
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                  No pending payment verifications at this time.
-                </p>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => refetch()}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          >
+            <RefreshCw size={20} className="text-primary" />
+          </button>
+          {unreadCount > 0 && (
+            <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium text-sm">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </div>
       </div>
+
+      <div className="space-y-3">
+        {filtered.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">All caught up!</div>
+        ) : (
+          filtered.map((n) => {
+            const isActionable = n.notification_type === 'payment_received';
+            return (
+              <div
+                key={n.id}
+                className={`flex items-center justify-between gap-4 p-4 border-l-4 rounded-md bg-white dark:bg-boxdark ${
+                  n.is_read ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {getNotificationIcon(n.notification_type)}
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{n.title}</p>
+                    <p className="text-sm text-primary">{n.metadata?.company_name}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{n.message}</p>
+                    <p className={`text-xs mt-1 ${getPriorityColor(n.priority)}`}>
+                      {n.priority.toUpperCase()} PRIORITY
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 flex-shrink-0">
+                  {n.metadata?.invoice_id && (
+                    <Link
+                      href={`/invoices?invoice_id=${n.metadata.invoice_id}`}
+                      className="px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary/90 flex items-center gap-1"
+                    >
+                      <Eye size={14} /> View
+                    </Link>
+                  )}
+
+                  {isActionable && (
+                    <>
+                      <button
+                        onClick={() => handleApprove(n)}
+                        className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1"
+                      >
+                        <CheckCircle size={14} /> Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(n)}
+                        className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1"
+                      >
+                        <XCircle size={14} /> Reject
+                      </button>
+                    </>
+                  )}
+
+                  {!n.is_read && (
+                    <button
+                      onClick={() => markAsReadMutate(n.id)}
+                      className="px-3 py-1 border text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Mark Read
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {filtered.length > 0 && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-40 flex items-center gap-1"
+          >
+            <ChevronLeft size={16} /> Prev
+          </button>
+          <span className="text-sm">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-40 flex items-center gap-1"
+          >
+            Next <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       <ConfirmDialog
         {...approveDialog.confirmProps}
         type="success"
         title="Approve Subscription"
-        message={`Are you sure you want to approve the subscription for "${selectedNotification?.metadata?.company_name}"? This will activate their account and grant full access to the platform.`}
+        message={`Are you sure you want to approve the subscription for "${selectedNotification?.metadata?.company_name}"?`}
         onConfirm={confirmApprove}
         confirmText="Approve"
         cancelText="Cancel"
@@ -407,21 +342,18 @@ const NotificationsPage = () => {
         {...rejectDialog.confirmProps}
         type="danger"
         title="Reject Subscription"
-        message={`Are you sure you want to reject the subscription for "${selectedNotification?.metadata?.company_name}"?`}
+        message={`Are you sure you want to reject "${selectedNotification?.metadata?.company_name}"?`}
         onConfirm={confirmReject}
         confirmText="Reject"
         cancelText="Cancel"
         isLoading={rejectSubscriptionMutation.isPending}
       >
-        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Rejection Reason (Required)
-          </label>
+        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <textarea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Enter the reason for rejection..."
-            className="w-full px-3 py-2 border border-stroke dark:border-strokedark rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:outline-none focus:border-primary"
+            placeholder="Enter rejection reason..."
+            className="w-full mt-2 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:outline-none focus:border-primary"
             rows={3}
           />
         </div>
