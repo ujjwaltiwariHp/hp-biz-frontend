@@ -42,6 +42,7 @@ export interface LogFilters {
   page?: number;
   limit?: number;
   search?: string;
+  ip_address?: string;
 }
 
 export interface LogsResponse {

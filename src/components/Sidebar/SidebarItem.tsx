@@ -64,7 +64,7 @@ const SidebarItem = ({ item, pageName, setPageName }: any) => {
               pageName !== item.label.toLowerCase() && "hidden"
             }`}
           >
-            <SidebarDropdown item={item.children} />
+           <SidebarDropdown items={item.children} label={item.label} icon={item.icon} defaultOpen={true} />
           </div>
         )}
       </li>

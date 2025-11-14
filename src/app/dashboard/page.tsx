@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -12,6 +11,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getAuthToken } from '@/lib/auth';
 import { useSSE } from '@/hooks/useSSE';
 import DateRangePicker from '@/components/common/DateRangePicker';
+import DynamicTable from '@/components/common/DynamicTable';
+import { TableColumn } from '@/types/table';
+import { Company } from '@/types/company';
 
 const parseNumeric = (value: any, defaultValue = 0) => {
     return Number(value) || defaultValue;
@@ -32,6 +34,15 @@ const CustomBarChartTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
+};
+
+// Helper function to format date
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 export default function Dashboard() {
@@ -78,7 +89,7 @@ export default function Dashboard() {
     new_companies_this_month: 0
   };
 
-  const recentCompanies = (companiesData?.data?.companies || []).slice(0, 5);
+  const recentCompanies: Company[] = (companiesData?.data?.companies || []).slice(0, 5);
   const usageReport = usageData?.data?.report || [];
   const usageSummary = usageData?.data?.summary || { totalCompanies: 0, totalLeads: 0, totalActivities: 0 };
 
@@ -118,6 +129,8 @@ export default function Dashboard() {
   const maxStaff = barChartData.reduce((max, item) => Math.max(max, item.staff), 0);
   const dataMax = Math.max(maxLeads, maxStaff);
 
+  const isDataLoading = usageLoading || companiesLoading || dashboardLoading;
+
   if (dashboardLoading) {
     return (
       <DefaultLayout>
@@ -128,7 +141,65 @@ export default function Dashboard() {
     );
   }
 
-  const isDataLoading = usageLoading || companiesLoading;
+  const recentCompaniesColumns: TableColumn<Company>[] = [
+    {
+      key: 'company_name',
+      header: 'Company Name',
+      headerClassName: 'min-w-[150px]',
+      render: (company) => (
+        <div className="flex flex-col">
+          <Typography variant="value" className="font-medium text-black dark:text-white text-sm">{company.company_name}</Typography>
+          <Typography variant="caption" className="text-xs text-gray-500">{company.unique_company_id}</Typography>
+        </div>
+      ),
+    },
+    {
+      key: 'admin_name',
+      header: 'Admin',
+      headerClassName: 'min-w-[150px]',
+      render: (company) => (
+        <div className="flex flex-col">
+          <Typography variant="body" className="text-black dark:text-white text-sm">{company.admin_name}</Typography>
+          <Typography variant="caption" className="text-xs text-gray-500">{company.admin_email}</Typography>
+        </div>
+      ),
+    },
+    {
+      key: 'package_name',
+      header: 'Package',
+      headerClassName: 'min-w-[80px]',
+      render: (company) => (
+        <span className="inline-flex rounded-full bg-primary/10 py-0.5 px-2 text-xs font-medium text-primary">
+          {company.package_name}
+        </span>
+      ),
+    },
+    {
+      key: 'is_active',
+      header: 'Status',
+      headerClassName: 'min-w-[60px]',
+      render: (company) => (
+        <span className={`inline-flex rounded-full py-0.5 px-2 text-xs font-medium ${
+          company.is_active
+            ? 'bg-success/10 text-success'
+            : 'bg-danger/10 text-danger'
+        }`}>
+          {company.is_active ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      headerClassName: 'min-w-[100px]',
+      render: (company) => (
+        <Typography variant="body" className="text-black dark:text-white text-sm">
+          {formatDate(company.created_at)}
+        </Typography>
+      ),
+    },
+  ];
+  // --- End Dynamic Table Configuration ---
 
   return (
     <DefaultLayout>
@@ -332,62 +403,18 @@ export default function Dashboard() {
                 Recently Added Companies
               </Typography>
 
+              {/* REPLACED hardcoded table with DynamicTable */}
               {recentCompanies.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full table-auto">
-                    <thead>
-                      <tr className="bg-gray-2 text-left dark:bg-meta-4 text-xs">
-                        <th className="py-3 px-3 font-bold text-black dark:text-white">Company Name</th>
-                        <th className="py-3 px-3 font-bold text-black dark:text-white">Admin</th>
-                        <th className="py-3 px-3 font-bold text-black dark:text-white">Package</th>
-                        <th className="py-3 px-3 font-bold text-black dark:text-white">Status</th>
-                        <th className="py-3 px-3 font-bold text-black dark:text-white">Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentCompanies.map((company: any) => (
-                        <tr key={company.id} className="border-b border-stroke dark:border-strokedark">
-                          <td className="py-3 px-3">
-                            <div className="flex flex-col">
-                              <Typography variant="value" className="font-medium text-black dark:text-white text-sm">{company.company_name}</Typography>
-                              <Typography variant="caption" className="text-xs text-gray-500">{company.unique_company_id}</Typography>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex flex-col">
-                              <Typography variant="body" className="text-black dark:text-white text-sm">{company.admin_name}</Typography>
-                              <Typography variant="caption" className="text-xs text-gray-500">{company.admin_email}</Typography>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className="inline-flex rounded-full bg-primary/10 py-0.5 px-2 text-xs font-medium text-primary">
-                              {company.package_name}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className={`inline-flex rounded-full py-0.5 px-2 text-xs font-medium ${
-                              company.is_active
-                                ? 'bg-success/10 text-success'
-                                : 'bg-danger/10 text-danger'
-                            }`}>
-                              {company.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3">
-                            <Typography variant="body" className="text-black dark:text-white text-sm">
-                              {new Date(company.created_at).toLocaleDateString()}
-                            </Typography>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DynamicTable<Company>
+                  data={recentCompanies}
+                  columns={recentCompaniesColumns}
+                />
               ) : (
                 <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400">
                   <Typography variant="body1">No companies found</Typography>
                 </div>
               )}
+
             </div>
           </div>
         </div>

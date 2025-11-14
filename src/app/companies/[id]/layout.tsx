@@ -4,11 +4,11 @@ import React, { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import Loader from '@/components/common/Loader';
-import CompanySidebar from '@/components/Sidebar/CompanySidebar';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Building } from 'lucide-react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
+import { Typography } from '@/components/common/Typography';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,7 +35,7 @@ export default function CompanyDetailLayout({
     queryKey: ['company', companyId],
     queryFn: () => companyService.getCompany(companyId),
     enabled: !!companyId && !isNaN(companyId),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Handle errors
@@ -49,6 +49,7 @@ export default function CompanyDetailLayout({
   }, [isError, error, companyId, router]);
 
   if (isLoading) {
+    // If the layout is loading, show a loader wrapped in the layout to prevent content flash
     return (
       <DefaultLayout>
         <Loader />
@@ -57,14 +58,15 @@ export default function CompanyDetailLayout({
   }
 
   if (isError || !companyResponse?.data?.company) {
-    return null; // Error handling will redirect
+    return null; // Error handling will redirect via useEffect
   }
 
   const company = companyResponse.data.company;
 
   return (
+    // THIS IS THE SOLE WRAPPER FOR THE DASHBOARD LAYOUT
     <DefaultLayout>
-      {/* Company Info Header Bar */}
+      {/* Company Info Header Bar (Displayed above all nested pages) */}
       <div className="mb-6 rounded-lg border border-stroke bg-white dark:bg-boxdark dark:border-strokedark shadow-sm">
         <div className="flex items-center justify-between px-4 py-4 md:px-6">
           <div className="flex items-center gap-4">
@@ -81,12 +83,12 @@ export default function CompanyDetailLayout({
                 <Building size={20} />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-black dark:text-white">
+                <Typography variant="value" as="h1" className="text-lg font-bold text-black dark:text-white">
                   {company.company_name}
-                </h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                </Typography>
+                <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
                   ID: {company.unique_company_id}
-                </p>
+                </Typography>
               </div>
             </div>
           </div>
@@ -104,15 +106,9 @@ export default function CompanyDetailLayout({
         </div>
       </div>
 
-      {/* Main Content with Sidebar */}
-      <div className="flex gap-6">
-        {/* Company Sidebar Navigation */}
-        <CompanySidebar companyId={companyId} company={company} />
-
-        {/* Page Content */}
-        <div className="flex-1 min-w-0">
+      {/* Page Content: This renders the nested page ([id]/page.tsx, [id]/invoices/page.tsx, etc.) */}
+      <div className="min-w-0">
           {children}
-        </div>
       </div>
     </DefaultLayout>
   );

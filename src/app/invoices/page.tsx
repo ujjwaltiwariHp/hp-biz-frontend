@@ -11,10 +11,6 @@ import {
   Download,
   Search,
   Building,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  XCircle,
   DollarSign,
   Plus,
 } from 'lucide-react';
@@ -23,7 +19,10 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Typography } from '@/components/common/Typography';
 import { useSSE } from '@/hooks/useSSE';
-import Link from 'next/link'; // FIX 1: Imported Link component
+import Link from 'next/link';
+import DynamicTable from '@/components/common/DynamicTable';
+import { TableColumn } from '@/types/table';
+import GlobalSearchInput from '@/components/common/GlobalSearchInput';
 
 const formatStatusText = (status: string) => {
     return status.replace(/_/g, ' ').toUpperCase();
@@ -45,6 +44,23 @@ const getStatusColor = (status: string) => {
     default:
       return 'bg-gray-100 text-gray-700 border-gray-200';
   }
+};
+
+const formatDate = (dateString: string | number | Date) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const isOverdue = (dueDate: string, status: string) => {
+  return new Date(dueDate) < new Date() && !['paid', 'rejected', 'cancelled'].includes(status);
+};
+
+const canMarkPayment = (status: string) => {
+  return status === 'sent' || status === 'overdue';
 };
 
 export default function InvoicesPage() {
@@ -73,10 +89,7 @@ export default function InvoicesPage() {
       }),
   });
 
-  // --- SSE Integration for Real-time Refresh ---
   useSSE('sa_finance_update', invoicesQueryKey);
-  // ----------------------------------------------
-
 
   const markPaymentMutation = useMutation({
     mutationFn: (invoiceId: number) =>
@@ -149,22 +162,126 @@ export default function InvoicesPage() {
     }
   };
 
-  const formatDate = (dateString: string | number | Date) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const handleGlobalSearch = (newSearchTerm: string) => {
+    setSearchTerm(newSearchTerm);
+    setCurrentPage(1);
   };
 
-  const isOverdue = (dueDate: string, status: string) => {
-    return new Date(dueDate) < new Date() && !['paid', 'rejected', 'cancelled'].includes(status);
-  };
+  const invoices = invoicesData?.invoices || [];
+  const pagination = invoicesData?.pagination;
 
-  const canMarkPayment = (status: string) => {
-    return status === 'sent' || status === 'overdue';
-  };
+  const invoiceColumns: TableColumn<Invoice>[] = [
+    {
+      key: 'invoice_number',
+      header: 'Invoice ID',
+      headerClassName: 'min-w-[150px] xl:pl-7',
+      className: 'xl:pl-7',
+      render: (invoice) => (
+        <div className="flex flex-col space-y-1">
+          <Typography variant="value" as="h5" className="font-semibold text-black dark:text-white">
+            {invoice.invoice_number}
+          </Typography>
+          <Typography variant="caption" className="text-sm text-gray-500 dark:text-gray-400">
+            {invoice.package_name || 'N/A'}
+          </Typography>
+        </div>
+      ),
+    },
+    {
+      key: 'company_name',
+      header: 'Customer',
+      headerClassName: 'min-w-[150px]',
+      render: (invoice) => (
+        <div className="flex flex-col space-y-1">
+          <Typography variant="value" className="font-medium text-black dark:text-white">{invoice.company_name}</Typography>
+          <Typography variant="body" className="text-sm text-gray-600 dark:text-gray-400">
+            ID: {(invoice as any).unique_company_id || 'N/A'}
+          </Typography>
+        </div>
+      ),
+    },
+    {
+      key: 'total_amount',
+      header: 'Amount',
+      headerClassName: 'min-w-[100px]',
+      render: (invoice) => (
+        <div>
+          <div className="flex items-baseline gap-1">
+            <Typography variant="value" as="span" className="font-semibold text-black dark:text-white">
+              {invoice.currency}
+            </Typography>
+            <Typography variant="value" as="span" className="text-lg font-bold text-primary">
+              {parseFloat(invoice.total_amount).toFixed(2)}
+            </Typography>
+          </div>
+          <Typography variant="caption" className="text-xs text-gray-500 mt-1">
+            Inc. {invoice.currency} {parseFloat(invoice.tax_amount).toFixed(2)} tax
+          </Typography>
+        </div>
+      ),
+    },
+    {
+      key: 'due_date',
+      header: 'Due Date',
+      headerClassName: 'min-w-[100px]',
+      render: (invoice) => (
+        <div className="flex flex-col space-y-1">
+          <Typography variant="value" className="font-medium text-black dark:text-white">
+            {formatDate(invoice.due_date)}
+          </Typography>
+          {isOverdue(invoice.due_date, invoice.status) && (
+            <Typography variant="caption" className="text-xs text-danger font-semibold">
+              OVERDUE
+            </Typography>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      headerClassName: 'min-w-[100px]',
+      render: (invoice) => (
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border py-1.5 px-3 text-xs font-semibold ${getStatusColor(
+            invoice.status
+          )}`}
+        >
+          <Typography variant="badge">{formatStatusText(invoice.status)}</Typography>
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'w-[100px] text-center',
+      className: 'w-[100px] text-center',
+      render: (invoice) => (
+        <div className="flex items-center gap-2 justify-center">
+          <button
+            onClick={() =>
+              handleDownloadInvoice(invoice.id, invoice.invoice_number)
+            }
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
+            title="Download PDF"
+          >
+            <Download size={18} />
+          </button>
+
+          {canMarkPayment(invoice.status) ? (
+            <button
+              onClick={() => handleMarkPaymentReceived(invoice)}
+              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-warning hover:text-warning disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Mark Payment Received"
+              disabled={markPaymentMutation.isPending}
+            >
+              <DollarSign size={18} />
+            </button>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
 
   if (isLoading) {
     return (
@@ -176,13 +293,9 @@ export default function InvoicesPage() {
     );
   }
 
-  const invoices = invoicesData?.invoices || [];
-  const pagination = invoicesData?.pagination;
-
   return (
     <DefaultLayout>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        {/* Header */}
         <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
           <div className="flex justify-between items-start">
             <div>
@@ -205,25 +318,16 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Typography variant="label" as="span">Search Invoices</Typography>
             </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search by invoice #, company, or email..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full rounded border border-stroke py-2.5 pl-10 pr-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
-              />
-            </div>
+            <GlobalSearchInput
+              searchTerm={searchTerm}
+              onSearchChange={handleGlobalSearch}
+              placeholder="Search by invoice #, company, email, or package..."
+            />
           </div>
 
           <div>
@@ -259,140 +363,20 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* Invoices Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              {/* Table Header Styling and Typography */}
-              <tr className="bg-gray-100 text-left dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
-                <th className="py-4 px-4 xl:pl-7">
-                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Invoice ID</Typography>
-                </th>
-                <th className="py-4 px-4">
-                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Customer</Typography>
-                </th>
-                <th className="py-4 px-4">
-                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Amount</Typography>
-                </th>
-                <th className="py-4 px-4">
-                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Due Date</Typography>
-                </th>
-                <th className="py-4 px-4">
-                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Status</Typography>
-                </th>
-                <th className="py-4 px-4">
-                  <Typography variant="value" as="span" className="text-sm font-bold text-black dark:text-white">Actions</Typography>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    <FileText size={48} className="mx-auto mb-3 opacity-50" />
-                    <Typography variant="value" className="text-lg font-medium">No invoices found</Typography>
-                    <Typography variant="caption" className="text-sm mt-1">Try adjusting your filters</Typography>
-                  </td>
-                </tr>
-              ) : (
-                invoices.map((invoice: Invoice) => (
-                  <tr
-                    key={invoice.id}
-                    className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
-                  >
-                    <td className="py-5 px-4 xl:pl-7">
-                      {/* Stacking Invoice Number and Package Name */}
-                      <div className="flex flex-col space-y-1">
-                        <Typography variant="value" as="h5" className="font-semibold text-black dark:text-white">
-                          {invoice.invoice_number}
-                        </Typography>
-                        <Typography variant="caption" className="text-sm text-gray-500 dark:text-gray-400">
-                          {invoice.package_name || 'N/A'}
-                        </Typography>
-                      </div>
-                    </td>
-                    <td className="py-5 px-4">
-                      {/* Stacking Company Name and ID */}
-                      <div className="flex flex-col space-y-1">
-                        <Typography variant="value" className="font-medium text-black dark:text-white">{invoice.company_name}</Typography>
-                        <Typography variant="body" className="text-sm text-gray-600 dark:text-gray-400">
-                            {/* FIX 3: Safely access unique_company_id */}
-                            ID: {(invoice as any).unique_company_id || 'N/A'}
-                        </Typography>
-                      </div>
-                    </td>
-                    <td className="py-5 px-4">
-                      <div className="flex items-baseline gap-1">
-                        <Typography variant="value" as="span" className="font-semibold text-black dark:text-white">
-                          {invoice.currency}
-                        </Typography>
-                        <Typography variant="value" as="span" className="text-lg font-bold text-primary">
-                          {parseFloat(invoice.total_amount).toFixed(2)}
-                        </Typography>
-                      </div>
-                      <Typography variant="caption" className="text-xs text-gray-500 mt-1">
-                        Inc. {invoice.currency} {parseFloat(invoice.tax_amount).toFixed(2)} tax
-                      </Typography>
-                    </td>
-                    <td className="py-5 px-4">
-                      {/* Stacking Due Date and Overdue status */}
-                      <div className="flex flex-col space-y-1">
-                        <Typography variant="value" className="font-medium text-black dark:text-white">
-                          {formatDate(invoice.due_date)}
-                        </Typography>
-                        {isOverdue(invoice.due_date, invoice.status) && (
-                          <Typography variant="caption" className="text-xs text-danger font-semibold">
-                            OVERDUE
-                          </Typography>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-5 px-4">
-                      <div className="flex items-center gap-2">
-                        {/* REMOVED: Status icon before the badge (as requested) */}
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border py-1.5 px-3 text-xs font-semibold ${getStatusColor(
-                            invoice.status
-                          )}`}
-                        >
-                          <Typography variant="badge">{formatStatusText(invoice.status)}</Typography>
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-5 px-4">
-                      <div className="flex items-center gap-2">
-                        {/* Download Button */}
-                        <button
-                          onClick={() =>
-                            handleDownloadInvoice(invoice.id, invoice.invoice_number)
-                          }
-                          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
-                          title="Download PDF"
-                        >
-                          <Download size={18} />
-                        </button>
+        {invoices.length > 0 || isLoading ? (
+          <DynamicTable<Invoice>
+            data={invoices}
+            columns={invoiceColumns}
+            isLoading={isLoading}
+          />
+        ) : (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <FileText size={48} className="mx-auto mb-3 opacity-50" />
+            <Typography variant="value" className="text-lg font-medium">No invoices found</Typography>
+            <Typography variant="caption" className="text-sm mt-1">Try adjusting your filters</Typography>
+          </div>
+        )}
 
-                        {/* Mark Payment Received - Only visible if status is pending/sent/overdue */}
-                        {canMarkPayment(invoice.status) ? (
-                          <button
-                            onClick={() => handleMarkPaymentReceived(invoice)}
-                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-warning hover:text-warning disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Mark Payment Received"
-                            disabled={markPaymentMutation.isPending}
-                          >
-                            <DollarSign size={18} />
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
         {pagination && pagination.totalCount > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stroke py-4 px-4 dark:border-strokedark md:px-6 xl:px-7.5 bg-gray-50 dark:bg-meta-4">
             <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -425,7 +409,6 @@ export default function InvoicesPage() {
         )}
       </div>
 
-      {/* Mark Payment Received Dialog */}
       <ConfirmDialog
         {...paymentDialog.confirmProps}
         type="success"
@@ -435,9 +418,7 @@ export default function InvoicesPage() {
         confirmText="Mark as Received"
         cancelText="Cancel"
         isLoading={markPaymentMutation.isPending}
-      >
-        {/* Removed all input fields for payment data from the dialog */}
-      </ConfirmDialog>
+      />
     </DefaultLayout>
   );
 }
