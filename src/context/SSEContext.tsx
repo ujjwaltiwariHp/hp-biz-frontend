@@ -94,7 +94,7 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     return () => {
       closeSSEConnection(eventSource);
     };
-  }, [isAuthenticated, connect]);
+  }, [isAuthenticated, connect, eventSource]);
 
   const subscribe = useCallback((eventType: SSEEventType, listener: SSEListener) => {
     if (!listenersRef.current.has(eventType)) {

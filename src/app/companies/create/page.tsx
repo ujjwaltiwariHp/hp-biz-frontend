@@ -1,5 +1,8 @@
 'use client';
 
+import React from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
@@ -13,6 +16,7 @@ import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
 import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Shield, User, DollarSign, ToggleRight, X, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { Typography } from '@/components/common/Typography';
 
 // HELPER FUNCTION
 const calculateEndDate = (startDate: string, durationType: string): string => {
@@ -192,15 +196,15 @@ export default function CreateCompanyPage() {
             <Breadcrumb pageName="Create Company" />
             <div className="p-6 text-center border border-danger/50 bg-danger/10 rounded-lg">
                 <XCircle size={32} className="text-danger mx-auto mb-3" />
-                <h3 className="text-xl font-semibold text-black dark:text-white">Error Loading Packages</h3>
-                <p className="text-danger mt-2">
+                <Typography variant="page-title" as="h3">Error Loading Packages</Typography>
+                <Typography variant="body" className="text-danger mt-2">
                     Could not fetch active subscription packages. Please ensure packages are configured in the backend.
-                </p>
+                </Typography>
                 <button
                     onClick={() => router.push('/subscriptions')}
                     className="mt-4 text-primary hover:underline text-sm"
                 >
-                    Go to Subscriptions Page
+                    <Typography variant="body2" as="span">Go to Subscriptions Page</Typography>
                 </button>
             </div>
         </DefaultLayout>
@@ -213,9 +217,9 @@ export default function CreateCompanyPage() {
       <div className="mx-auto max-w-3xl">
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-            <h4 className="text-xl font-semibold text-black dark:text-white">
+            <Typography variant="card-title" as="h4">
               Company Provisioning Wizard (Step {step} of 2)
-            </h4>
+            </Typography>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -223,36 +227,36 @@ export default function CreateCompanyPage() {
 
               {/* Step 1: Company & Admin Details */}
               <div className={step === 1 ? 'block' : 'hidden'}>
-                <h5 className="text-lg font-medium text-primary mb-5 flex items-center gap-2"><User size={18} /> Company & Admin Information</h5>
+                <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><User size={18} /> Company & Admin Information</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Company Name */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Company Name <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">Company Name <span className="text-danger">*</span></Typography>
                         <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
                     {/* Industry (Optional) */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Industry</label>
+                        <Typography variant="label" className="mb-2.5 block">Industry</Typography>
                         <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
                     {/* Admin Name */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Admin Full Name <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">Admin Full Name <span className="text-danger">*</span></Typography>
                         <input type="text" name="admin_name" value={formData.admin_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
                     {/* Phone (Optional) */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Phone</label>
+                        <Typography variant="label" className="mb-2.5 block">Phone</Typography>
                         <input type="tel" name="phone" value={formData.phone || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
                     {/* Admin Email */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Admin Email <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">Admin Email <span className="text-danger">*</span></Typography>
                         <input type="email" name="admin_email" value={formData.admin_email} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
                     {/* Password */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Temporary Password <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">Temporary Password <span className="text-danger">*</span></Typography>
                         <div className="relative">
                             <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-500 hover:text-black dark:hover:text-white">
@@ -260,7 +264,7 @@ export default function CreateCompanyPage() {
                             </button>
                         </div>
                         {formData.password.length > 0 && formData.password.length < 6 && (
-                            <p className="text-xs text-danger mt-1">Password must be at least 6 characters long.</p>
+                            <Typography variant="caption" className="text-xs text-danger mt-1">Password must be at least 6 characters long.</Typography>
                         )}
                     </div>
                 </div>
@@ -268,11 +272,11 @@ export default function CreateCompanyPage() {
 
               {/* Step 2: Subscription Details */}
               <div className={step === 2 ? 'block' : 'hidden'}>
-                <h5 className="text-lg font-medium text-primary mb-5 flex items-center gap-2"><DollarSign size={18} /> Subscription & Billing</h5>
+                <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><DollarSign size={18} /> Subscription & Billing</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Package Selection */}
                     <div className="md:col-span-2">
-                        <label className="mb-2.5 block text-black dark:text-white">Subscription Package <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">Subscription Package <span className="text-danger">*</span></Typography>
                         <div className="relative z-20 bg-white dark:bg-form-input">
                             <select name="subscription_package_id" value={formData.subscription_package_id} onChange={handleChange} required className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white">
                                 <option value={0} disabled>Select a package</option>
@@ -287,28 +291,28 @@ export default function CreateCompanyPage() {
                     {/* Package Info Card */}
                     {selectedPackage && (
                         <div className="md:col-span-2 p-4 border border-primary/20 bg-primary/5 rounded-lg">
-                            <h6 className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</h6>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Max Staff: <strong>{selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}</strong> |
-                                Max Leads: <strong>{selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}</strong>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
+                            <Typography variant="body2" as="h6" className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</Typography>
+                            <Typography variant="body" className="text-gray-600 dark:text-gray-400">
+                                Max Staff: <strong className="font-semibold">{selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}</strong> |
+                                Max Leads: <strong className="font-semibold">{selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}</strong>
+                            </Typography>
+                            <Typography variant="caption" className="text-gray-500 mt-2">
                                 *Note: Since this is a manual provisioning, the dates below determine the subscription cycle.
-                            </p>
+                            </Typography>
                         </div>
                     )}
 
                     {/* Subscription Start Date */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">Start Date <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
                         <input type="date" name="subscription_start_date" value={formData.subscription_start_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
                     {/* Subscription End Date */}
                     <div>
-                        <label className="mb-2.5 block text-black dark:text-white">End Date <span className="text-danger">*</span></label>
+                        <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
                         <input type="date" name="subscription_end_date" value={formData.subscription_end_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                         {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
-                            <p className="text-xs text-danger mt-1">End date must be after start date.</p>
+                            <Typography variant="caption" className="text-xs text-danger mt-1">End date must be after start date.</Typography>
                         )}
                     </div>
 
@@ -329,8 +333,8 @@ export default function CreateCompanyPage() {
                             </div>
                         </label>
                         <div className="flex flex-col">
-                            <p className="text-sm font-medium text-black dark:text-white">Send Activation Email</p>
-                            <span className="text-xs text-gray-500">Sends the Admin an OTP to set their permanent password.</span>
+                            <Typography variant="body" className="font-medium text-black dark:text-white">Send Activation Email</Typography>
+                            <Typography variant="caption" className="text-gray-500">Sends the Admin an OTP to set their permanent password.</Typography>
                         </div>
                     </div>
                 </div>
@@ -344,7 +348,7 @@ export default function CreateCompanyPage() {
                           onClick={() => setStep(1)}
                           className="flex items-center gap-2 rounded bg-gray-300 py-3 px-6 text-black hover:bg-gray-400 transition-colors"
                       >
-                          <ArrowLeft size={18} /> Previous
+                          <ArrowLeft size={18} /> <Typography variant="body" as="span" className="font-medium">Previous</Typography>
                       </button>
                   )}
 
@@ -354,7 +358,7 @@ export default function CreateCompanyPage() {
                           onClick={handleNext}
                           className="ml-auto flex items-center gap-2 rounded bg-primary py-3 px-6 font-medium text-white hover:bg-primary/90 transition-colors"
                       >
-                          Next <ArrowRight size={18} />
+                          <Typography variant="body" as="span" className="font-medium text-white">Next</Typography> <ArrowRight size={18} />
                       </button>
                   )}
 
@@ -364,7 +368,9 @@ export default function CreateCompanyPage() {
                           disabled={createCompanyMutation.isPending || !isFormValid}
                           className="rounded bg-success py-3 px-6 font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
                       >
-                          {createCompanyMutation.isPending ? 'Provisioning...' : 'Provision Company'}
+                          <Typography variant="body" as="span" className="font-medium text-white">
+                              {createCompanyMutation.isPending ? 'Provisioning...' : 'Provision Company'}
+                          </Typography>
                       </button>
                   )}
               </div>

@@ -1,6 +1,4 @@
-'use client';
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,17 +13,26 @@ import {
   LayoutDashboard,
   ClipboardList,
   User as ProfileIcon,
+  FileText,
+  Package,
+  LucideIcon,
 } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { useAuth } from '@/hooks/useAuth';
 import { Typography } from '@/components/common/Typography';
+import SidebarDropdown from './SidebarDropdown';
 
 interface MenuItem {
     label: string;
     route: string;
-    icon: React.FC<any>;
+    icon: LucideIcon;
     requiredResource: string;
 }
+
+const getCompanyIdFromPath = (path: string): string | null => {
+  const match = path.match(/^\/companies\/(\d+)/);
+  return match ? match[1] : null;
+};
 
 const checkPermission = (permissions: Record<string, string[]>, resource: string): boolean => {
     if (permissions.all && permissions.all.includes('crud')) {
@@ -82,6 +89,12 @@ interface SidebarProps {
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const pathname = usePathname();
   const { isInitialized, isAuthenticated, permissions } = useAuth();
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCompanyId(getCompanyIdFromPath(pathname));
+  }, [pathname]);
+
 
   const handleLogout = () => {
     authService.logout();
@@ -94,6 +107,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     return pathname.startsWith(route);
   };
 
+  const isCompanyDetailRoute = !!companyId;
+
+
   if (!isInitialized || !isAuthenticated) {
       return null;
   }
@@ -102,6 +118,32 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       checkPermission(permissions, item.requiredResource)
   );
 
+  const companySubMenuItems = companyId ? [
+    {
+        label: 'Details',
+        route: `/companies/${companyId}`,
+        icon: ProfileIcon,
+        isActive: pathname === `/companies/${companyId}` || pathname === `/companies/${companyId}/details`,
+    },
+    {
+        label: 'Subscriptions',
+        route: `/companies/${companyId}/subscriptions`,
+        icon: Package,
+        isActive: pathname.startsWith(`/companies/${companyId}/subscriptions`),
+    },
+    {
+        label: 'Invoices',
+        route: `/companies/${companyId}/invoices`,
+        icon: FileText,
+        isActive: pathname.startsWith(`/companies/${companyId}/invoices`),
+    },
+    {
+        label: 'Activity Logs',
+        route: `/companies/${companyId}/logs`,
+        icon: Activity,
+        isActive: pathname.startsWith(`/companies/${companyId}/logs`),
+    },
+  ] : [];
 
   return (
     <aside
@@ -109,7 +151,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      {/* Sidebar Header/Logo */}
       <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5 border-b border-gray-800 dark:border-gray-700">
         <Link href="/dashboard">
           <Typography
@@ -121,7 +162,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
           </Typography>
         </Link>
 
-        {/* Removed 'block' class to fix Tailwind conflict */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-controls="sidebar"
@@ -132,32 +172,45 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         </button>
       </div>
 
-      {/* Navigation */}
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear flex-1">
         <nav className="mt-5 py-4 px-4 lg:mt-9 lg:px-4">
           <ul className="mb-6 flex flex-col gap-1.5">
-            {filteredMenuItems.map((item) => (
-              <li key={item.route}>
-                <Link
-                  href={item.route}
-                  className={`group relative flex items-center gap-2.5 rounded-lg py-3 px-4 font-medium duration-300 ease-in-out transition-colors
-                    ${isActive(item.route)
-                        ? 'bg-primary text-white dark:bg-primary dark:text-white shadow-md'
-                        : 'text-bodydark1 hover:bg-gray-800 dark:hover:bg-meta-4'
-                    }
-                  `}
-                >
-                  <item.icon size={18} />
-                  <Typography
-                    as="span"
-                    variant="body1"
-                    className="text-inherit"
+            {filteredMenuItems.map((item) => {
+              if (item.route === '/companies' && isCompanyDetailRoute) {
+                return (
+                  <SidebarDropdown
+                    key={item.route}
+                    icon={item.icon}
+                    label={item.label}
+                    items={companySubMenuItems}
+                    defaultOpen={isCompanyDetailRoute}
+                  />
+                );
+              }
+
+              return (
+                <li key={item.route}>
+                  <Link
+                    href={item.route}
+                    className={`group relative flex items-center gap-2.5 rounded-lg py-3 px-4 font-medium duration-300 ease-in-out transition-colors
+                      ${isActive(item.route)
+                          ? 'bg-primary text-white dark:bg-primary dark:text-white shadow-md'
+                          : 'text-bodydark1 hover:bg-gray-800 dark:hover:bg-meta-4'
+                      }
+                    `}
                   >
-                    {item.label}
-                  </Typography>
-                </Link>
-              </li>
-            ))}
+                    <item.icon size={18} />
+                    <Typography
+                      as="span"
+                      variant="body1"
+                      className="text-inherit"
+                    >
+                      {item.label}
+                    </Typography>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
           {filteredMenuItems.length === 0 && (
               <Typography
@@ -171,7 +224,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         </nav>
       </div>
 
-      {/* Logout at the Bottom */}
       <div className="p-4 border-t border-gray-800 dark:border-gray-700">
         <button
           onClick={handleLogout}
