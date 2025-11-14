@@ -43,7 +43,7 @@ select: (data) => {
 
   useEffect(() => {
     refetchStats();
-  }, []);
+  }, [refetchStats]);
 
   useEffect(() => {
     const companyIdMatch = pathname.match(/\/companies\/(\d+)/);

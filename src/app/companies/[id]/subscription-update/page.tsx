@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { use } from 'react';
 import Link from 'next/link';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
+// import DefaultLayout from '@/components/Layouts/DefaultLayout'; // REMOVED
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,23 +10,21 @@ import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { Company, SubscriptionUpdate } from '@/types/company';
+import { SubscriptionUpdate } from '@/types/company';
 import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
-import { useState, useEffect, useMemo, use } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Package, Calendar, DollarSign, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
-import { CardTitle, Label, Value } from '@/components/common/Typography';
+import { Typography } from '@/components/common/Typography';
 
-// PARAMS TYPE DEFINITION
 interface UpdatePageProps {
   params: Promise<{
     id: string;
   }>;
 }
 
-// HELPER FUNCTION
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -52,7 +50,6 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
   return format(end, 'yyyy-MM-dd');
 };
 
-// MAIN COMPONENT
 export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -65,7 +62,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     subscription_end_date: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  // FETCH COMPANY DATA
   const { data: companyResponse, isLoading: isCompanyLoading, isError: isCompanyError, error: companyError } = useQuery({
     queryKey: ['company', companyId],
     queryFn: () => companyService.getCompany(companyId),
@@ -73,14 +69,12 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     staleTime: 60000,
   });
 
-  // FETCH PACKAGES DATA
   const { data: packagesResponse, isLoading: isPackagesLoading } = useQuery<PackagesResponse>({
     queryKey: ['activePackages'],
     queryFn: () => subscriptionService.getPackages({ active_only: true }),
     staleTime: Infinity,
   });
 
-  // UPDATE MUTATION
   const updateMutation = useMutation({
     mutationFn: (data: SubscriptionUpdate) =>
       companyService.updateSubscription(companyId, data),
@@ -95,10 +89,8 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     },
   });
 
-  // MEMOIZED PACKAGES
   const packages = useMemo(() => packagesResponse?.data.packages || [], [packagesResponse]);
 
-  // MEMOIZED PACKAGE MAP
   const packageMap = useMemo(() => {
     return packages.reduce((acc, pkg) => {
       acc[pkg.id] = pkg;
@@ -109,7 +101,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   const currentCompany = companyResponse?.data.company;
   const selectedPackage = packageMap[formData.subscription_package_id] || null;
 
-  // INITIALIZE FORM WITH COMPANY DATA
   useEffect(() => {
     if (currentCompany && packages.length > 0 && formData.subscription_package_id === 0) {
       const pkgId = currentCompany.subscription_package_id || packages[0].id;
@@ -140,10 +131,9 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     return null;
   }
 
-  // HANDLE INPUT CHANGES
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    let newFormData = { ...formData, [name]: name === 'subscription_package_id' ? parseInt(value) : value };
+    let newFormData = { ...formData, [name]: name === 'subscription_package_id' ? parseInt(value) : value } as SubscriptionUpdate;
 
     if (name === 'subscription_package_id' || name === 'subscription_start_date') {
       const pkgId = name === 'subscription_package_id' ? parseInt(value) : newFormData.subscription_package_id;
@@ -158,7 +148,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     setFormData(newFormData);
   };
 
-  // HANDLE FORM SUBMISSION
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const { subscription_package_id, subscription_start_date, subscription_end_date } = formData;
@@ -177,15 +166,15 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   };
 
   return (
-    <DefaultLayout>
+    // REMOVED <DefaultLayout> wrapper here. It is provided by [id]/layout.tsx
+    <>
       <div className="mb-6">
-        {/* Compact Back Button */}
         <button
           onClick={() => router.push('/companies')}
           className="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 hover:text-primary mb-4 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back to Companies
+          <Typography variant="caption">Back to Companies</Typography>
         </button>
         <Breadcrumb pageName={`Update Subscription for ${currentCompany.company_name}`} />
       </div>
@@ -193,37 +182,34 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
       <div className="mx-auto max-w-2xl">
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <div className="py-4 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-            {/* Replaced h4 with CardTitle component */}
-            <CardTitle as="h4" className="flex items-center gap-2">
-                <Package size={16} className="text-primary" /> {/* Smaller Icon */}
+            <Typography variant="card-title" as="h4" className="flex items-center gap-2">
+                <Package size={16} className="text-primary" />
                 Update Subscription
-            </CardTitle>
+            </Typography>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
                 <div className="space-y-6">
-                    {/* Current Package Info Block - Using Label/Value */}
+                    {/* Current Package Info Block */}
                     <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
-                        <Label>Current Package</Label>
-                        <Value as="h5" className="mt-1">
+                        <Typography variant="label">Current Package</Typography>
+                        <Typography variant="value" as="h5" className="mt-1">
                             {currentCompany.package_name}
-                        </Value>
-                        <p className="text-xs text-primary mt-1">
+                        </Typography>
+                        <Typography variant="caption" className="text-xs text-primary mt-1">
                             Current Period: {formatDate(currentCompany.subscription_start_date)} - {formatDate(currentCompany.subscription_end_date)}
-                        </p>
+                        </Typography>
                     </div>
 
                     {/* New Subscription Package Selection */}
                     <div>
-                        {/* Replaced label with Label component */}
-                        <Label className="mb-2.5 block">New Subscription Package <span className="text-danger">*</span></Label>
+                        <Typography variant="label" className="mb-2.5 block">New Subscription Package <span className="text-danger">*</span></Typography>
                         <select
                             name="subscription_package_id"
                             value={formData.subscription_package_id}
                             onChange={handleChange}
                             required
-                            // Tighter vertical padding py-2.5 -> py-2
                             className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                         >
                             <option value={0} disabled>Select a package</option>
@@ -234,50 +220,44 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
                             ))}
                         </select>
                         {selectedPackage && (
-                            <p className="text-xs text-gray-500 mt-2">
+                            <Typography variant="caption" className="text-xs text-gray-500 mt-2">
                                 New Package Price: ${selectedPackage.price.toFixed(2)} / {selectedPackage.duration_type}
-                            </p>
+                            </Typography>
                         )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Start Date Input */}
                         <div>
-                            {/* Replaced label with Label component */}
-                            <Label className="mb-2.5 block">Start Date <span className="text-danger">*</span></Label>
+                            <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
                             <input
                                 type="date"
                                 name="subscription_start_date"
                                 value={formData.subscription_start_date}
                                 onChange={handleChange}
                                 required
-                                // Tighter vertical padding py-2.5 -> py-2
                                 className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                             />
                         </div>
                         {/* End Date Input */}
                         <div>
-                            {/* Replaced label with Label component */}
-                            <Label className="mb-2.5 block">End Date <span className="text-danger">*</span></Label>
+                            <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
                             <input
                                 type="date"
                                 name="subscription_end_date"
                                 value={formData.subscription_end_date}
                                 onChange={handleChange}
                                 required
-                                // Tighter vertical padding py-2.5 -> py-2
                                 className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                             />
-                            {/* Smaller validation text */}
                             {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
-                                <p className="text-xxs text-danger mt-1 flex items-center gap-1"><X size={12} /> End date must be after start date.</p>
+                                <Typography variant="caption" className="text-xxs text-danger mt-2 flex items-center gap-1"><X size={12} /> End date must be after start date.</Typography>
                             )}
                         </div>
                     </div>
                 </div>
 
                 <div className="flex justify-end pt-6 mt-6 border-t border-stroke dark:border-strokedark">
-                    {/* Compact submit button text and padding */}
                     <button
                         type="submit"
                         disabled={updateMutation.isPending || formData.subscription_package_id === 0 || (new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date))}
@@ -290,6 +270,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
           </form>
         </div>
       </div>
-    </DefaultLayout>
+    </>
   );
 }
