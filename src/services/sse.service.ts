@@ -3,9 +3,7 @@ import { getAuthToken } from "@/lib/auth";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const SSE_ENDPOINT = `${API_BASE_URL}/sse/stream`;
 
-export const createSSEConnection = (): EventSource | null => {
-  const token = getAuthToken();
-
+export const createSSEConnection = (token: string): EventSource | null => {
   if (!token) {
     return null;
   }

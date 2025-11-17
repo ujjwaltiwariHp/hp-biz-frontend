@@ -1,8 +1,9 @@
-'use client'; // <-- FIX: Adding the directive here resolves all the reported errors
+'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { createSSEConnection, closeSSEConnection } from "@/services/sse.service";
 import { useAuth } from "@/hooks/useAuth";
+import { getAuthToken } from "@/lib/auth";
 
 type SSEEventType =
   'new_staff_notification' |
@@ -70,7 +71,11 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
   }, [dispatchMessage]);
 
   const connect = useCallback(() => {
-    const newSource = createSSEConnection();
+    const token = getAuthToken();
+
+    if (!token) return;
+
+    const newSource = createSSEConnection(token);
 
     if (newSource) {
       setupSourceListeners(newSource);

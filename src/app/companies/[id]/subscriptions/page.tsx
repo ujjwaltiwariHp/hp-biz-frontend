@@ -280,7 +280,13 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
               <InfoValue
                   label="Price"
-                  value={`$${typeof company.package_price === 'string' ? parseFloat(company.package_price).toFixed(2) : company.package_price.toFixed(2)} / ${company.duration_type}`}
+                  value={`$${
+                    company.package_price === null || company.package_price === undefined
+                      ? '0.00'
+                      : typeof company.package_price === 'string'
+                        ? parseFloat(company.package_price).toFixed(2)
+                        : company.package_price.toFixed(2)
+                  } / ${company.duration_type}`}
                   icon={<DollarSign size={16} className="text-primary/70 dark:text-white/70" />}
               />
 
