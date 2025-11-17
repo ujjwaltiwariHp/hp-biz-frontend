@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { getAuthToken } from './auth';
+import { getAuthToken, removeAuthToken } from './auth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1';
 
@@ -34,7 +34,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      removeAuthToken();
       if (typeof window !== 'undefined' && window.location.pathname !== '/auth/signin') {
         window.location.href = '/auth/signin';
       }

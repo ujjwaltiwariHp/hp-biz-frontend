@@ -26,11 +26,14 @@ interface SSEContextType {
 const SSEContext = createContext<SSEContextType | undefined>(undefined);
 
 export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
 
   const listenersRef = useRef<Map<SSEEventType, Set<SSEListener>>>(new Map());
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const connectionTimeoutRef = useRef<NodeJS.Timeout>();
 
   const dispatchMessage = useCallback((eventType: SSEEventType, event: MessageEvent) => {
     const listeners = listenersRef.current.get(eventType);
@@ -51,12 +54,20 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
   }, []);
 
   const setupSourceListeners = useCallback((source: EventSource) => {
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+    }
+
     source.onopen = () => {
+        console.log("SSE Connection: Successfully Established");
         setIsConnected(true);
+        setConnectionAttempts(0);
     };
 
-    source.onerror = () => {
+    source.onerror = (error) => {
+        console.error("SSE Connection: Error", error);
         setIsConnected(false);
+        source.close();
     };
 
     source.onmessage = (event) => {
@@ -68,38 +79,107 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
             dispatchMessage(eventType, event);
         });
     }
+
+    connectionTimeoutRef.current = setTimeout(() => {
+        if (source.readyState !== EventSource.OPEN) {
+            console.warn("SSE Connection: Timeout - connection did not establish");
+            source.close();
+            setEventSource(null);
+        }
+    }, 5000);
   }, [dispatchMessage]);
 
   const connect = useCallback(() => {
     const token = getAuthToken();
 
-    if (!token) return;
+    if (!token) {
+        console.warn("SSE Connection: No token available");
+        return;
+    }
+
+    if (connectionAttempts > 3) {
+        console.error("SSE Connection: Max reconnection attempts reached");
+        return;
+    }
+
+    console.log("SSE Connection: Attempting to connect...", { attempt: connectionAttempts + 1 });
 
     const newSource = createSSEConnection(token);
 
     if (newSource) {
       setupSourceListeners(newSource);
       setEventSource(newSource);
+      setConnectionAttempts(prev => prev + 1);
     } else {
+        console.error("SSE Connection: Failed to create connection");
         setIsConnected(false);
     }
-  }, [setupSourceListeners]);
+  }, [connectionAttempts, setupSourceListeners]);
+
+  const reconnect = useCallback(() => {
+    console.log("SSE Connection: Reconnecting...");
+
+    if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+    }
+
+    setEventSource(null);
+    setIsConnected(false);
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+        connect();
+    }, 2000);
+  }, [eventSource, connect]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      if (!eventSource || eventSource.readyState === EventSource.CLOSED || eventSource.readyState === EventSource.CONNECTING) {
+
+    if (!isInitialized || !isAuthenticated) {
+        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+            eventSource.close();
+        }
+        setEventSource(null);
+        setIsConnected(false);
+        return;
+    }
+
+    const token = getAuthToken();
+
+    if (!token) {
+        console.warn("SSE: Token not available yet");
+        return;
+    }
+
+    if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
         connect();
-      }
-    } else {
-      closeSSEConnection(eventSource);
-      setEventSource(null);
-      setIsConnected(false);
     }
 
     return () => {
-      closeSSEConnection(eventSource);
+      // Cleanup
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
-  }, [isAuthenticated, connect, eventSource]);
+  }, [isAuthenticated, isInitialized, connect, eventSource]);
+
+  useEffect(() => {
+    if (!isConnected && isAuthenticated && isInitialized && eventSource === null) {
+        const reconnectDelay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000);
+        console.log(`SSE: Will attempt reconnection in ${reconnectDelay}ms`);
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+            connect();
+        }, reconnectDelay);
+
+        return () => {
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+            }
+        };
+    }
+  }, [isConnected, isAuthenticated, isInitialized, eventSource, connectionAttempts, connect]);
 
   const subscribe = useCallback((eventType: SSEEventType, listener: SSEListener) => {
     if (!listenersRef.current.has(eventType)) {

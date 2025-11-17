@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api';
+import { setAuthToken } from '@/lib/auth';
 import {
   LoginCredentials,
   CreateAdminData,
@@ -20,9 +21,8 @@ export const authService = {
       credentials,
       { withCredentials: true }
     );
-
     if (response.data.success && response.data.data.token) {
-      document.cookie = `auth-token=${response.data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      setAuthToken(response.data.data.token);
     }
     return response.data;
   },
