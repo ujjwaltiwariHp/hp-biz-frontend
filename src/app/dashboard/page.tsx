@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import CardDataStats from '@/components/CardDataStats';
 import { Typography } from '@/components/common/Typography';
@@ -46,6 +46,7 @@ const formatDate = (dateString: string) => {
 };
 
 export default function Dashboard() {
+  const [isMounted, setIsMounted] = useState(false); // Fix for hydration
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -53,7 +54,13 @@ export default function Dashboard() {
 
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  const token = getAuthToken();
+  // Ensure we only run client-specific logic after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const token = typeof window !== 'undefined' ? getAuthToken() : null;
+
   const companiesQueryKey = ['companies', { page: 1, limit: 10, recent: true }];
   const dashboardQueryKey = ['dashboard'];
   const usageQueryKey = ['usageReport', dateRange];
@@ -61,19 +68,19 @@ export default function Dashboard() {
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
     queryKey: dashboardQueryKey,
     queryFn: () => companyService.getDashboard(),
-    enabled: !!token,
+    enabled: !!token && isMounted, // Only fetch when mounted
   });
 
   const { data: companiesData, isLoading: companiesLoading } = useQuery({
     queryKey: companiesQueryKey,
     queryFn: () => companyService.getCompanies({ page: 1, limit: 10 }),
-    enabled: !!token,
+    enabled: !!token && isMounted,
   });
 
   const { data: usageData, isLoading: usageLoading } = useQuery({
     queryKey: usageQueryKey,
     queryFn: () => companyService.getUsageReport(dateRange),
-    enabled: !!token && !!dateRange.startDate && !!dateRange.endDate,
+    enabled: !!token && !!dateRange.startDate && !!dateRange.endDate && isMounted,
   });
 
   useSSE('sa_company_list_refresh', companiesQueryKey);
@@ -131,7 +138,8 @@ export default function Dashboard() {
 
   const isDataLoading = usageLoading || companiesLoading || dashboardLoading;
 
-  if (dashboardLoading) {
+  // FIX: Force loading state until mounted to match server render
+  if (!isMounted || dashboardLoading) {
     return (
       <DefaultLayout>
         <div className="flex items-center justify-center h-screen">
@@ -199,7 +207,6 @@ export default function Dashboard() {
       ),
     },
   ];
-  // --- End Dynamic Table Configuration ---
 
   return (
     <DefaultLayout>
@@ -403,7 +410,6 @@ export default function Dashboard() {
                 Recently Added Companies
               </Typography>
 
-              {/* REPLACED hardcoded table with DynamicTable */}
               {recentCompanies.length > 0 ? (
                 <DynamicTable<Company>
                   data={recentCompanies}
