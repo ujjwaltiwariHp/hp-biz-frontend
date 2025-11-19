@@ -12,7 +12,6 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// Compact Info Field Component
 const InfoField = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
     <Typography variant="label" className="block mb-1">{label}</Typography>

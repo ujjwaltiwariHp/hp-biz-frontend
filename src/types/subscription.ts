@@ -1,13 +1,19 @@
+export type SubscriptionDurationType = 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
+
 export interface SubscriptionPackage {
   id: number;
   name: string;
-  duration_type: 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
-  price: number;
+  price_monthly: string;
+  price_quarterly: string;
+  price_yearly: string;
+  yearly_discount_percent: number;
+  currency: string;
+  max_custom_fields: number;
+
   features: string[];
   max_staff_count: number;
   max_leads_per_month: number;
   is_active: boolean;
-
 
   is_trial: boolean;
   trial_duration_days: number;
@@ -20,8 +26,12 @@ export interface SubscriptionPackage {
 
 export interface CreatePackageData {
   name: string;
-  duration_type: 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
-  price: number;
+  price_monthly: string;
+  price_quarterly: string;
+  price_yearly: string;
+  yearly_discount_percent: number;
+  max_custom_fields: number;
+
   features: string[];
   max_staff_count: number;
   max_leads_per_month: number;
@@ -34,14 +44,18 @@ export interface CreatePackageData {
 
 export interface UpdatePackageData {
   name?: string;
-  duration_type?: 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
-  price?: number;
+  price_monthly?: string;
+  price_quarterly?: string;
+  price_yearly?: string;
+  yearly_discount_percent?: number;
+  currency?: string;
+  max_custom_fields?: number;
+
   features?: string[];
   max_staff_count?: number;
   max_leads_per_month?: number;
   is_active?: boolean;
 
-  // optional fields for update
   is_trial?: boolean;
   trial_duration_days?: number;
 }

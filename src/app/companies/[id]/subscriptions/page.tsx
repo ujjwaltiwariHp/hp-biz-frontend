@@ -28,7 +28,8 @@ interface PageProps {
   }>;
 }
 
-const calculateEndDate = (startDate: string, durationType: string): string => {
+// Fixed date calculation to default to monthly since duration_type was removed
+const calculateEndDate = (startDate: string, durationType: string = 'monthly'): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
   let end = new Date(start);
@@ -47,7 +48,9 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
       end.setFullYear(start.getFullYear() + 1);
       break;
     default:
-      return startDate;
+      // Default to 30 days if unknown
+      end.setMonth(start.getMonth() + 1);
+      break;
   }
   end.setDate(end.getDate() - 1);
   return format(end, 'yyyy-MM-dd');
@@ -156,16 +159,17 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         name === 'subscription_package_id'
           ? parseInt(value)
           : newFormData.subscription_package_id;
-      const pkg = packageMap[pkgId];
+      // const pkg = packageMap[pkgId]; // Not strictly needed for calculation anymore since duration_type is gone
       const startDate =
         name === 'subscription_start_date'
           ? value
           : newFormData.subscription_start_date;
 
-      if (pkg && startDate) {
+      if (startDate) {
+        // Defaulting to 'monthly' calculation as duration_type is removed
         newFormData.subscription_end_date = calculateEndDate(
           startDate,
-          pkg.duration_type
+          'monthly'
         );
       }
     }
@@ -280,13 +284,15 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
               <InfoValue
                   label="Price"
-                  value={`$${
+                  value={`${
+                    company.package_currency || 'USD'} ${
                     company.package_price === null || company.package_price === undefined
                       ? '0.00'
                       : typeof company.package_price === 'string'
                         ? parseFloat(company.package_price).toFixed(2)
                         : company.package_price.toFixed(2)
-                  } / ${company.duration_type}`}
+                  } / month`}
+                  // Fixed: Hardcoded / month and removed duration_type
                   icon={<DollarSign size={16} className="text-primary/70 dark:text-white/70" />}
               />
 
@@ -386,9 +392,10 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   <option value={0} disabled>
                     Select a package
                   </option>
-                  {packages.map((pkg) => (
+                  {packages.map((pkg: any) => (
                     <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} (${pkg.price.toFixed(2)} / {pkg.duration_type})
+                      {/* FIXED: Used price_monthly and removed duration_type */}
+                      {pkg.name} ({pkg.currency || 'USD'} {pkg.price_monthly} / month)
                     </option>
                   ))}
                 </select>
@@ -396,7 +403,8 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 {selectedPackage && (
                   <div className="mt-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
                     <Typography variant="body2" className="font-medium text-primary mb-2">
-                      <span className='font-bold'>New Plan:</span> {selectedPackage.name} (${selectedPackage.price.toFixed(2)} / {selectedPackage.duration_type})
+                      {/* FIXED: Used price_monthly */}
+                      <span className='font-bold'>New Plan:</span> {selectedPackage.name} ({selectedPackage.currency || 'USD'} {selectedPackage.price_monthly} / month)
                     </Typography>
                   </div>
                 )}
@@ -453,7 +461,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 <div>
                   <Typography variant="body2" className="font-medium text-success">Auto-Calculation Note</Typography>
                   <Typography variant="caption" className="text-xs text-success/80 mt-1">
-                    The end date adjusts automatically based on the new package duration.
+                    The end date defaults to 1 month. You can adjust it manually for yearly plans.
                   </Typography>
                 </div>
               </div>
