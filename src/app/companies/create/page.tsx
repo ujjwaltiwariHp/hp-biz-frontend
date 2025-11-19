@@ -38,7 +38,9 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
       end.setFullYear(start.getFullYear() + 1);
       break;
     default:
-      return startDate;
+      // Default to monthly
+      end.setMonth(start.getMonth() + 1);
+      break;
   }
   end.setDate(end.getDate() - 1);
   return format(end, 'yyyy-MM-dd');
@@ -47,7 +49,8 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
 // HELPER FUNCTION
 const getDefaultFormData = (selectedPackage: SubscriptionPackage | null): CreateCompanyData => {
   const today = format(new Date(), 'yyyy-MM-dd');
-  const duration = selectedPackage?.duration_type || 'monthly';
+  // FIXED: Removed dependency on duration_type, defaulting to monthly
+  const duration = 'monthly';
   const endDate = calculateEndDate(today, duration);
 
   return {
@@ -91,7 +94,8 @@ export default function CreateCompanyPage() {
     setSelectedPackage(pkg || null);
 
     if (pkg) {
-      const newEndDate = calculateEndDate(formData.subscription_start_date, pkg.duration_type);
+      // FIXED: Hardcoded 'monthly' instead of accessing pkg.duration_type
+      const newEndDate = calculateEndDate(formData.subscription_start_date, 'monthly');
       setFormData(prev => ({
         ...prev,
         subscription_end_date: newEndDate,
@@ -282,7 +286,8 @@ export default function CreateCompanyPage() {
                                 <option value={0} disabled>Select a package</option>
                                 {packages.map(pkg => (
                                     <option key={pkg.id} value={pkg.id}>
-                                        {pkg.name} (${pkg.price.toFixed(2)} / {pkg.duration_type})
+                                        {/* FIXED: Use price_monthly and static 'month' text */}
+                                        {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
                                     </option>
                                 ))}
                             </select>
