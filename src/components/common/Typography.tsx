@@ -16,7 +16,8 @@ interface TypographyProps {
   variant?: Variant;
   className?: string;
   children: React.ReactNode;
-  as?: 'label' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span';
+  // FIXED: Added 'div' to the allowed 'as' types
+  as?: 'label' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
   style?: React.CSSProperties;
 }
 

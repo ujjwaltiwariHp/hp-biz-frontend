@@ -18,7 +18,7 @@ export interface Company {
   updated_at: string;
   package_name: string;
   package_price: number | string;
-  duration_type: string;
+  package_currency: string;
 }
 
 // Interface for Company Provisioning (Creation by Super Admin)

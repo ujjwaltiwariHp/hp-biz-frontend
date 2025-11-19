@@ -172,16 +172,20 @@ export default function CompaniesPage() {
         </div>
       ),
     },
-    {
+{
       key: 'package_name',
       header: 'Package',
-      // Reduced width
       headerClassName: 'min-w-[120px]',
       render: (company) => (
         <div className="flex flex-col space-y-1">
-          <Typography variant="value" className="font-semibold text-black dark:text-white">{company.package_name}</Typography>
+          <Typography variant="value" className="font-semibold text-black dark:text-white">
+            {company.package_name || 'No Package'}
+          </Typography>
           <Typography variant="body" className="text-sm text-primary font-medium">
-            ${company.package_price}/{company.duration_type}
+             {/* CHANGED: Use package_currency (or default USD) and hardcode '/mo' since duration_type is gone */}
+            {company.package_price
+              ? `${company.package_currency || 'USD'} ${company.package_price}/mo`
+              : '-'}
           </Typography>
         </div>
       ),

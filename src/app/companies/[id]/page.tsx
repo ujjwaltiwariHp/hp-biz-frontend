@@ -47,10 +47,11 @@ interface PageProps {
 }
 
 // Helper component for label/value pair using standard Typography
+// Uses 'as="div"' now that Typography supports it
 const InfoBlock = ({ label, value, className = '' }: { label: string, value: React.ReactNode, className?: string }) => (
     <div className={className}>
         <Typography variant="label" as="p" className="text-xs mb-1.5">{label}</Typography>
-        <Typography as="p" variant="value" className="break-words">
+        <Typography as="div" variant="value" className="break-words">
             {value}
         </Typography>
     </div>
@@ -550,7 +551,8 @@ export default function CompanyOverviewPage({ params }: PageProps) {
                   <Typography variant="label" className="text-xs mb-1">Pricing</Typography>
                   <Typography variant="value" className="text-lg font-bold text-black dark:text-white">
                     ${parseFloat(String(company.package_price)).toFixed(2)}
-                    <span className="text-xs font-normal text-gray-600 dark:text-gray-400"> / {company.duration_type}</span>
+                    {/* FIXED: Replaced company.duration_type with static text */}
+                    <span className="text-xs font-normal text-gray-600 dark:text-gray-400"> / month</span>
                   </Typography>
                 </div>
               </div>

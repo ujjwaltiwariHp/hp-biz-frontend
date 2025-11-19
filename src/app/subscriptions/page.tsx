@@ -4,7 +4,7 @@ import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionService } from '@/services/subscription.service';
 import { useState } from 'react';
-import { SubscriptionPackage, CreatePackageData, UpdatePackageData } from '@/types/subscription';
+import { SubscriptionPackage } from '@/types/subscription';
 import { toast } from 'react-toastify';
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, CheckCircle, MinusCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -14,10 +14,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Typography } from '@/components/common/Typography';
 import { useSSE } from '@/hooks/useSSE';
 
-const formatDurationType = (type: string) => {
-  if (type === 'one_time') return 'One-Time';
-  return type.charAt(0).toUpperCase() + type.slice(1);
-};
+// Removed outdated formatDurationType function as duration_type no longer exists
 
 const FeatureItem = ({ feature, Icon = CheckCircle }: { feature: string, Icon?: any }) => (
     <li className="text-sm text-gray-700 dark:text-gray-300 flex items-start">
@@ -46,10 +43,7 @@ export default function SubscriptionsPage() {
     staleTime: 60000,
   });
 
-  // --- SSE Integration for Real-time Refresh ---
   useSSE('sa_subscription_status_update', ['packages']);
-  // ----------------------------------------------
-
 
   const toggleStatusMutation = useMutation({
     mutationFn: subscriptionService.toggleStatus,
@@ -227,6 +221,11 @@ export default function SubscriptionsPage() {
                 const disableToggle = toggleStatusMutation.isPending || (pkg.is_active && pkg.company_count > 0);
                 const disableDelete = deleteMutation.isPending || pkg.company_count > 0;
 
+                // Ensure values are treated as numbers for formatting
+                const monthlyPrice = parseFloat(pkg.price_monthly || '0');
+                const yearlyPrice = parseFloat(pkg.price_yearly || '0');
+                const currency = pkg.currency || 'USD';
+
                 return (
                 <div
                   key={pkg.id}
@@ -259,13 +258,22 @@ export default function SubscriptionsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      {/* FIX: Use variant='value' and a valid 'as' prop */}
+                      {/* NEW PRICING DISPLAY */}
                       <Typography variant="value" as="p" className="text-2xl font-bold text-primary">
-                        ${pkg.price.toFixed(2)}
+                        {currency} {monthlyPrice.toFixed(2)}
                       </Typography>
                       <Typography variant="caption" className="text-sm text-gray-500">
-                        per {formatDurationType(pkg.duration_type)}
+                        / month
                       </Typography>
+                      {/* Show yearly price hint */}
+                      <div className="text-xs text-gray-500 mt-1">
+                        {currency} {yearlyPrice.toFixed(2)} / year
+                        {pkg.yearly_discount_percent > 0 && (
+                           <span className="text-green-600 ml-1 font-medium">
+                             (-{pkg.yearly_discount_percent}%)
+                           </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -280,6 +288,12 @@ export default function SubscriptionsPage() {
                       <Typography variant="caption" as="span">Max Leads/Month:</Typography>
                       <Typography variant="body" as="span" className="ml-2 font-medium text-black dark:text-white">
                         {pkg.max_leads_per_month === 0 ? 'Unlimited' : pkg.max_leads_per_month}
+                      </Typography>
+                    </div>
+                    <div className="text-sm flex justify-between">
+                      <Typography variant="caption" as="span">Max Custom Fields:</Typography>
+                      <Typography variant="body" as="span" className="ml-2 font-medium text-black dark:text-white">
+                        {pkg.max_custom_fields === 0 ? 'None' : pkg.max_custom_fields}
                       </Typography>
                     </div>
                     <div className="text-sm flex justify-between">
@@ -355,7 +369,6 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         {...deleteDialog.confirmProps}
         type="danger"
@@ -366,7 +379,6 @@ export default function SubscriptionsPage() {
         isLoading={deleteMutation.isPending}
       />
 
-      {/* Toggle Status Confirmation Dialog */}
       <ConfirmDialog
         {...toggleDialog.confirmProps}
         type={toggleDialogProps.type}

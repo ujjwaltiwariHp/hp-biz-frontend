@@ -2,7 +2,6 @@
 
 import React, { use } from 'react';
 import Link from 'next/link';
-// import DefaultLayout from '@/components/Layouts/DefaultLayout'; // REMOVED
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,7 +13,7 @@ import { SubscriptionUpdate } from '@/types/company';
 import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Package, Calendar, DollarSign, X } from 'lucide-react';
+import { ArrowLeft, Package, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 import { Typography } from '@/components/common/Typography';
@@ -25,7 +24,8 @@ interface UpdatePageProps {
   }>;
 }
 
-const calculateEndDate = (startDate: string, durationType: string): string => {
+// Default to 'monthly' since duration_type was removed from DB
+const calculateEndDate = (startDate: string, durationType: string = 'monthly'): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
   let end = new Date(start);
@@ -44,7 +44,9 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
       end.setFullYear(start.getFullYear() + 1);
       break;
     default:
-      return startDate;
+      // Default fallback
+      end.setMonth(start.getMonth() + 1);
+      break;
   }
   end.setDate(end.getDate() - 1);
   return format(end, 'yyyy-MM-dd');
@@ -109,9 +111,10 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
         ? format(new Date(currentCompany.subscription_start_date), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd');
 
+      // FIX: Removed dependency on packageMap[pkgId]?.duration_type
       const endDate = currentCompany.subscription_end_date
         ? format(new Date(currentCompany.subscription_end_date), 'yyyy-MM-dd')
-        : calculateEndDate(startDate, packageMap[pkgId]?.duration_type || 'monthly');
+        : calculateEndDate(startDate, 'monthly');
 
       setFormData({
         subscription_package_id: pkgId,
@@ -141,7 +144,8 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
       const startDate = name === 'subscription_start_date' ? value : newFormData.subscription_start_date;
 
       if (pkg && startDate) {
-        newFormData.subscription_end_date = calculateEndDate(startDate, pkg.duration_type);
+        // FIX: Hardcoded 'monthly' calculation instead of accessing pkg.duration_type
+        newFormData.subscription_end_date = calculateEndDate(startDate, 'monthly');
       }
     }
 
@@ -166,7 +170,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   };
 
   return (
-    // REMOVED <DefaultLayout> wrapper here. It is provided by [id]/layout.tsx
     <>
       <div className="mb-6">
         <button
@@ -215,13 +218,15 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
                             <option value={0} disabled>Select a package</option>
                             {packages.map(pkg => (
                                 <option key={pkg.id} value={pkg.id}>
-                                    {pkg.name} (${pkg.price.toFixed(2)} / {pkg.duration_type})
+                                    {/* FIX: Use price_monthly and static text */}
+                                    {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
                                 </option>
                             ))}
                         </select>
                         {selectedPackage && (
                             <Typography variant="caption" className="text-xs text-gray-500 mt-2">
-                                New Package Price: ${selectedPackage.price.toFixed(2)} / {selectedPackage.duration_type}
+                                {/* FIX: Use price_monthly and static text */}
+                                New Package Price: {selectedPackage.currency || 'USD'} {Number(selectedPackage.price_monthly).toFixed(2)} / month
                             </Typography>
                         )}
                     </div>
