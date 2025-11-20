@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import { createSSEConnection, closeSSEConnection } from "@/services/sse.service";
+import { createSSEConnection } from "@/services/sse.service";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthToken } from "@/lib/auth";
 
@@ -13,7 +13,11 @@ type SSEEventType =
   'sa_company_list_refresh' |
   'sa_subscription_status_update' |
   'sa_finance_update' |
-  'keep-alive';
+  'keep-alive' |
+  'new_activity_log' |
+  'new_system_log' |
+  'sa_new_activity_log' |
+  'sa_new_system_log';
 
 type SSEListener = (data: any) => void;
 

@@ -9,7 +9,11 @@ type SSEEventType =
   'new_sa_notification' |
   'sa_company_list_refresh' |
   'sa_subscription_status_update' |
-  'sa_finance_update';
+  'sa_finance_update' |
+  'new_activity_log' |
+  'new_system_log' |
+  'sa_new_activity_log' |
+  'sa_new_system_log';
 
 interface SSEInvalidationOptions {
   refetchQueries?: boolean;

@@ -54,12 +54,11 @@ const getDefaultDateRange = () => ({
   end_date: new Date().toISOString().split('T')[0],
 });
 
-// Initial filters now only track what is necessary
+
 const initialFilters: LogFilters = {
   search: '',
-  resource_type: '', // Used for Activity Logs
-  log_level: '',     // Used for System Logs
-  // The rest are excluded from initial state setup and UI interaction
+  resource_type: '',
+  log_level: '',
   action_type: undefined,
   log_category: undefined,
   ip_address: undefined,
@@ -72,30 +71,22 @@ export default function LogsPage() {
   const [filters, setFilters] = useState<LogFilters>(initialFilters);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  // Local state to hold the immediate input value for GlobalSearchInput
   const [localSearchTerm, setLocalSearchTerm] = useState(filters.search || '');
 
-  // The query key should depend on all filters
   const logsQueryKey = [logType, currentPage, filters];
 
   const { data: logsData, isLoading, refetch, isFetching } = useQuery({
     queryKey: logsQueryKey,
     queryFn: () => {
-      // Create a filtered object for the API call to only send relevant types
       const apiFilters: LogFilters = {
         ...filters,
         page: currentPage,
         limit: 10,
-        // Only send filters relevant to the active log type
         resource_type: logType === 'activity' ? filters.resource_type : undefined,
         log_level: logType === 'system' ? filters.log_level : undefined,
-
-        // Ensure other fields are explicitly undefined as they are not used in this view
         action_type: undefined,
         log_category: undefined,
         ip_address: undefined,
-
-        // Global search is always applied if present
         search: filters.search || undefined,
       };
 
@@ -103,7 +94,8 @@ export default function LogsPage() {
     },
   });
 
-  useSSE('sa_logs_refresh' as any, logsQueryKey);
+  useSSE('sa_new_activity_log', logsQueryKey, { refetchQueries: true });
+  useSSE('sa_new_system_log', logsQueryKey, { refetchQueries: true });
 
   const logs = logsData?.data?.logs || [];
   const pagination = logsData?.data?.pagination;
@@ -111,22 +103,17 @@ export default function LogsPage() {
   const handleLogTypeChange = (newType: LogType) => {
     setLogType(newType);
     setCurrentPage(1);
-    // Reset filters and local search state when switching log types
     setFilters(initialFilters);
     setLocalSearchTerm(initialFilters.search || '');
   };
 
-  // Handler for all standard text/select filter changes
   const handleFilterChange = (key: keyof LogFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
-  // Handler passed to GlobalSearchInput (debounced)
   const handleGlobalSearch = (newSearchTerm: string) => {
-    // 1. Update the actual filters state which triggers the query
     setFilters(prev => ({ ...prev, search: newSearchTerm }));
-    // 2. Reset pagination
     setCurrentPage(1);
   };
 
@@ -138,7 +125,6 @@ export default function LogsPage() {
   const handleExport = async () => {
     try {
       toast.info(`Preparing ${logType} logs for export...`);
-      // Use the full filters set, but the service will internally handle relevance
       const blob = await logsService.exportLogs(logType, filters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -301,8 +287,6 @@ export default function LogsPage() {
 
   const renderFilters = () => (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
-
-      {/* 1. Global Search Input */}
       <div className="md:col-span-1">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           <Typography variant="label" as="span">Global Search</Typography>
@@ -317,7 +301,6 @@ export default function LogsPage() {
         />
       </div>
 
-      {/* 2. Type-Specific Filter (Resource Type / Log Level) */}
       <div className="md:col-span-1">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           <Typography variant="label" as="span">{logType === 'activity' ? 'Resource Type' : 'Log Level'}</Typography>
@@ -344,7 +327,6 @@ export default function LogsPage() {
         )}
       </div>
 
-      {/* 3. Date Range Button */}
       <div className="flex items-end md:col-span-1">
         <button
           onClick={() => setIsDatePickerOpen(true)}
@@ -357,7 +339,6 @@ export default function LogsPage() {
         </button>
       </div>
 
-      {/* 4. Clear Filters Button */}
       <div className="flex items-end md:col-span-1">
         <button
           onClick={handleClearFilters}
