@@ -16,14 +16,13 @@ import {
   Search,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { formatDate } from '@/lib/utils';
-
 import { Typography } from '@/components/common/Typography';
 import { useSearch } from '@/hooks/useSearch';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import { ActivityLog, LogFilters } from '@/types/logs';
 import DateRangePicker from '@/components/common/DateRangePicker';
+import { useSSE } from '@/hooks/useSSE';
 
 interface PageProps {
   params: Promise<{
@@ -38,7 +37,6 @@ const getActionColor = (action: string) => {
     if (action.includes('LOGIN')) return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
     return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
 };
-
 
 export default function CompanyLogsPage({ params }: PageProps) {
   const resolvedParams = use(params);
@@ -72,10 +70,8 @@ export default function CompanyLogsPage({ params }: PageProps) {
     handleSearch,
     handleClear,
     isLoading: isSearchDebouncing,
-    error: searchError,
     handleSearchSubmit,
   } = useSearch(searchTrigger, 400, MIN_SEARCH_LENGTH);
-
 
   const { data: companyResponse, isLoading: companyLoading } = useQuery({
     queryKey: ['company', companyId],
@@ -84,8 +80,10 @@ export default function CompanyLogsPage({ params }: PageProps) {
     staleTime: 5 * 60 * 1000,
   });
 
+  const logsQueryKey = ['company-logs', companyId, currentPage, filters, finalSearchQuery];
+
   const { data: logsData, isLoading: logsLoading } = useQuery({
-    queryKey: ['company-logs', companyId, currentPage, filters, finalSearchQuery],
+    queryKey: logsQueryKey,
     queryFn: () =>
       logsService.getCompanyActivityLogs(companyId, {
         page: currentPage,
@@ -98,6 +96,9 @@ export default function CompanyLogsPage({ params }: PageProps) {
       }),
     staleTime: 5 * 60 * 1000,
   });
+
+  // Real-time updates for company logs
+  useSSE('new_activity_log', logsQueryKey, { refetchQueries: true });
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -158,7 +159,6 @@ export default function CompanyLogsPage({ params }: PageProps) {
     );
   }
 
-  // --- Dynamic Table Column Definitions (Adjusted Widths for Equal Spacing) ---
   const logColumns: TableColumn<ActivityLog>[] = [
     {
       key: 'created_at',
@@ -261,12 +261,10 @@ export default function CompanyLogsPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Filters Block (Fixed Layout for Equal Boxes) */}
+      {/* Filters */}
       <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-        {/* FIX: Changed grid to md:grid-cols-4 and ensured all elements are direct children */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-            {/* 1. Global Search Input (1/4 width) */}
+            {/* 1. Search */}
             <div>
                 <Typography variant="label" className="mb-2">
                     Search User, Action, or Details
@@ -274,7 +272,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
                 <div className="relative">
                     <input
                         type="text"
-                        placeholder={`Search all logs (min ${MIN_SEARCH_LENGTH} chars)...`}
+                        placeholder={`Search logs (min ${MIN_SEARCH_LENGTH} chars)...`}
                         value={searchInputQuery}
                         onChange={(e) => handleSearch(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
@@ -296,7 +294,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
                 </div>
             </div>
 
-            {/* 2. Action Type Filter (1/4 width) */}
+            {/* 2. Action Type */}
             <div>
               <Typography variant="label" className="mb-2">
                 Action Type
@@ -316,7 +314,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
               </select>
             </div>
 
-            {/* 3. Date Range Button (1/4 width, items-end to align with inputs) */}
+            {/* 3. Date Range */}
             <div className="flex items-end">
               <button
                 onClick={() => setShowDatePicker(true)}
@@ -329,7 +327,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
               </button>
             </div>
 
-             {/* 4. Clear Filters Button (1/4 width, items-end to align with inputs) */}
+             {/* 4. Clear Filters */}
             <div className="flex items-end">
                 <button
                     onClick={() => {
@@ -345,7 +343,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Logs Table (DynamicTable Implementation) */}
+      {/* Table */}
       <div className="rounded-lg border border-stroke dark:border-strokedark overflow-hidden">
         {logs.length > 0 || logsLoading ? (
             <DynamicTable<ActivityLog>
