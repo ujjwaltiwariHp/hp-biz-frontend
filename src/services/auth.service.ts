@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api';
-import { setAuthToken } from '@/lib/auth';
+import { setAuthToken, removeAuthToken } from '@/lib/auth';
 import {
   LoginCredentials,
   CreateAdminData,
@@ -16,13 +16,16 @@ import {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await apiClient.post(
+    const response = await apiClient.post<AuthResponse>(
       '/super-admin/auth/login',
-      credentials,
-      { withCredentials: true }
+      credentials
     );
+
     if (response.data.success && response.data.data.token) {
       setAuthToken(response.data.data.token);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('superAdmin', JSON.stringify(response.data.data.superAdmin));
+      }
     }
     return response.data;
   },
@@ -44,6 +47,13 @@ export const authService = {
 
   updateProfile: async (profileData: UpdateProfileData): Promise<ProfileResponse> => {
     const response = await apiClient.put('/super-admin/auth/profile', profileData);
+    if (response.data.success && typeof window !== 'undefined') {
+        const currentUser = localStorage.getItem('superAdmin');
+        if (currentUser) {
+            const parsed = JSON.parse(currentUser);
+            localStorage.setItem('superAdmin', JSON.stringify({ ...parsed, ...response.data.data }));
+        }
+    }
     return response.data;
   },
 
@@ -76,9 +86,21 @@ export const authService = {
     try {
       await apiClient.post('/super-admin/auth/logout');
     } catch (error) {
+      console.error("Logout API call failed", error);
     } finally {
-      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      removeAuthToken();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('superAdmin');
+      }
       window.location.href = '/auth/signin';
     }
+  },
+
+  getCurrentUser: () => {
+    if (typeof window !== 'undefined') {
+        const userStr = localStorage.getItem('superAdmin');
+        return userStr ? JSON.parse(userStr) : null;
+    }
+    return null;
   }
 };

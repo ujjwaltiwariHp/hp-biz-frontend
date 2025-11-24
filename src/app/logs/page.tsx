@@ -9,7 +9,7 @@ import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { Typography } from '@/components/common/Typography';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
-import { Download, RefreshCw, Filter, Zap, Code } from 'lucide-react';
+import { Download, RefreshCw, Filter, Zap, Code, User, Building2, Mail } from 'lucide-react';
 import { toast } from 'react-toastify';
 import DateRangePicker from '@/components/common/DateRangePicker';
 import { useSSE } from '@/hooks/useSSE';
@@ -17,52 +17,70 @@ import GlobalSearchInput from '@/components/common/GlobalSearchInput';
 
 type LogType = 'activity' | 'system';
 
-const formatLogDate = (dateString: string) => {
-  return new Date(dateString).toLocaleTimeString('en-US', {
+// Helper to get separate Date and Time strings reliably
+const getFormattedDateTime = (dateString: string) => {
+  if (!dateString) return { date: 'N/A', time: '' };
+
+  const dateObj = new Date(dateString);
+  if (isNaN(dateObj.getTime())) return { date: 'Invalid Date', time: '' };
+
+  const date = dateObj.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const time = dateObj.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    month: 'short',
-    day: 'numeric',
+    hour12: true
   });
+
+  return { date, time };
 };
 
 const getActionColor = (action: string) => {
-  if (action.includes('CREATE') || action.includes('ADD')) return 'bg-success/10 text-success';
-  if (action.includes('UPDATE') || action.includes('EDIT')) return 'bg-warning/10 text-warning';
-  if (action.includes('DELETE') || action.includes('REMOVE')) return 'bg-danger/10 text-danger';
-  return 'bg-primary/10 text-primary';
+  const safeAction = action?.toUpperCase() || '';
+  if (safeAction.includes('CREATE') || safeAction.includes('ADD') || safeAction.includes('REGISTER')) return 'bg-success/10 text-success border-success/20';
+  if (safeAction.includes('UPDATE') || safeAction.includes('EDIT') || safeAction.includes('CHANGE')) return 'bg-warning/10 text-warning border-warning/20';
+  if (safeAction.includes('DELETE') || safeAction.includes('REMOVE')) return 'bg-danger/10 text-danger border-danger/20';
+  if (safeAction.includes('LOGIN') || safeAction.includes('LOGOUT')) return 'bg-primary/10 text-primary border-primary/20';
+  return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-meta-4 dark:text-gray-300 dark:border-strokedark';
 };
 
 const getLevelColor = (level: string) => {
   switch (level?.toUpperCase()) {
     case 'ERROR':
+    case 'CRITICAL':
       return 'bg-danger/10 text-danger border border-danger/20';
     case 'WARN':
+    case 'WARNING':
       return 'bg-warning/10 text-warning border border-warning/20';
     case 'INFO':
       return 'bg-primary/10 text-primary border border-primary/20';
+    case 'SUCCESS':
+      return 'bg-success/10 text-success border border-success/20';
     case 'DEBUG':
-      return 'bg-meta-5/10 text-meta-5 border border-meta-5/20';
+      return 'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-meta-4 dark:text-gray-300 dark:border-strokedark';
     default:
-      return 'bg-gray-100 text-gray-700 border border-gray-200';
+      return 'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-meta-4 dark:text-gray-300 dark:border-strokedark';
   }
 };
-
-const getDefaultDateRange = () => ({
-  start_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-  end_date: new Date().toISOString().split('T')[0],
-});
-
 
 const initialFilters: LogFilters = {
   search: '',
   resource_type: '',
   log_level: '',
   action_type: undefined,
-  log_category: undefined,
-  ip_address: undefined,
-  ...getDefaultDateRange(),
+  start_date: '',
+  end_date: '',
+};
+
+const getDateString = (date: string | Date | undefined): string => {
+  if (!date) return '';
+  if (date instanceof Date) return date.toISOString().split('T')[0];
+  return date;
 };
 
 export default function LogsPage() {
@@ -70,7 +88,6 @@ export default function LogsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<LogFilters>(initialFilters);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
   const [localSearchTerm, setLocalSearchTerm] = useState(filters.search || '');
 
   const logsQueryKey = [logType, currentPage, filters];
@@ -84,13 +101,11 @@ export default function LogsPage() {
         limit: 10,
         resource_type: logType === 'activity' ? filters.resource_type : undefined,
         log_level: logType === 'system' ? filters.log_level : undefined,
-        action_type: undefined,
-        log_category: undefined,
-        ip_address: undefined,
         search: filters.search || undefined,
+        start_date: filters.start_date || undefined,
+        end_date: filters.end_date || undefined,
       };
-
-      return logsService.getLogs(logType, apiFilters);
+      return logsService.getLogs(apiFilters);
     },
   });
 
@@ -103,8 +118,8 @@ export default function LogsPage() {
   const handleLogTypeChange = (newType: LogType) => {
     setLogType(newType);
     setCurrentPage(1);
-    setFilters(initialFilters);
-    setLocalSearchTerm(initialFilters.search || '');
+    setFilters(prev => ({ ...initialFilters, type: newType === 'system' ? 'system' : 'activity' }));
+    setLocalSearchTerm('');
   };
 
   const handleFilterChange = (key: keyof LogFilters, value: string) => {
@@ -125,11 +140,17 @@ export default function LogsPage() {
   const handleExport = async () => {
     try {
       toast.info(`Preparing ${logType} logs for export...`);
-      const blob = await logsService.exportLogs(logType, filters);
+      const filtersForExport: LogFilters = {
+        ...filters,
+        type: logType === 'system' ? 'system' : 'activity'
+      };
+      const blob = await logsService.exportLogs(filtersForExport);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${logType}_logs_${filters.start_date}_to_${filters.end_date}.csv`;
+      const startStr = getDateString(filters.start_date) || 'all';
+      const endStr = getDateString(filters.end_date) || 'current';
+      a.download = `${logType}_logs_${startStr}_to_${endStr}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -141,8 +162,8 @@ export default function LogsPage() {
   };
 
   const handleClearFilters = () => {
-    setFilters(initialFilters);
-    setLocalSearchTerm(initialFilters.search || '');
+    setFilters({ ...initialFilters, type: logType === 'system' ? 'system' : 'activity' });
+    setLocalSearchTerm('');
     setCurrentPage(1);
   };
 
@@ -150,49 +171,87 @@ export default function LogsPage() {
     {
       key: 'created_at',
       header: 'Timestamp',
-      headerClassName: 'min-w-[120px]',
-      render: (log) => (
-        <div className="flex flex-col space-y-1">
-          <Typography variant="value" className="font-medium text-black dark:text-white">{formatLogDate(log.created_at)}</Typography>
-        </div>
-      ),
+      headerClassName: 'min-w-[150px] pl-4',
+      render: (log) => {
+        const { date, time } = getFormattedDateTime(log.created_at);
+        return (
+          <div className="pl-4 flex flex-col">
+            {/* Bold Font for Date */}
+            <Typography variant="value" className="text-sm font-bold text-black dark:text-white whitespace-nowrap">
+              {date}
+            </Typography>
+            {/* Bold Font for Time */}
+            <Typography variant="value" className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {time}
+            </Typography>
+          </div>
+        );
+      },
     },
     {
-      key: 'user',
+      key: 'user_name',
       header: 'User & Company',
-      headerClassName: 'min-w-[200px]',
+      headerClassName: 'min-w-[220px]',
       render: (log) => (
-        <div className="flex flex-col space-y-1">
-          <Typography variant="value" className="font-semibold text-black dark:text-white">
-            {log.first_name || 'System'} {log.last_name}
-          </Typography>
-          <Typography variant="body" className="text-sm text-gray-600 dark:text-gray-400">
-            {log.company_name || 'Super Admin'}
-          </Typography>
-          {log.email && <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">{log.email}</Typography>}
+        // ✅ FIX: Stacked: Company Name > Email > User Name/Role
+        <div className="flex flex-col gap-1 py-1">
+
+          {/* 1. Company Name */}
+          <div className="flex items-center gap-2" title={log.company_name || 'System'}>
+            <Building2 size={14} className="shrink-0 text-primary" />
+            <Typography variant="value" className="text-sm font-bold text-black dark:text-white truncate max-w-[180px]">
+              {log.company_name || 'System'}
+            </Typography>
+          </div>
+
+          {/* 2. Email */}
+          {log.email && log.email !== 'System' && (
+            <div className="flex items-center gap-2" title={log.email}>
+              <Mail size={14} className="shrink-0 text-gray-400" />
+              <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                {log.email}
+              </Typography>
+            </div>
+          )}
+
+          {/* 3. User Name & Role */}
+          <div className="flex items-center gap-2 mt-0.5" title={log.user_name || 'System'}>
+            <User size={14} className="shrink-0 text-gray-400" />
+            <Typography variant="caption" className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate max-w-[180px]">
+              {log.user_name || 'System'}
+              <span className="ml-1 text-gray-400">
+                ({log.user_type === 'Super Admin' ? 'Super Admin' : (log.user_type || 'User')})
+              </span>
+            </Typography>
+          </div>
+
         </div>
       ),
     },
     {
       key: 'action_type',
       header: 'Action',
-      headerClassName: 'min-w-[100px]',
+      headerClassName: 'min-w-[130px]',
       render: (log) => (
-        <span className={`inline-flex rounded-full py-1 px-3 text-xs font-medium ${getActionColor(log.action_type || '')}`}>
-          <Typography variant="badge">{log.action_type || 'N/A'}</Typography>
+        <span className={`inline-flex items-center justify-center rounded-md border py-1 px-2.5 text-xs font-medium ${getActionColor(log.action_type || '')}`}>
+          {log.action_type || 'N/A'}
         </span>
       ),
     },
     {
       key: 'resource_type',
       header: 'Resource',
-      headerClassName: 'min-w-[120px]',
+      headerClassName: 'min-w-[140px]',
       render: (log) => (
-        <div className="flex flex-col space-y-1">
-          <Typography variant="value" className="font-medium text-black dark:text-white">
-            {log.resource_type || 'N/A'}
+        <div className="flex flex-col">
+          <Typography variant="value" className="text-sm font-medium text-black dark:text-white capitalize">
+            {log.resource_type?.replace(/_/g, ' ') || 'N/A'}
           </Typography>
-          {log.resource_id && <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">ID: {log.resource_id}</Typography>}
+          {log.resource_id && (
+            <Typography variant="caption" className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">
+              ID: {log.resource_id}
+            </Typography>
+          )}
         </div>
       ),
     },
@@ -201,7 +260,7 @@ export default function LogsPage() {
       header: 'Details',
       headerClassName: 'min-w-[300px]',
       render: (log) => (
-        <Typography variant="body2" className="text-gray-600 dark:text-gray-300 max-w-lg whitespace-normal break-words">
+        <Typography variant="body2" className="text-sm text-gray-600 dark:text-gray-300 whitespace-normal break-words leading-relaxed">
           {log.action_details || 'No details provided'}
         </Typography>
       ),
@@ -209,9 +268,10 @@ export default function LogsPage() {
     {
       key: 'ip_address',
       header: 'IP Address',
-      headerClassName: 'min-w-[100px]',
+      headerClassName: 'min-w-[110px]',
       render: (log) => (
-        <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
+        // ✅ FIX: Bold, Mono, No Box
+        <Typography variant="value" className="text-xs font-bold font-mono text-gray-600 dark:text-gray-300">
           {log.ip_address || 'N/A'}
         </Typography>
       ),
@@ -222,63 +282,91 @@ export default function LogsPage() {
     {
       key: 'created_at',
       header: 'Timestamp',
-      headerClassName: 'min-w-[120px]',
-      render: (log) => (
-        <div className="flex flex-col space-y-1">
-          <Typography variant="value" className="font-medium text-black dark:text-white">{formatLogDate(log.created_at)}</Typography>
-        </div>
-      ),
+      headerClassName: 'min-w-[150px] pl-4',
+      render: (log) => {
+        const { date, time } = getFormattedDateTime(log.created_at);
+        return (
+          <div className="pl-4 flex flex-col">
+            {/* Bold Font for Date */}
+            <Typography variant="value" className="text-sm font-bold text-black dark:text-white whitespace-nowrap">
+              {date}
+            </Typography>
+            {/* Bold Font for Time */}
+            <Typography variant="value" className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {time}
+            </Typography>
+          </div>
+        );
+      },
     },
     {
       key: 'log_level',
       header: 'Level',
-      headerClassName: 'min-w-[80px]',
+      headerClassName: 'min-w-[100px]',
       render: (log) => (
-        <span className={`inline-flex rounded-full py-1 px-3 text-xs font-semibold ${getLevelColor(log.log_level || '')}`}>
-          <Typography variant="badge">{log.log_level?.toUpperCase() || 'N/A'}</Typography>
+        <span className={`inline-flex items-center justify-center rounded-md border py-1 px-2.5 text-xs font-bold ${getLevelColor(log.log_level || '')}`}>
+          {log.log_level?.toUpperCase() || 'N/A'}
         </span>
       ),
     },
     {
-      key: 'company',
-      header: 'Company & Admin',
+      key: 'company_name',
+      header: 'Source',
       headerClassName: 'min-w-[200px]',
       render: (log) => (
-        <div className="flex flex-col space-y-1">
-          <Typography variant="body" className="font-medium text-black dark:text-white">
-            {log.company_name || 'System'}
-          </Typography>
-          {log.email && (
-            <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
-              {log.email}
+        // ✅ FIX: Stacked Company > Email > User
+        <div className="flex flex-col gap-1 py-1">
+          <div className="flex items-center gap-2" title={log.company_name || 'System'}>
+            <Building2 size={14} className="shrink-0 text-primary" />
+            <Typography variant="value" className="text-sm font-bold text-black dark:text-white truncate max-w-[180px]">
+              {log.company_name || 'System'}
             </Typography>
+          </div>
+
+          {log.email && log.email !== 'System' && (
+            <div className="flex items-center gap-2" title={log.email}>
+              <Mail size={14} className="shrink-0 text-gray-400" />
+              <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                {log.email}
+              </Typography>
+            </div>
+          )}
+
+          {log.user_name && log.user_name !== 'System' && (
+             <div className="flex items-center gap-2 mt-0.5" title={log.user_name}>
+               <User size={14} className="shrink-0 text-gray-400" />
+               <Typography variant="caption" className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate max-w-[180px]">
+                 {log.user_name}
+               </Typography>
+             </div>
           )}
         </div>
       ),
     },
     {
       key: 'message',
-      header: 'Error Message & Details',
+      header: 'Message & Category',
       headerClassName: 'min-w-[350px]',
       render: (log) => (
-        <div className="flex flex-col space-y-1">
-          <Typography variant="body2" className="text-gray-800 dark:text-gray-100 font-medium whitespace-normal break-words">
+        <div className="flex flex-col gap-1.5">
+          {log.log_category && (
+            <span className="inline-flex self-start items-center rounded-[4px] text-[9px] font-semibold bg-primary/10 text-primary px-1 py-px uppercase tracking-wider border border-primary/10">
+              {log.log_category}
+            </span>
+          )}
+          <Typography variant="body2" className="text-sm text-gray-700 dark:text-gray-200 font-medium whitespace-normal break-words leading-relaxed">
             {log.message || 'No message provided'}
           </Typography>
-          {log.log_category && (
-            <Typography variant="caption" className="text-xs text-primary font-medium">
-              Category: {log.log_category}
-            </Typography>
-          )}
         </div>
       ),
     },
     {
       key: 'ip_address',
       header: 'IP Address',
-      headerClassName: 'min-w-[100px]',
+      headerClassName: 'min-w-[110px]',
       render: (log) => (
-        <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
+        // ✅ FIX: Bold, Mono, No Box
+        <Typography variant="value" className="text-xs font-bold font-mono text-gray-600 dark:text-gray-300">
           {log.ip_address || 'N/A'}
         </Typography>
       ),
@@ -286,10 +374,10 @@ export default function LogsPage() {
   ];
 
   const renderFilters = () => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
       <div className="md:col-span-1">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          <Typography variant="label" as="span">Global Search</Typography>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+          Global Search
         </label>
         <GlobalSearchInput
           searchTerm={localSearchTerm || ''}
@@ -297,13 +385,13 @@ export default function LogsPage() {
             setLocalSearchTerm(newTerm);
             handleGlobalSearch(newTerm);
           }}
-          placeholder="Search all columns..."
+          placeholder="Search logs..."
         />
       </div>
 
       <div className="md:col-span-1">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          <Typography variant="label" as="span">{logType === 'activity' ? 'Resource Type' : 'Log Level'}</Typography>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+          {logType === 'activity' ? 'Resource Type' : 'Log Level'}
         </label>
         {logType === 'activity' ? (
           <input
@@ -320,7 +408,7 @@ export default function LogsPage() {
             className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
           >
             <option value="">All Levels</option>
-            {['ERROR', 'WARN', 'INFO', 'DEBUG'].map(level => (
+            {['ERROR', 'WARN', 'INFO', 'DEBUG', 'SUCCESS', 'CRITICAL'].map(level => (
               <option key={level} value={level.toLowerCase()}>{level}</option>
             ))}
           </select>
@@ -330,21 +418,23 @@ export default function LogsPage() {
       <div className="flex items-end md:col-span-1">
         <button
           onClick={() => setIsDatePickerOpen(true)}
-          className="flex w-full items-center gap-2 rounded border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black dark:text-white text-sm hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors justify-center"
+          className={`flex w-full items-center justify-between gap-2 rounded border-[1.5px] border-stroke bg-white dark:bg-boxdark py-2.5 px-4 text-sm hover:border-primary transition-colors ${
+            filters.start_date ? 'text-primary border-primary' : 'text-black dark:text-white'
+          }`}
         >
-          <Filter size={16} />
-          <Typography variant="body2">
-            {filters.start_date && filters.end_date ? `${filters.start_date} → ${filters.end_date}` : 'Filter by Date'}
-          </Typography>
+          <span className="truncate">
+            {filters.start_date && filters.end_date ? `${getDateString(filters.start_date)} - ${getDateString(filters.end_date)}` : 'Filter by Date'}
+          </span>
+          <Filter size={16} className="shrink-0" />
         </button>
       </div>
 
       <div className="flex items-end md:col-span-1">
         <button
           onClick={handleClearFilters}
-          className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded hover:bg-white dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
+          className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded bg-white dark:bg-boxdark hover:bg-gray-50 dark:hover:bg-meta-4 dark:border-strokedark text-gray-600 dark:text-gray-300 transition-colors"
         >
-          Clear Filters
+          Reset Filters
         </button>
       </div>
     </div>
@@ -370,14 +460,21 @@ export default function LogsPage() {
   };
 
   const EmptyState = ({ type }: { type: LogType }) => (
-    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-      {type === 'activity' ? (
-        <Zap size={48} className="mx-auto mb-3 opacity-50" />
-      ) : (
-        <Code size={48} className="mx-auto mb-3 opacity-50" />
-      )}
-      <Typography variant="value" className="text-lg font-medium">No {type} logs found</Typography>
-      <Typography variant="caption" className="text-sm mt-1">Try adjusting your filters or date range</Typography>
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-16 h-16 bg-gray-100 dark:bg-meta-4 rounded-full flex items-center justify-center mb-4">
+        {type === 'activity' ? (
+          <Zap size={32} className="text-gray-400 dark:text-gray-500" />
+        ) : (
+          <Code size={32} className="text-gray-400 dark:text-gray-500" />
+        )}
+      </div>
+      <h3 className="text-lg font-semibold text-black dark:text-white mb-1">
+        No {type} logs found
+      </h3>
+      {/* ✅ FIXED: Escaped single quote from 'couldn't' to 'couldn&apos;t' */}
+      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
+        We couldn&apos;t find any logs matching your current filters. Try adjusting your search criteria.
+      </p>
     </div>
   );
 
@@ -386,47 +483,47 @@ export default function LogsPage() {
       <Breadcrumb pageName="Logs Management" />
 
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center p-1 bg-gray-100 dark:bg-meta-4 rounded-lg">
             <button
               onClick={() => handleLogTypeChange('activity')}
-              className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 logType === 'activity'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-200 text-black hover:bg-gray-300 dark:bg-meta-4 dark:text-white dark:hover:bg-meta-5'
+                  ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
-              <Zap size={20} />
-              <Typography variant="body" as="span" className={logType === 'activity' ? 'text-white' : 'text-black dark:text-white'}>Activity Logs</Typography>
+              <Zap size={16} />
+              Activity Logs
             </button>
             <button
               onClick={() => handleLogTypeChange('system')}
-              className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 logType === 'system'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-200 text-black hover:bg-gray-300 dark:bg-meta-4 dark:text-white dark:hover:bg-meta-5'
+                  ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
-              <Code size={20} />
-              <Typography variant="body" as="span" className={logType === 'system' ? 'text-white' : 'text-black dark:text-white'}>System Logs</Typography>
+              <Code size={16} />
+              System Logs
             </button>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 self-end sm:self-auto">
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors shadow-sm"
             >
-              <Download size={20} />
-              <Typography variant="body" as="span" className="text-white">Export</Typography>
+              <Download size={18} />
+              Export CSV
             </button>
             <button
               onClick={() => refetch()}
               disabled={isFetching}
-              className="p-2 border border-stroke rounded-lg hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
+              className="p-2.5 border border-stroke rounded-lg hover:bg-gray-50 dark:border-strokedark dark:hover:bg-meta-4 transition-colors text-gray-600 dark:text-gray-300"
               title="Refresh Logs"
             >
-              <RefreshCw size={20} className={isFetching ? 'animate-spin' : ''} />
+              <RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
@@ -442,9 +539,7 @@ export default function LogsPage() {
         {pagination && pagination.total_records > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stroke py-4 px-4 dark:border-strokedark md:px-6 xl:px-7.5 bg-gray-50 dark:bg-meta-4">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              <Typography variant="caption">
-                Showing <span className="font-semibold text-black dark:text-white">{((currentPage - 1) * 10) + 1}</span> to <span className="font-semibold text-black dark:text-white">{Math.min(currentPage * 10, pagination.total_records)}</span> of <span className="font-semibold text-black dark:text-white">{pagination.total_records}</span> results
-              </Typography>
+              Showing <span className="font-semibold text-black dark:text-white">{((currentPage - 1) * 10) + 1}</span> to <span className="font-semibold text-black dark:text-white">{Math.min(currentPage * 10, pagination.total_records)}</span> of <span className="font-semibold text-black dark:text-white">{pagination.total_records}</span> results
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -454,8 +549,8 @@ export default function LogsPage() {
               >
                 Previous
               </button>
-              <span className="px-4 py-2 text-sm font-semibold text-black dark:text-white">
-                Page {currentPage} of {pagination.total_pages}
+              <span className="px-4 py-2 text-sm font-semibold text-black dark:text-white bg-white dark:bg-boxdark border border-stroke dark:border-strokedark rounded-lg">
+                {currentPage} / {pagination.total_pages}
               </span>
               <button
                 onClick={() => setCurrentPage(Math.min(pagination.total_pages, currentPage + 1))}
@@ -470,7 +565,7 @@ export default function LogsPage() {
       </div>
       <DateRangePicker
         isOpen={isDatePickerOpen}
-        dateRange={{ startDate: filters.start_date || '', endDate: filters.end_date || '' }}
+        dateRange={{ startDate: getDateString(filters.start_date), endDate: getDateString(filters.end_date) }}
         setDateRange={handleDateRangeChange as any}
         onClose={() => setIsDatePickerOpen(false)}
       />

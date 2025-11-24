@@ -21,7 +21,11 @@ const SignIn: React.FC = () => {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const user = authService.getCurrentUser();
+    if (user) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
 
   const validateForm = () => {
     const newErrors: {email?: string; password?: string} = {};
@@ -86,23 +90,18 @@ const SignIn: React.FC = () => {
     } catch (error: any) {
       console.error('Login error:', error);
 
-      if (error.response?.data?.message) {
-        const errorMsg = error.response.data.message;
-        if (errorMsg.toLowerCase().includes('inactive')) {
-          setApiError('Your account is currently inactive. Please contact support.');
-        } else if (errorMsg.toLowerCase().includes('invalid') || errorMsg.toLowerCase().includes('credentials')) {
-          setApiError('Invalid email or password. Please try again.');
-        } else {
-          setApiError(errorMsg);
-        }
-      } else if (error.response?.status === 401) {
-        setApiError('Invalid email or password. Please try again.');
-      } else if (error.response?.status === 403) {
+      const backendMessage = error.response?.data?.message || error.message;
+
+      if (backendMessage?.toLowerCase().includes('inactive')) {
         setApiError('Your account is currently inactive. Please contact support.');
-      } else if (error.response?.status === 400) {
-        setApiError('Please check your email and password and try again.');
+      } else if (backendMessage?.toLowerCase().includes('credentials')) {
+        setApiError('Invalid email or password. Please try again.');
+      } else if (error.response?.status === 401) {
+        setApiError('Invalid email or password.');
+      } else if (error.response?.status === 403) {
+        setApiError('Access denied. Please contact administrator.');
       } else {
-        setApiError('Something went wrong. Please try again later.');
+        setApiError(backendMessage || 'Something went wrong. Please try again later.');
       }
     } finally {
       setIsLoggingIn(false);
@@ -111,6 +110,7 @@ const SignIn: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gray-900 overflow-hidden">
+      {/* Left Side - Visuals */}
       <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-6 2xl:p-12 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] overflow-hidden">
         {mounted && (
           <div className="absolute inset-0">
@@ -166,18 +166,13 @@ const SignIn: React.FC = () => {
             animation: twinkle ease-in-out infinite;
           }
           @keyframes twinkle {
-            0%, 100% {
-              opacity: 0.3;
-              transform: scale(1);
-            }
-            50% {
-              opacity: 1;
-              transform: scale(1.5);
-            }
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
           }
         `}</style>
       </div>
 
+      {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center min-h-screen lg:min-h-auto p-4 xs:p-5 sm:p-6 md:p-8 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#1e293b] relative overflow-hidden">
         {mounted && (
           <div className="absolute inset-0 opacity-30">
@@ -213,21 +208,16 @@ const SignIn: React.FC = () => {
             animation: float ease-in-out infinite;
           }
           @keyframes float {
-            0%, 100% {
-              transform: translateY(0) scale(1);
-              opacity: 0.4;
-            }
-            50% {
-              transform: translateY(-20px) scale(1.2);
-              opacity: 0.8;
-            }
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
+            50% { transform: translateY(-20px) scale(1.2); opacity: 0.8; }
           }
         `}</style>
 
         <div className="w-full max-w-xs xs:max-w-sm sm:max-w-md relative z-10">
+          {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-6 xs:mb-7 sm:mb-8">
-            <div className="w-16 xs:w-18 sm:w-20 h-16 xs:h-18 sm:h-20 rounded-2xl border-2 border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-xl flex items-center justify-center shadow-xl">
-              <Building2 size={36} className="text-blue-100 xs:w-9 xs:h-9 sm:w-10 sm:h-10" strokeWidth={1.5} />
+            <div className="w-16 h-16 rounded-2xl border-2 border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-xl flex items-center justify-center shadow-xl">
+              <Building2 size={36} className="text-blue-100" strokeWidth={1.5} />
             </div>
           </div>
 
@@ -235,26 +225,23 @@ const SignIn: React.FC = () => {
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-2xl blur-xl opacity-30"></div>
 
             <div className="relative bg-[#1e293b]/80 backdrop-blur-xl rounded-2xl shadow-2xl p-5 xs:p-6 sm:p-7 md:p-8 border border-white/10">
-              <div className="text-center mb-5 xs:mb-6 sm:mb-7">
-                <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold text-white">
-                  Super-Admin LogIn
-                </h2>
+              <div className="text-center mb-5">
+                <h2 className="text-2xl font-bold text-white">Sign In</h2>
+                <p className="text-blue-300/70 text-sm mt-1">Access the admin dashboard</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4 xs:space-y-4.5 sm:space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {apiError && (
-                  <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 xs:p-3.5 sm:p-4">
-                    <p className="text-red-300 text-xs xs:text-xs sm:text-sm leading-relaxed">{apiError}</p>
+                  <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
+                    <p className="text-red-300 text-sm">{apiError}</p>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs xs:text-xs sm:text-sm font-medium text-white mb-1.5 xs:mb-1.5 sm:mb-2">
-                    Email Address
-                  </label>
+                  <label className="block text-sm font-medium text-white mb-2">Email Address</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 xs:pl-3 sm:pl-4 flex items-center pointer-events-none">
-                      <Mail size={16} className="text-blue-300 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Mail size={18} className="text-blue-300" />
                     </div>
                     <input
                       type="email"
@@ -263,26 +250,20 @@ const SignIn: React.FC = () => {
                       onChange={handleChange}
                       required
                       placeholder="Enter your email"
-                      className={`w-full bg-[#0f172a]/80 border rounded-xl py-2.5 xs:py-2.5 sm:py-3 pl-10 xs:pl-10 sm:pl-12 pr-3 xs:pr-3 sm:pr-4 text-white placeholder-gray-400 text-xs xs:text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                        errors.email
-                          ? 'border-red-500 focus:ring-red-500'
-                          : 'border-blue-500/30 focus:ring-blue-500'
+                      className={`w-full bg-[#0f172a]/80 border rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                        errors.email ? 'border-red-500 focus:ring-red-500' : 'border-blue-500/30 focus:ring-blue-500'
                       }`}
                       disabled={isLoggingIn}
                     />
                   </div>
-                  {errors.email && (
-                    <p className="text-red-400 text-xs xs:text-xs sm:text-sm mt-1 xs:mt-1 sm:mt-1.5">{errors.email}</p>
-                  )}
+                  {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-xs xs:text-xs sm:text-sm font-medium text-white mb-1.5 xs:mb-1.5 sm:mb-2">
-                    Password
-                  </label>
+                  <label className="block text-sm font-medium text-white mb-2">Password</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 xs:pl-3 sm:pl-4 flex items-center pointer-events-none">
-                      <Lock size={16} className="text-blue-300 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock size={18} className="text-blue-300" />
                     </div>
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -291,35 +272,27 @@ const SignIn: React.FC = () => {
                       onChange={handleChange}
                       required
                       placeholder="Enter your password"
-                      className={`w-full bg-[#0f172a]/80 border rounded-xl py-2.5 xs:py-2.5 sm:py-3 pl-10 xs:pl-10 sm:pl-12 pr-10 xs:pr-10 sm:pr-12 text-white placeholder-gray-400 text-xs xs:text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                        errors.password
-                          ? 'border-red-500 focus:ring-red-500'
-                          : 'border-blue-500/30 focus:ring-blue-500'
+                      className={`w-full bg-[#0f172a]/80 border rounded-xl py-3 pl-12 pr-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                        errors.password ? 'border-red-500 focus:ring-red-500' : 'border-blue-500/30 focus:ring-blue-500'
                       }`}
                       disabled={isLoggingIn}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 xs:pr-3 sm:pr-4 flex items-center text-blue-300 hover:text-blue-200 transition-colors disabled:opacity-50"
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-300 hover:text-blue-200 transition-colors"
                       disabled={isLoggingIn}
                     >
-                      {showPassword ? (
-                        <EyeOff size={16} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
-                      ) : (
-                        <Eye size={16} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
-                      )}
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  {errors.password && (
-                    <p className="text-red-400 text-xs xs:text-xs sm:text-sm mt-1 xs:mt-1 sm:mt-1.5">{errors.password}</p>
-                  )}
+                  {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoggingIn}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2.5 xs:py-2.5 sm:py-3 px-4 xs:px-4 sm:px-4 rounded-xl text-xs xs:text-sm sm:text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#1e293b] shadow-lg hover:shadow-purple-500/50 transform hover:scale-[1.02]"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-purple-500/50 transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoggingIn ? 'Signing In...' : 'Sign In'}
                 </button>

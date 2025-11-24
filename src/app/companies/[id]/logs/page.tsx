@@ -14,8 +14,10 @@ import {
   Activity,
   X,
   Search,
+  User,
+  Mail,
+  Shield
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { Typography } from '@/components/common/Typography';
 import { useSearch } from '@/hooks/useSearch';
 import DynamicTable from '@/components/common/DynamicTable';
@@ -30,12 +32,46 @@ interface PageProps {
   }>;
 }
 
+const getFormattedDateTime = (dateString: string) => {
+  if (!dateString) return { date: 'N/A', time: '' };
+
+  const dateObj = new Date(dateString);
+  if (isNaN(dateObj.getTime())) return { date: 'Invalid Date', time: '' };
+
+  const date = dateObj.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const time = dateObj.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+
+  return { date, time };
+};
+
 const getActionColor = (action: string) => {
-    if (action.includes('CREATE')) return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-    if (action.includes('UPDATE')) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-    if (action.includes('DELETE')) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-    if (action.includes('LOGIN')) return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-    return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
+    const safeAction = action?.toUpperCase() || '';
+    if (safeAction.includes('CREATE') || safeAction.includes('ADD')) return 'bg-success/10 text-success border-success/20';
+    if (safeAction.includes('UPDATE') || safeAction.includes('EDIT')) return 'bg-warning/10 text-warning border-warning/20';
+    if (safeAction.includes('DELETE') || safeAction.includes('REMOVE')) return 'bg-danger/10 text-danger border-danger/20';
+    if (safeAction.includes('LOGIN')) return 'bg-primary/10 text-primary border-primary/20';
+    return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-meta-4 dark:text-gray-300 dark:border-strokedark';
+};
+
+const getIsoDate = (dateInput: string | Date | undefined, endOfDay: boolean = false) => {
+    if (!dateInput) return undefined;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return undefined;
+
+    if (endOfDay) d.setHours(23, 59, 59, 999);
+    else d.setHours(0, 0, 0, 0);
+
+    return d.toISOString();
 };
 
 export default function CompanyLogsPage({ params }: PageProps) {
@@ -46,13 +82,14 @@ export default function CompanyLogsPage({ params }: PageProps) {
   const [filters, setFilters] = useState<LogFilters>({
     action_type: '',
     resource_type: '',
-    start_date: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
-    end_date: format(new Date(), 'yyyy-MM-dd'),
+    start_date: '',
+    end_date: '',
     ip_address: '',
     search: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const MIN_SEARCH_LENGTH = 3;
+  const ITEMS_PER_PAGE = 10; // Set pagination limit to 10
 
   const [finalSearchQuery, setFinalSearchQuery] = useState('');
 
@@ -84,20 +121,22 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: logsQueryKey,
-    queryFn: () =>
-      logsService.getCompanyActivityLogs(companyId, {
+    queryFn: () => {
+      const apiFilters: LogFilters = {
         page: currentPage,
-        limit: 20,
+        limit: ITEMS_PER_PAGE, // Use 10 items per page
+        company_id: companyId,
         action_type: filters.action_type || undefined,
         resource_type: filters.resource_type || undefined,
-        start_date: filters.start_date || undefined,
-        end_date: filters.end_date || undefined,
+        start_date: getIsoDate(filters.start_date),
+        end_date: getIsoDate(filters.end_date, true),
         search: finalSearchQuery || undefined,
-      }),
-    staleTime: 5 * 60 * 1000,
+      };
+      return logsService.getLogs(apiFilters);
+    },
+    staleTime: 30 * 1000,
   });
 
-  // Real-time updates for company logs
   useSSE('new_activity_log', logsQueryKey, { refetchQueries: true });
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -114,18 +153,19 @@ export default function CompanyLogsPage({ params }: PageProps) {
   const handleExport = async () => {
     try {
       toast.info('Preparing export...');
-      const blob = await logsService.exportLogs('activity', {
+      const blob = await logsService.exportLogs({
+        type: 'activity',
         company_id: companyId,
         action_type: filters.action_type || undefined,
         resource_type: filters.resource_type || undefined,
-        start_date: filters.start_date || undefined,
-        end_date: filters.end_date || undefined,
+        start_date: getIsoDate(filters.start_date),
+        end_date: getIsoDate(filters.end_date, true),
       });
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${companyResponse?.data?.company?.company_name}-logs-${Date.now()}.csv`;
+      a.download = `${companyResponse?.data?.company?.company_name || 'company'}-logs-${Date.now()}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -136,15 +176,12 @@ export default function CompanyLogsPage({ params }: PageProps) {
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    return format(new Date(dateString), 'MMM dd, yyyy HH:mm:ss');
-  };
-
   if (companyLoading || logsLoading) {
     return <Loader />;
   }
 
   const company = companyResponse?.data?.company;
+
   const logs = logsData?.data?.logs || [];
   const pagination = logsData?.data?.pagination;
 
@@ -163,36 +200,69 @@ export default function CompanyLogsPage({ params }: PageProps) {
     {
       key: 'created_at',
       header: 'Timestamp',
-      headerClassName: 'min-w-[140px] w-[14%]',
-      render: (log) => (
-        <Typography variant="caption" className="text-black dark:text-white">
-          {formatDateTime(log.created_at)}
-        </Typography>
-      ),
+      headerClassName: 'min-w-[150px] pl-4',
+      render: (log) => {
+        const { date, time } = getFormattedDateTime(log.created_at);
+        return (
+          <div className="pl-4 flex flex-col">
+            <Typography variant="value" className="text-sm font-bold text-black dark:text-white whitespace-nowrap">
+              {date}
+            </Typography>
+            <Typography variant="value" className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {time}
+            </Typography>
+          </div>
+        );
+      },
     },
     {
-      key: 'user',
+      key: 'user_name',
       header: 'User',
-      headerClassName: 'min-w-[180px] w-[20%]',
+      headerClassName: 'min-w-[220px]',
       render: (log) => (
-        <div>
-          <Typography variant="body" className="font-medium text-black dark:text-white">
-            {log.first_name ? `${log.first_name} ${log.last_name || ''}` : 'System'}
-          </Typography>
-          {log.email && (
-            <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
-              {log.email}
-            </Typography>
+        <div className="flex flex-col gap-1.5 py-1">
+
+          {/* Row 1: User Name */}
+          <div className="flex items-center gap-2">
+            <User size={14} className="shrink-0 text-gray-400" />
+            <div title={log.user_name || 'System'}>
+                <Typography variant="value" className="text-sm font-bold text-black dark:text-white truncate max-w-[180px]">
+                {log.user_name || 'System'}
+                </Typography>
+            </div>
+          </div>
+
+          {/* Row 2: Email */}
+          {log.email && log.email !== 'System' && (
+            <div className="flex items-center gap-2" title={log.email}>
+              <Mail size={14} className="shrink-0 text-gray-400" />
+              <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                {log.email}
+              </Typography>
+            </div>
           )}
+
+          {/* Row 3: Role Badge */}
+          <div className="flex items-center gap-2">
+             <Shield size={14} className="shrink-0 text-gray-400" />
+             <span className={`
+               inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border
+               ${log.super_admin_id || log.user_type === 'Super Admin'
+                 ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
+                 : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'}
+             `}>
+               {log.super_admin_id || log.user_type === 'Super Admin' ? 'Super Admin' : (log.user_type || 'Staff')}
+             </span>
+          </div>
         </div>
       ),
     },
     {
       key: 'action_type',
       header: 'Action',
-      headerClassName: 'min-w-[120px] w-[10%]',
+      headerClassName: 'min-w-[120px]',
       render: (log) => (
-        <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getActionColor(log.action_type || '')}`}>
+        <span className={`inline-flex items-center justify-center rounded-md border py-1 px-2.5 text-xs font-medium ${getActionColor(log.action_type || '')}`}>
           {log.action_type || 'ACTION'}
         </span>
       ),
@@ -200,14 +270,14 @@ export default function CompanyLogsPage({ params }: PageProps) {
     {
       key: 'resource_type',
       header: 'Resource',
-      headerClassName: 'min-w-[120px] w-[10%]',
+      headerClassName: 'min-w-[140px]',
       render: (log) => (
-        <div>
-          <Typography variant="body" className="font-medium text-black dark:text-white">
-            {log.resource_type || 'N/A'}
+        <div className="flex flex-col">
+          <Typography variant="value" className="text-sm font-medium text-black dark:text-white capitalize">
+            {log.resource_type?.replace(/_/g, ' ') || 'N/A'}
           </Typography>
           {log.resource_id && (
-            <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
+            <Typography variant="caption" className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">
               ID: {log.resource_id}
             </Typography>
           )}
@@ -217,20 +287,19 @@ export default function CompanyLogsPage({ params }: PageProps) {
     {
       key: 'action_details',
       header: 'Details',
-      headerClassName: 'min-w-[300px] w-[30%]',
-      className: 'whitespace-normal break-words',
+      headerClassName: 'min-w-[300px]',
       render: (log) => (
-        <Typography variant="caption" className="text-gray-600 dark:text-gray-400">
-          {log.action_details || 'N/A'}
+        <Typography variant="body2" className="text-sm text-gray-600 dark:text-gray-300 whitespace-normal break-words leading-relaxed">
+          {log.action_details || 'No details provided'}
         </Typography>
       ),
     },
     {
       key: 'ip_address',
-      header: 'IP',
-      headerClassName: 'min-w-[100px] w-[10%]',
+      header: 'IP Address',
+      headerClassName: 'min-w-[110px]',
       render: (log) => (
-        <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
+        <Typography variant="value" className="text-xs font-bold font-mono text-gray-600 dark:text-gray-300">
           {log.ip_address || 'N/A'}
         </Typography>
       ),
@@ -266,27 +335,27 @@ export default function CompanyLogsPage({ params }: PageProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* 1. Search */}
             <div>
-                <Typography variant="label" className="mb-2">
-                    Search User, Action, or Details
-                </Typography>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                    Search User/Details
+                </label>
                 <div className="relative">
                     <input
                         type="text"
-                        placeholder={`Search logs (min ${MIN_SEARCH_LENGTH} chars)...`}
+                        placeholder={`Search logs...`}
                         value={searchInputQuery}
                         onChange={(e) => handleSearch(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-                        className="w-full rounded border border-stroke py-2.5 pl-10 pr-10 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
+                        className="w-full rounded border border-stroke py-2.5 pl-10 pr-10 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
                     />
                     <Search
-                        size={18}
+                        size={16}
                         className={`absolute left-3 top-1/2 -translate-y-1/2 ${
                             isSearchDebouncing ? 'text-primary animate-spin' : 'text-gray-400'
                         }`}
                     />
                     {searchInputQuery && (
                         <X
-                            size={18}
+                            size={16}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-danger"
                             onClick={handleClear}
                         />
@@ -296,9 +365,9 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
             {/* 2. Action Type */}
             <div>
-              <Typography variant="label" className="mb-2">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                 Action Type
-              </Typography>
+              </label>
               <select
                 name="action_type"
                 value={filters.action_type}
@@ -318,12 +387,12 @@ export default function CompanyLogsPage({ params }: PageProps) {
             <div className="flex items-end">
               <button
                 onClick={() => setShowDatePicker(true)}
-                className="inline-flex items-center gap-2 px-3 py-2.5 text-sm border border-stroke rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-meta-4 w-full justify-center"
+                className="inline-flex items-center justify-between gap-2 px-3 py-2.5 text-sm border border-stroke rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-meta-4 w-full text-left"
               >
-                <Filter size={16} />
-                <Typography variant="body2">
-                    Date Range
-                </Typography>
+                <span className="truncate text-black dark:text-white">
+                    {filters.start_date && filters.end_date ? `${filters.start_date} - ${filters.end_date}` : 'Filter by Date'}
+                </span>
+                <Filter size={16} className="text-gray-500" />
               </button>
             </div>
 
@@ -335,7 +404,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
                         setFinalSearchQuery('');
                         handleClear();
                     }}
-                    className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded hover:bg-white dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
+                    className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded hover:bg-gray-50 dark:border-strokedark dark:hover:bg-meta-4 dark:text-white transition-colors"
                 >
                     Clear Filters
                 </button>
@@ -344,7 +413,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-stroke dark:border-strokedark overflow-hidden">
+      <div className="rounded-lg border border-stroke dark:border-strokedark overflow-hidden shadow-sm bg-white dark:bg-boxdark">
         {logs.length > 0 || logsLoading ? (
             <DynamicTable<ActivityLog>
                 data={logs as ActivityLog[]}
@@ -352,7 +421,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
                 isLoading={logsLoading}
             />
         ) : (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-boxdark">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 <Activity size={48} className="mx-auto mb-3 opacity-50" />
                 <Typography variant="body1" className="text-base font-medium">
                     {finalSearchQuery || filters.action_type || filters.resource_type || filters.start_date || filters.end_date
@@ -372,11 +441,11 @@ export default function CompanyLogsPage({ params }: PageProps) {
           <Typography variant="caption" className="text-xs text-gray-600 dark:text-gray-400">
             Showing{' '}
             <span className="font-semibold text-black dark:text-white">
-              {(currentPage - 1) * 20 + 1}
+              {(currentPage - 1) * ITEMS_PER_PAGE + 1}
             </span>{' '}
             to{' '}
             <span className="font-semibold text-black dark:text-white">
-              {Math.min(currentPage * 20, pagination.total_records)}
+              {Math.min(currentPage * ITEMS_PER_PAGE, pagination.total_records)}
             </span>{' '}
             of{' '}
             <span className="font-semibold text-black dark:text-white">
@@ -392,9 +461,9 @@ export default function CompanyLogsPage({ params }: PageProps) {
             >
               Previous
             </button>
-            <Typography variant="body" className="px-3 py-2 text-xs font-semibold text-black dark:text-white">
-              Page {currentPage} of {pagination.total_pages}
-            </Typography>
+            <span className="px-3 py-2 text-xs font-semibold text-black dark:text-white bg-white dark:bg-boxdark border border-stroke dark:border-strokedark rounded-lg">
+              {currentPage} / {pagination.total_pages}
+            </span>
             <button
               onClick={() =>
                 setCurrentPage(Math.min(pagination.total_pages, currentPage + 1))
@@ -410,7 +479,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
     <DateRangePicker
         isOpen={showDatePicker}
-        dateRange={{ startDate: filters.start_date ?? '', endDate: filters.end_date ?? '' }}
+        dateRange={{ startDate: filters.start_date as string ?? '', endDate: filters.end_date as string ?? '' }}
         setDateRange={handleDateRangeChange as any}
         onClose={() => setShowDatePicker(false)}
     />
