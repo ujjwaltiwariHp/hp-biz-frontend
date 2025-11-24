@@ -1,8 +1,9 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { useQueryClient, QueryKey } from "@tanstack/react-query";
 import { useSSEContext } from "@/context/SSEContext";
+import { authService } from "@/services/auth.service";
 
-type SSEEventType =
+export type SSEEventType =
   'new_staff_notification' |
   'leads_list_refresh' |
   'staff_list_refresh' |
@@ -27,8 +28,20 @@ export const useSSE = (
   const { subscribe } = useSSEContext();
   const queryClient = useQueryClient();
   const { refetchQueries = false } = options;
+  const effectiveEventType = useMemo(() => {
+    const currentUser = authService.getCurrentUser();
+    const isSuperAdmin = !!currentUser && !!currentUser.id;
+
+    if (isSuperAdmin) {
+      if (eventType === 'new_activity_log') return 'sa_new_activity_log';
+      if (eventType === 'new_system_log') return 'sa_new_system_log';
+    }
+
+    return eventType;
+  }, [eventType]);
 
   const handleEvent = useCallback((data: any) => {
+
     queryClient.invalidateQueries({ queryKey });
 
     if (refetchQueries) {
@@ -37,10 +50,11 @@ export const useSSE = (
   }, [queryClient, queryKey, refetchQueries]);
 
   useEffect(() => {
-    const unsubscribe = subscribe(eventType, handleEvent);
+
+    const unsubscribe = subscribe(effectiveEventType, handleEvent);
 
     return () => {
       unsubscribe();
     };
-  }, [subscribe, eventType, handleEvent]);
+  }, [subscribe, effectiveEventType, handleEvent]);
 };
