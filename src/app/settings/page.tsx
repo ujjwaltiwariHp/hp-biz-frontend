@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
-import Loader from '@/components/common/Loader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/auth.service';
 import { billingService } from '@/services/billing.service';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'react-toastify';
 import { SettingsIcon, DollarSign, User, Lock, UserPlus, Users } from 'lucide-react';
-import { PageTitle, Label, Value } from '@/components/common/Typography';
+import { Label, Value } from '@/components/common/Typography';
 import ActionCard from '@/components/common/ActionCard';
 import BillingSettingsModal from '@/components/forms/BillingSettingsModal';
 import { EditProfileModal } from '@/components/modal/EditProfileModal';
@@ -146,7 +145,7 @@ export default function SettingsPage() {
     createAdminMutation.mutate(data);
   };
 
-  if (!isInitialized || !profile) {
+  if (!isInitialized || !profile || rolesLoading || billingLoading) {
     return (
       <DefaultLayout>
         <div className="flex items-center justify-center h-screen">
@@ -158,6 +157,8 @@ export default function SettingsPage() {
 
   const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');
   const isCreateAllowed = hasPermission(permissions, 'super_admins', 'create');
+  const canEditBilling = hasPermission(permissions, 'billing_settings', 'update');
+
   const roles = rolesResponse?.data?.roles || [];
   const admins = adminsResponse?.data?.superAdmins;
   const billingSettings = billingResponse;
@@ -184,46 +185,42 @@ export default function SettingsPage() {
               <h3 className="text-base font-semibold text-black dark:text-white mb-4">
                 Admin Actions
               </h3>
-              {rolesLoading ? (
-                <Loader size="md" variant="modal" />
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <ActionCard
-                    title="Profile"
-                    description="Update your personal details."
-                    icon={<User size={24} className="text-primary" />}
-                    color="primary"
-                    onClick={() => setShowEditProfile(true)}
-                    buttonText="Edit Profile"
-                  />
-                  <ActionCard
-                    title="Security"
-                    description="Change your account password."
-                    icon={<Lock size={24} className="text-warning" />}
-                    color="warning"
-                    onClick={() => setShowChangePassword(true)}
-                    buttonText="Change Password"
-                  />
-                  <ActionCard
-                    title="New Admin"
-                    description="Add a new administrator."
-                    icon={<UserPlus size={24} className="text-success" />}
-                    color="success"
-                    onClick={() => setShowCreateAdmin(true)}
-                    buttonText="Create Admin"
-                    disabled={!isCreateAllowed}
-                  />
-                  <ActionCard
-                    title="Manage Admins"
-                    description="View and manage administrators."
-                    icon={<Users size={24} className="text-meta-5" />}
-                    color="danger"
-                    onClick={() => setShowViewAdmins(true)}
-                    buttonText="View/Manage"
-                    disabled={!isViewAllowed}
-                  />
-                </div>
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <ActionCard
+                  title="Profile"
+                  description="Update your personal details."
+                  icon={<User size={24} className="text-primary" />}
+                  color="primary"
+                  onClick={() => setShowEditProfile(true)}
+                  buttonText="Edit Profile"
+                />
+                <ActionCard
+                  title="Security"
+                  description="Change your account password."
+                  icon={<Lock size={24} className="text-warning" />}
+                  color="warning"
+                  onClick={() => setShowChangePassword(true)}
+                  buttonText="Change Password"
+                />
+                <ActionCard
+                  title="New Admin"
+                  description="Add a new administrator."
+                  icon={<UserPlus size={24} className="text-success" />}
+                  color="success"
+                  onClick={() => setShowCreateAdmin(true)}
+                  buttonText="Create Admin"
+                  disabled={!isCreateAllowed}
+                />
+                <ActionCard
+                  title="Manage Admins"
+                  description="View and manage administrators."
+                  icon={<Users size={24} className="text-meta-5" />}
+                  color="danger"
+                  onClick={() => setShowViewAdmins(true)}
+                  buttonText="View/Manage"
+                  disabled={!isViewAllowed}
+                />
+              </div>
             </div>
           </div>
 
@@ -251,9 +248,7 @@ export default function SettingsPage() {
               </h4>
             </div>
             <div className="p-4 sm:p-6">
-              {billingLoading ? (
-                <Loader size="md" variant="modal" />
-              ) : !billingSettings ? (
+              {!billingSettings ? (
                 <div className="text-center py-8 text-danger">
                   <p className="text-sm font-medium">Failed to load billing settings.</p>
                 </div>
@@ -281,9 +276,13 @@ export default function SettingsPage() {
                   <div className="border-t border-stroke dark:border-strokedark pt-4 flex justify-end">
                     <button
                       onClick={() => setShowBillingSettings(true)}
-                      className="rounded bg-success py-2 px-6 text-white hover:bg-success/90 transition-colors text-sm font-medium"
+                      className={`rounded py-2 px-6 text-white transition-colors text-sm font-medium ${
+                        canEditBilling
+                          ? 'bg-success hover:bg-success/90'
+                          : 'bg-primary hover:bg-primary/90'
+                      }`}
                     >
-                      Edit Billing Settings
+                      {canEditBilling ? 'Edit Billing Settings' : 'View Billing Details'}
                     </button>
                   </div>
                 </>
@@ -336,6 +335,7 @@ export default function SettingsPage() {
           settings={billingSettings}
           mutation={updateBillingMutation}
           onClose={() => setShowBillingSettings(false)}
+          canEdit={canEditBilling}
         />
       )}
     </DefaultLayout>

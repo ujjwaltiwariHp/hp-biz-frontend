@@ -5,15 +5,15 @@ import { X, UploadCloud } from 'lucide-react';
 import ClickOutside from '@/components/ClickOutside';
 import BankDetailsForm from './BankDetailsForm';
 import { BillingSettings, UpdateBillingSettingsPayload, BankDetails } from '@/types/billing';
-import { billingService } from '@/services/billing.service';
 
 interface BillingSettingsModalProps {
     settings: BillingSettings;
     onClose: () => void;
     mutation: ReturnType<typeof useMutation<BillingSettings, unknown, UpdateBillingSettingsPayload>>;
+    canEdit: boolean;
 }
 
-const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, onClose, mutation }) => {
+const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, onClose, mutation, canEdit }) => {
     const [formData, setFormData] = useState<UpdateBillingSettingsPayload>({
         company_name: settings.company_name,
         address: settings.address,
@@ -40,6 +40,8 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!canEdit) return;
+
         const payload: UpdateBillingSettingsPayload = { ...formData };
 
         const cleanedBankDetails = bankDetails
@@ -61,19 +63,17 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
     return (
         <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4">
             <ClickOutside onOutsideClick={onClose}>
-                {/* Wider, shorter, compact modal */}
                 <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-boxdark shadow-2xl max-h-[85vh] overflow-y-auto">
-                    {/* Compact header */}
                     <div className="flex items-center justify-between border-b dark:border-strokedark px-5 py-3">
-                        <h3 className="text-lg font-semibold text-black dark:text-white">Edit Billing Settings</h3>
+                        <h3 className="text-lg font-semibold text-black dark:text-white">
+                            {canEdit ? 'Edit Billing Settings' : 'Billing Settings (View Only)'}
+                        </h3>
                         <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
                             <X size={20} />
                         </button>
                     </div>
                         <form onSubmit={handleSubmit} className="p-5">
-                            {/* 3-column tight grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                                {/* Company & Contact */}
                                 <div>
                                     <label className="block font-medium text-black dark:text-white mb-1">Company Name</label>
                                     <input
@@ -82,7 +82,8 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                         value={formData.company_name || ''}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
+                                        disabled={!canEdit}
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none disabled:bg-gray-100 disabled:dark:bg-boxdark-2 disabled:cursor-not-allowed"
                                     />
                                 </div>
 
@@ -94,7 +95,8 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                         value={formData.email || ''}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
+                                        disabled={!canEdit}
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none disabled:bg-gray-100 disabled:dark:bg-boxdark-2 disabled:cursor-not-allowed"
                                     />
                                 </div>
 
@@ -106,7 +108,8 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                         value={formData.phone || ''}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
+                                        disabled={!canEdit}
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none disabled:bg-gray-100 disabled:dark:bg-boxdark-2 disabled:cursor-not-allowed"
                                     />
                                 </div>
 
@@ -121,7 +124,8 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                         value={taxRatePercent.toFixed(2)}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
+                                        disabled={!canEdit}
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none disabled:bg-gray-100 disabled:dark:bg-boxdark-2 disabled:cursor-not-allowed"
                                     />
                                 </div>
 
@@ -133,11 +137,11 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                         value={formData.currency || ''}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none"
+                                        disabled={!canEdit}
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none disabled:bg-gray-100 disabled:dark:bg-boxdark-2 disabled:cursor-not-allowed"
                                     />
                                 </div>
 
-                                {/* Full-width fields */}
                                 <div className="sm:col-span-2 lg:col-span-3">
                                     <label className="block font-medium text-black dark:text-white mb-1">Address</label>
                                     <textarea
@@ -146,17 +150,16 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                         value={formData.address || ''}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none resize-none"
+                                        disabled={!canEdit}
+                                        className="w-full rounded border border-stroke bg-transparent px-3 py-2 text-black dark:text-white dark:border-form-strokedark dark:bg-form-input focus:border-primary outline-none resize-none disabled:bg-gray-100 disabled:dark:bg-boxdark-2 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
 
-                            {/* Bank Details - Compact */}
-                            <div className="mt-4 border-t dark:border-strokedark pt-4">
+                            <div className={`mt-4 border-t dark:border-strokedark pt-4 ${!canEdit ? 'pointer-events-none opacity-70' : ''}`}>
                                 <BankDetailsForm bankDetails={bankDetails} setBankDetails={setBankDetails} />
                             </div>
 
-                            {/* QR Code Upload - Compact */}
                             <div className="mt-5">
                                 <label className="block text-sm font-medium text-black dark:text-white mb-1.5">
                                     QR Code Image
@@ -173,41 +176,42 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                     </a>
                                 )}
 
-                                {/* This div is NOW the only clickable area */}
-                                <div className="relative inline-block w-full">
-                                    <div className="border-2 border-dashed border-stroke dark:border-strokedark rounded-lg p-2 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
-                                        <input
-                                            type="file"
-                                            accept="image/png,image/jpeg,image/svg+xml"
-                                            onChange={handleFileChange}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                        // ← Now safely contained
-                                        />
-                                        <UploadCloud size={20} className="mx-auto text-gray-500 dark:text-gray-400 mb-1" />
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            {qrCodeFile ? qrCodeFile.name : 'Click to upload QR code'}
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, SVG up to 5MB</p>
+                                {canEdit && (
+                                    <div className="relative inline-block w-full">
+                                        <div className="border-2 border-dashed border-stroke dark:border-strokedark rounded-lg p-2 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/svg+xml"
+                                                onChange={handleFileChange}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            />
+                                            <UploadCloud size={20} className="mx-auto text-gray-500 dark:text-gray-400 mb-1" />
+                                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                {qrCodeFile ? qrCodeFile.name : 'Click to upload QR code'}
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-1">PNG, JPG, SVG up to 5MB</p>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="flex justify-end gap-3 mt-5 pt-4 border-t dark:border-strokedark">
                                 <button
                                     type="button"
                                     onClick={onClose}
                                     className="px-5 py-2 text-sm font-medium rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
                                 >
-                                    Cancel
+                                    {canEdit ? 'Cancel' : 'Close'}
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={mutation.isPending}
-                                    className="px-5 py-2 text-sm font-medium rounded bg-success text-white hover:bg-success/90 disabled:opacity-50 transition-colors shadow-md"
-                                >
-                                    {mutation.isPending ? 'Saving...' : 'Save Settings'}
-                                </button>
+                                {canEdit && (
+                                    <button
+                                        type="submit"
+                                        disabled={mutation.isPending}
+                                        className="px-5 py-2 text-sm font-medium rounded bg-success text-white hover:bg-success/90 disabled:opacity-50 transition-colors shadow-md"
+                                    >
+                                        {mutation.isPending ? 'Saving...' : 'Save Settings'}
+                                    </button>
+                                )}
                             </div>
                         </form>
                 </div>
