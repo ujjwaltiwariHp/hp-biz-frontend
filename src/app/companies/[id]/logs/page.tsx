@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState, useCallback } from 'react';
+import React, { use, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { logsService } from '@/services/logs.service';
 import { companyService } from '@/services/company.service';
@@ -13,13 +13,12 @@ import {
   AlertCircle,
   Activity,
   X,
-  Search,
   User,
   Mail,
   Shield
 } from 'lucide-react';
 import { Typography } from '@/components/common/Typography';
-import { useSearch } from '@/hooks/useSearch';
+import StandardSearchInput from '@/components/common/StandardSearchInput';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import { ActivityLog, LogFilters } from '@/types/logs';
@@ -78,37 +77,22 @@ export default function CompanyLogsPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const companyId = parseInt(resolvedParams.id);
   const router = useRouter();
+
+  // State
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<LogFilters>({
+  const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
     action_type: '',
     resource_type: '',
-    start_date: '',
-    end_date: '',
-    ip_address: '',
-    search: '',
+  });
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
+    startDate: '',
+    endDate: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const MIN_SEARCH_LENGTH = 3;
-  const ITEMS_PER_PAGE = 10; // Set pagination limit to 10
 
-  const [finalSearchQuery, setFinalSearchQuery] = useState('');
-
-  const searchTrigger = useCallback(
-    async (q: string) => {
-      setFinalSearchQuery(q);
-      setCurrentPage(1);
-      return [];
-    },
-    []
-  );
-
-  const {
-    query: searchInputQuery,
-    handleSearch,
-    handleClear,
-    isLoading: isSearchDebouncing,
-    handleSearchSubmit,
-  } = useSearch(searchTrigger, 400, MIN_SEARCH_LENGTH);
+  const ITEMS_PER_PAGE = 10;
 
   const { data: companyResponse, isLoading: companyLoading } = useQuery({
     queryKey: ['company', companyId],
@@ -117,20 +101,20 @@ export default function CompanyLogsPage({ params }: PageProps) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const logsQueryKey = ['company-logs', companyId, currentPage, filters, finalSearchQuery];
+  const logsQueryKey = ['company-logs', companyId, currentPage, filters, dateRange, appliedSearchTerm];
 
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: logsQueryKey,
     queryFn: () => {
       const apiFilters: LogFilters = {
         page: currentPage,
-        limit: ITEMS_PER_PAGE, // Use 10 items per page
+        limit: ITEMS_PER_PAGE,
         company_id: companyId,
         action_type: filters.action_type || undefined,
         resource_type: filters.resource_type || undefined,
-        start_date: getIsoDate(filters.start_date),
-        end_date: getIsoDate(filters.end_date, true),
-        search: finalSearchQuery || undefined,
+        start_date: getIsoDate(dateRange.startDate),
+        end_date: getIsoDate(dateRange.endDate, true),
+        search: appliedSearchTerm || undefined,
       };
       return logsService.getLogs(apiFilters);
     },
@@ -139,14 +123,35 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
   useSSE('new_activity_log', logsQueryKey, { refetchQueries: true });
 
+  // Handlers
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setCurrentPage(1);
+  };
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1);
   };
 
-  const handleDateRangeChange = (newRange: { startDate: string, endDate: string }) => {
-    setFilters(prev => ({ ...prev, start_date: newRange.startDate, end_date: newRange.endDate }));
+  const handleDateRangeApply = (range: { startDate: string; endDate: string }) => {
+    setDateRange(range);
+    setCurrentPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ action_type: '', resource_type: '' });
+    setDateRange({ startDate: '', endDate: '' });
+    setSearchTerm('');
+    setAppliedSearchTerm('');
     setCurrentPage(1);
   };
 
@@ -158,8 +163,9 @@ export default function CompanyLogsPage({ params }: PageProps) {
         company_id: companyId,
         action_type: filters.action_type || undefined,
         resource_type: filters.resource_type || undefined,
-        start_date: getIsoDate(filters.start_date),
-        end_date: getIsoDate(filters.end_date, true),
+        start_date: getIsoDate(dateRange.startDate),
+        end_date: getIsoDate(dateRange.endDate, true),
+        search: appliedSearchTerm || undefined,
       });
 
       const url = window.URL.createObjectURL(blob);
@@ -181,9 +187,15 @@ export default function CompanyLogsPage({ params }: PageProps) {
   }
 
   const company = companyResponse?.data?.company;
-
   const logs = logsData?.data?.logs || [];
   const pagination = logsData?.data?.pagination;
+
+  const activeFiltersCount = [
+    appliedSearchTerm,
+    filters.action_type,
+    filters.resource_type,
+    dateRange.startDate || dateRange.endDate
+  ].filter(Boolean).length;
 
   if (!company) {
     return (
@@ -221,7 +233,6 @@ export default function CompanyLogsPage({ params }: PageProps) {
       headerClassName: 'min-w-[220px]',
       render: (log) => (
         <div className="flex flex-col gap-1.5 py-1">
-
           {/* Row 1: User Name */}
           <div className="flex items-center gap-2">
             <User size={14} className="shrink-0 text-gray-400" />
@@ -334,33 +345,18 @@ export default function CompanyLogsPage({ params }: PageProps) {
       <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* 1. Search */}
-            <div>
+            <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                     Search User/Details
                 </label>
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder={`Search logs...`}
-                        value={searchInputQuery}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-                        className="w-full rounded border border-stroke py-2.5 pl-10 pr-10 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
-                    />
-                    <Search
-                        size={16}
-                        className={`absolute left-3 top-1/2 -translate-y-1/2 ${
-                            isSearchDebouncing ? 'text-primary animate-spin' : 'text-gray-400'
-                        }`}
-                    />
-                    {searchInputQuery && (
-                        <X
-                            size={16}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-danger"
-                            onClick={handleClear}
-                        />
-                    )}
-                </div>
+                <StandardSearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    onSearch={handleSearch}
+                    onClear={handleClearSearch}
+                    placeholder="Search logs..."
+                    isLoading={logsLoading}
+                />
             </div>
 
             {/* 2. Action Type */}
@@ -384,32 +380,54 @@ export default function CompanyLogsPage({ params }: PageProps) {
             </div>
 
             {/* 3. Date Range */}
-            <div className="flex items-end">
+            <div className="flex flex-col">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                Date Range
+              </label>
               <button
                 onClick={() => setShowDatePicker(true)}
                 className="inline-flex items-center justify-between gap-2 px-3 py-2.5 text-sm border border-stroke rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-meta-4 w-full text-left"
               >
                 <span className="truncate text-black dark:text-white">
-                    {filters.start_date && filters.end_date ? `${filters.start_date} - ${filters.end_date}` : 'Filter by Date'}
+                    {dateRange.startDate && dateRange.endDate ? `${dateRange.startDate} - ${dateRange.endDate}` : 'Filter by Date'}
                 </span>
                 <Filter size={16} className="text-gray-500" />
               </button>
             </div>
+        </div>
 
-             {/* 4. Clear Filters */}
-            <div className="flex items-end">
+        {/* Active Filters Display */}
+        {activeFiltersCount > 0 && (
+            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-primary">
+                        Active Filters ({activeFiltersCount}):
+                    </span>
+                    {appliedSearchTerm && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                            Search: {appliedSearchTerm}
+                        </span>
+                    )}
+                    {filters.action_type && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                            Action: {filters.action_type}
+                        </span>
+                    )}
+                    {(dateRange.startDate || dateRange.endDate) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                            Date: {dateRange.startDate} - {dateRange.endDate}
+                        </span>
+                    )}
+                </div>
                 <button
-                    onClick={() => {
-                        setFilters({ action_type: '', resource_type: '', start_date: '', end_date: '', ip_address: '', search: '' });
-                        setFinalSearchQuery('');
-                        handleClear();
-                    }}
-                    className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded hover:bg-gray-50 dark:border-strokedark dark:hover:bg-meta-4 dark:text-white transition-colors"
+                    onClick={handleClearFilters}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
                 >
-                    Clear Filters
+                    <X size={16} />
+                    Clear All
                 </button>
             </div>
-        </div>
+        )}
       </div>
 
       {/* Table */}
@@ -424,7 +442,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 <Activity size={48} className="mx-auto mb-3 opacity-50" />
                 <Typography variant="body1" className="text-base font-medium">
-                    {finalSearchQuery || filters.action_type || filters.resource_type || filters.start_date || filters.end_date
+                    {appliedSearchTerm || filters.action_type || filters.resource_type || dateRange.startDate || dateRange.endDate
                          ? 'No activities found matching filters.'
                          : `No activity logs recorded for ${company.company_name}.`}
                 </Typography>
@@ -479,9 +497,10 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
     <DateRangePicker
         isOpen={showDatePicker}
-        dateRange={{ startDate: filters.start_date as string ?? '', endDate: filters.end_date as string ?? '' }}
-        setDateRange={handleDateRangeChange as any}
+        dateRange={dateRange}
+        setDateRange={setDateRange}
         onClose={() => setShowDatePicker(false)}
+        onApply={handleDateRangeApply}
     />
     </div>
   );

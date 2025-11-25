@@ -9,15 +9,14 @@ import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { Typography } from '@/components/common/Typography';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
-import { Download, RefreshCw, Filter, Zap, Code, User, Building2, Mail } from 'lucide-react';
+import { Download, RefreshCw, Zap, Code, User, Building2, Mail, Filter, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import DateRangePicker from '@/components/common/DateRangePicker';
 import { useSSE } from '@/hooks/useSSE';
-import GlobalSearchInput from '@/components/common/GlobalSearchInput';
+import StandardSearchInput from '@/components/common/StandardSearchInput';
 
 type LogType = 'activity' | 'system';
 
-// Helper to get separate Date and Time strings reliably
 const getFormattedDateTime = (dateString: string) => {
   if (!dateString) return { date: 'N/A', time: '' };
 
@@ -68,15 +67,6 @@ const getLevelColor = (level: string) => {
   }
 };
 
-const initialFilters: LogFilters = {
-  search: '',
-  resource_type: '',
-  log_level: '',
-  action_type: undefined,
-  start_date: '',
-  end_date: '',
-};
-
 const getDateString = (date: string | Date | undefined): string => {
   if (!date) return '';
   if (date instanceof Date) return date.toISOString().split('T')[0];
@@ -86,11 +76,18 @@ const getDateString = (date: string | Date | undefined): string => {
 export default function LogsPage() {
   const [logType, setLogType] = useState<LogType>('activity');
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<LogFilters>(initialFilters);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [localSearchTerm, setLocalSearchTerm] = useState(filters.search || '');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [filters, setFilters] = useState<LogFilters>({
+    resource_type: '',
+    log_level: '',
+    action_type: undefined,
+    start_date: '',
+    end_date: '',
+  });
 
-  const logsQueryKey = [logType, currentPage, filters];
+  const logsQueryKey = [logType, currentPage, appliedSearchTerm, filters];
 
   const { data: logsData, isLoading, refetch, isFetching } = useQuery({
     queryKey: logsQueryKey,
@@ -101,9 +98,10 @@ export default function LogsPage() {
         limit: 10,
         resource_type: logType === 'activity' ? filters.resource_type : undefined,
         log_level: logType === 'system' ? filters.log_level : undefined,
-        search: filters.search || undefined,
+        search: appliedSearchTerm || undefined,
         start_date: filters.start_date || undefined,
         end_date: filters.end_date || undefined,
+        type: logType === 'system' ? 'system' : 'activity',
       };
       return logsService.getLogs(apiFilters);
     },
@@ -118,8 +116,26 @@ export default function LogsPage() {
   const handleLogTypeChange = (newType: LogType) => {
     setLogType(newType);
     setCurrentPage(1);
-    setFilters(prev => ({ ...initialFilters, type: newType === 'system' ? 'system' : 'activity' }));
-    setLocalSearchTerm('');
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setFilters({
+      resource_type: '',
+      log_level: '',
+      action_type: undefined,
+      start_date: '',
+      end_date: '',
+    });
+  };
+
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setCurrentPage(1);
   };
 
   const handleFilterChange = (key: keyof LogFilters, value: string) => {
@@ -127,13 +143,26 @@ export default function LogsPage() {
     setCurrentPage(1);
   };
 
-  const handleGlobalSearch = (newSearchTerm: string) => {
-    setFilters(prev => ({ ...prev, search: newSearchTerm }));
+  const handleDateRangeApply = (range: { startDate: string; endDate: string }) => {
+    setFilters(prev => ({
+      ...prev,
+      start_date: range.startDate,
+      end_date: range.endDate
+    }));
     setCurrentPage(1);
+    setShowDatePicker(false);
   };
 
-  const handleDateRangeChange = (newRange: { startDate: string, endDate: string }) => {
-    setFilters(prev => ({ ...prev, start_date: newRange.startDate, end_date: newRange.endDate }));
+  const handleClearFilters = () => {
+    setFilters({
+      resource_type: '',
+      log_level: '',
+      action_type: undefined,
+      start_date: '',
+      end_date: '',
+    });
+    setSearchTerm('');
+    setAppliedSearchTerm('');
     setCurrentPage(1);
   };
 
@@ -142,6 +171,7 @@ export default function LogsPage() {
       toast.info(`Preparing ${logType} logs for export...`);
       const filtersForExport: LogFilters = {
         ...filters,
+        search: appliedSearchTerm || undefined,
         type: logType === 'system' ? 'system' : 'activity'
       };
       const blob = await logsService.exportLogs(filtersForExport);
@@ -161,12 +191,6 @@ export default function LogsPage() {
     }
   };
 
-  const handleClearFilters = () => {
-    setFilters({ ...initialFilters, type: logType === 'system' ? 'system' : 'activity' });
-    setLocalSearchTerm('');
-    setCurrentPage(1);
-  };
-
   const activityLogColumns: TableColumn<ActivityLog>[] = [
     {
       key: 'created_at',
@@ -176,11 +200,9 @@ export default function LogsPage() {
         const { date, time } = getFormattedDateTime(log.created_at);
         return (
           <div className="pl-4 flex flex-col">
-            {/* Bold Font for Date */}
             <Typography variant="value" className="text-sm font-bold text-black dark:text-white whitespace-nowrap">
               {date}
             </Typography>
-            {/* Bold Font for Time */}
             <Typography variant="value" className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
               {time}
             </Typography>
@@ -193,18 +215,13 @@ export default function LogsPage() {
       header: 'User & Company',
       headerClassName: 'min-w-[220px]',
       render: (log) => (
-        // ✅ FIX: Stacked: Company Name > Email > User Name/Role
         <div className="flex flex-col gap-1 py-1">
-
-          {/* 1. Company Name */}
           <div className="flex items-center gap-2" title={log.company_name || 'System'}>
             <Building2 size={14} className="shrink-0 text-primary" />
             <Typography variant="value" className="text-sm font-bold text-black dark:text-white truncate max-w-[180px]">
               {log.company_name || 'System'}
             </Typography>
           </div>
-
-          {/* 2. Email */}
           {log.email && log.email !== 'System' && (
             <div className="flex items-center gap-2" title={log.email}>
               <Mail size={14} className="shrink-0 text-gray-400" />
@@ -213,8 +230,6 @@ export default function LogsPage() {
               </Typography>
             </div>
           )}
-
-          {/* 3. User Name & Role */}
           <div className="flex items-center gap-2 mt-0.5" title={log.user_name || 'System'}>
             <User size={14} className="shrink-0 text-gray-400" />
             <Typography variant="caption" className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate max-w-[180px]">
@@ -224,7 +239,6 @@ export default function LogsPage() {
               </span>
             </Typography>
           </div>
-
         </div>
       ),
     },
@@ -270,7 +284,6 @@ export default function LogsPage() {
       header: 'IP Address',
       headerClassName: 'min-w-[110px]',
       render: (log) => (
-        // ✅ FIX: Bold, Mono, No Box
         <Typography variant="value" className="text-xs font-bold font-mono text-gray-600 dark:text-gray-300">
           {log.ip_address || 'N/A'}
         </Typography>
@@ -287,11 +300,9 @@ export default function LogsPage() {
         const { date, time } = getFormattedDateTime(log.created_at);
         return (
           <div className="pl-4 flex flex-col">
-            {/* Bold Font for Date */}
             <Typography variant="value" className="text-sm font-bold text-black dark:text-white whitespace-nowrap">
               {date}
             </Typography>
-            {/* Bold Font for Time */}
             <Typography variant="value" className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
               {time}
             </Typography>
@@ -314,7 +325,6 @@ export default function LogsPage() {
       header: 'Source',
       headerClassName: 'min-w-[200px]',
       render: (log) => (
-        // ✅ FIX: Stacked Company > Email > User
         <div className="flex flex-col gap-1 py-1">
           <div className="flex items-center gap-2" title={log.company_name || 'System'}>
             <Building2 size={14} className="shrink-0 text-primary" />
@@ -322,7 +332,6 @@ export default function LogsPage() {
               {log.company_name || 'System'}
             </Typography>
           </div>
-
           {log.email && log.email !== 'System' && (
             <div className="flex items-center gap-2" title={log.email}>
               <Mail size={14} className="shrink-0 text-gray-400" />
@@ -331,7 +340,6 @@ export default function LogsPage() {
               </Typography>
             </div>
           )}
-
           {log.user_name && log.user_name !== 'System' && (
              <div className="flex items-center gap-2 mt-0.5" title={log.user_name}>
                <User size={14} className="shrink-0 text-gray-400" />
@@ -365,7 +373,6 @@ export default function LogsPage() {
       header: 'IP Address',
       headerClassName: 'min-w-[110px]',
       render: (log) => (
-        // ✅ FIX: Bold, Mono, No Box
         <Typography variant="value" className="text-xs font-bold font-mono text-gray-600 dark:text-gray-300">
           {log.ip_address || 'N/A'}
         </Typography>
@@ -373,70 +380,110 @@ export default function LogsPage() {
     },
   ];
 
+  const activeFiltersCount = [
+    appliedSearchTerm,
+    filters.resource_type,
+    filters.log_level,
+    filters.start_date || filters.end_date,
+  ].filter(Boolean).length;
+
   const renderFilters = () => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
-      <div className="md:col-span-1">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-          Global Search
-        </label>
-        <GlobalSearchInput
-          searchTerm={localSearchTerm || ''}
-          onSearchChange={(newTerm) => {
-            setLocalSearchTerm(newTerm);
-            handleGlobalSearch(newTerm);
-          }}
-          placeholder="Search logs..."
-        />
-      </div>
-
-      <div className="md:col-span-1">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-          {logType === 'activity' ? 'Resource Type' : 'Log Level'}
-        </label>
-        {logType === 'activity' ? (
-          <input
-            type="text"
-            placeholder="e.g. COMPANY, USER"
-            value={filters.resource_type || ''}
-            onChange={(e) => handleFilterChange('resource_type', e.target.value)}
-            className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
+    <div className="px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+            Global Search
+          </label>
+          <StandardSearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            placeholder="Search logs..."
+            isLoading={isLoading}
           />
-        ) : (
-          <select
-            value={filters.log_level || ''}
-            onChange={(e) => handleFilterChange('log_level', e.target.value)}
-            className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
+        </div>
+
+        <div className="md:col-span-1">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+            {logType === 'activity' ? 'Resource Type' : 'Log Level'}
+          </label>
+          {logType === 'activity' ? (
+            <input
+              type="text"
+              placeholder="e.g. COMPANY, USER"
+              value={filters.resource_type || ''}
+              onChange={(e) => handleFilterChange('resource_type', e.target.value)}
+              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
+            />
+          ) : (
+            <select
+              value={filters.log_level || ''}
+              onChange={(e) => handleFilterChange('log_level', e.target.value)}
+              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
+            >
+              <option value="">All Levels</option>
+              {['ERROR', 'WARN', 'INFO', 'DEBUG', 'SUCCESS', 'CRITICAL'].map(level => (
+                <option key={level} value={level.toLowerCase()}>{level}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="md:col-span-1">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+            Date Range
+          </label>
+          <button
+            onClick={() => setShowDatePicker(true)}
+            className="flex items-center justify-between w-full gap-2 px-4 py-2.5 text-sm border border-stroke bg-white dark:bg-boxdark rounded dark:border-strokedark transition-colors text-left"
           >
-            <option value="">All Levels</option>
-            {['ERROR', 'WARN', 'INFO', 'DEBUG', 'SUCCESS', 'CRITICAL'].map(level => (
-              <option key={level} value={level.toLowerCase()}>{level}</option>
-            ))}
-          </select>
-        )}
+            <span className="truncate text-black dark:text-white">
+              {filters.start_date && filters.end_date
+                ? `${getDateString(filters.start_date)} - ${getDateString(filters.end_date)}`
+                : 'Select dates'}
+            </span>
+            <Filter size={16} className="text-gray-500 flex-shrink-0" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-end md:col-span-1">
-        <button
-          onClick={() => setIsDatePickerOpen(true)}
-          className={`flex w-full items-center justify-between gap-2 rounded border-[1.5px] border-stroke bg-white dark:bg-boxdark py-2.5 px-4 text-sm hover:border-primary transition-colors ${
-            filters.start_date ? 'text-primary border-primary' : 'text-black dark:text-white'
-          }`}
-        >
-          <span className="truncate">
-            {filters.start_date && filters.end_date ? `${getDateString(filters.start_date)} - ${getDateString(filters.end_date)}` : 'Filter by Date'}
-          </span>
-          <Filter size={16} className="shrink-0" />
-        </button>
-      </div>
-
-      <div className="flex items-end md:col-span-1">
-        <button
-          onClick={handleClearFilters}
-          className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded bg-white dark:bg-boxdark hover:bg-gray-50 dark:hover:bg-meta-4 dark:border-strokedark text-gray-600 dark:text-gray-300 transition-colors"
-        >
-          Reset Filters
-        </button>
-      </div>
+      {activeFiltersCount > 0 && (
+        <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-primary">
+              Active Filters ({activeFiltersCount}):
+            </span>
+            {appliedSearchTerm && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                Search: {appliedSearchTerm}
+              </span>
+            )}
+            {filters.resource_type && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                Resource: {filters.resource_type}
+              </span>
+            )}
+            {filters.log_level && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                Level: {filters.log_level}
+              </span>
+            )}
+            {(filters.start_date || filters.end_date) && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                Date: {getDateString(filters.start_date)} - {getDateString(filters.end_date)}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={handleClearFilters}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
+          >
+            <X size={16} />
+            Clear All
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -471,7 +518,6 @@ export default function LogsPage() {
       <h3 className="text-lg font-semibold text-black dark:text-white mb-1">
         No {type} logs found
       </h3>
-      {/* ✅ FIXED: Escaped single quote from 'couldn't' to 'couldn&apos;t' */}
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
         We couldn&apos;t find any logs matching your current filters. Try adjusting your search criteria.
       </p>
@@ -563,11 +609,22 @@ export default function LogsPage() {
           </div>
         )}
       </div>
+
       <DateRangePicker
-        isOpen={isDatePickerOpen}
-        dateRange={{ startDate: getDateString(filters.start_date), endDate: getDateString(filters.end_date) }}
-        setDateRange={handleDateRangeChange as any}
-        onClose={() => setIsDatePickerOpen(false)}
+        isOpen={showDatePicker}
+        dateRange={{
+          startDate: (filters.start_date as string) || '',
+          endDate: (filters.end_date as string) || ''
+        }}
+        setDateRange={(range) => {
+           setFilters(prev => ({
+             ...prev,
+             start_date: range.startDate,
+             end_date: range.endDate
+           }));
+        }}
+        onClose={() => setShowDatePicker(false)}
+        onApply={handleDateRangeApply}
       />
     </DefaultLayout>
   );
