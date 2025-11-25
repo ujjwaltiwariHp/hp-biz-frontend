@@ -6,7 +6,7 @@ import { companyService } from '@/services/company.service';
 import { useState } from 'react';
 import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
-import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight } from 'lucide-react';
+import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight, Filter, X } from 'lucide-react';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Link from 'next/link';
@@ -16,13 +16,25 @@ import { Typography } from '@/components/common/Typography';
 import { useSSE } from '@/hooks/useSSE';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
+import DateRangePicker from '@/components/common/DateRangePicker';
+import StandardSearchInput from '@/components/common/StandardSearchInput';
 
 export default function CompaniesPage() {
   const { isSuperAdmin } = useAuth();
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Search State
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+
+  // Filter State
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
+    startDate: '',
+    endDate: '',
+  });
 
   const deleteDialog = useConfirmDialog();
   const toggleDialog = useConfirmDialog();
@@ -31,15 +43,17 @@ export default function CompaniesPage() {
 
   const queryClient = useQueryClient();
 
-  const companiesQueryKey = ['companies', currentPage, searchTerm, statusFilter];
+  const companiesQueryKey = ['companies', currentPage, appliedSearchTerm, statusFilter, dateRange];
 
   const { data: companiesData, isLoading } = useQuery({
     queryKey: companiesQueryKey,
     queryFn: () => companyService.getCompanies({
       page: currentPage,
       limit: 10,
-      search: searchTerm || undefined,
+      search: appliedSearchTerm || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
+      startDate: dateRange.startDate ? new Date(dateRange.startDate).toISOString() : undefined,
+      endDate: dateRange.endDate ? new Date(dateRange.endDate).toISOString() : undefined,
     }),
   });
 
@@ -120,6 +134,33 @@ export default function CompaniesPage() {
     router.push(`/companies/${company.id}`);
   };
 
+  // Search Handlers
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setCurrentPage(1);
+  };
+
+  // Filter Handlers
+  const handleDateRangeApply = (range: { startDate: string; endDate: string }) => {
+    setDateRange(range);
+    setCurrentPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setStatusFilter('all');
+    setDateRange({ startDate: '', endDate: '' });
+    setCurrentPage(1);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -135,11 +176,16 @@ export default function CompaniesPage() {
   const companies = companiesData?.data?.companies || [];
   const pagination = companiesData?.data?.pagination;
 
+  const activeFiltersCount = [
+    appliedSearchTerm,
+    statusFilter !== 'all',
+    dateRange.startDate || dateRange.endDate
+  ].filter(Boolean).length;
+
   const companyColumns: TableColumn<Company>[] = [
     {
       key: 'company_name',
       header: 'Company',
-      // Reduced width for better space management
       headerClassName: 'min-w-[180px] xl:pl-7',
       className: 'xl:pl-7',
       render: (company) => (
@@ -162,7 +208,6 @@ export default function CompaniesPage() {
     {
       key: 'admin_name',
       header: 'Admin',
-      // Reduced width
       headerClassName: 'min-w-[150px]',
       render: (company) => (
         <div className="flex flex-col space-y-1">
@@ -172,7 +217,7 @@ export default function CompaniesPage() {
         </div>
       ),
     },
-{
+    {
       key: 'package_name',
       header: 'Package',
       headerClassName: 'min-w-[120px]',
@@ -182,7 +227,6 @@ export default function CompaniesPage() {
             {company.package_name || 'No Package'}
           </Typography>
           <Typography variant="body" className="text-sm text-primary font-medium">
-             {/* CHANGED: Use package_currency (or default USD) and hardcode '/mo' since duration_type is gone */}
             {company.package_price
               ? `${company.package_currency || 'USD'} ${company.package_price}/mo`
               : '-'}
@@ -193,7 +237,6 @@ export default function CompaniesPage() {
     {
       key: 'is_active',
       header: 'Status',
-      // Reduced width
       headerClassName: 'min-w-[100px]',
       render: (company) => (
         <div className="flex flex-col space-y-2">
@@ -218,7 +261,6 @@ export default function CompaniesPage() {
     {
       key: 'subscription_end_date',
       header: 'Subscription',
-      // Reduced width
       headerClassName: 'min-w-[150px]',
       render: (company) => (
         <div className="flex flex-col space-y-1 text-sm">
@@ -246,7 +288,6 @@ export default function CompaniesPage() {
     {
       key: 'actions',
       header: 'Actions',
-      // Significantly reduced width
       headerClassName: 'w-[100px] text-center',
       className: 'w-[100px] text-center',
       render: (company) => (
@@ -310,13 +351,12 @@ export default function CompaniesPage() {
     );
   }
 
-
   return (
     <DefaultLayout>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
 
         {/* Header with Provisioning Button */}
-        <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex justify-between items-center">
+        <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <Typography variant="page-title" as="h4">
               Companies Management
@@ -337,54 +377,104 @@ export default function CompaniesPage() {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Typography variant="label" as="span">Search Companies</Typography>
-            </label>
-            <input
-              type="text"
-              placeholder="Search by name, email, or ID..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
-            />
+        {/* Filters Section */}
+        <div className="px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+            {/* 1. Global Search */}
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <Typography variant="label" as="span">Search</Typography>
+              </label>
+              <StandardSearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                onSearch={handleSearch}
+                onClear={handleClearSearch}
+                placeholder="Name, Email, or ID..."
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* 2. Status Filter */}
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <Typography variant="label" as="span">Status</Typography>
+              </label>
+              <div className="relative z-20 bg-white dark:bg-boxdark rounded border border-stroke dark:border-strokedark">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className="relative z-20 w-full appearance-none rounded border-none bg-transparent py-2.5 px-4 h-11 outline-none transition focus:border-primary active:border-primary dark:bg-boxdark dark:text-white"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <span className="absolute top-1/2 right-4 z-10 -translate-y-1/2">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g opacity="0.8">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M5.29289 8.29289C5.68342 7.90237 6.31658 7.90237 6.70711 8.29289L12 13.5858L17.2929 8.29289C17.6834 7.90237 18.3166 7.90237 18.7071 8.29289C19.0976 8.68342 19.0976 9.31658 18.7071 9.70711L12.7071 15.7071C12.3166 16.0976 11.6834 16.0976 11.2929 15.7071L5.29289 9.70711C4.90237 9.31658 4.90237 8.68342 5.29289 8.29289Z" fill="#637381"></path>
+                    </g>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Date Range Filter */}
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <Typography variant="label" as="span">Date Range</Typography>
+              </label>
+              <button
+                onClick={() => setShowDatePicker(true)}
+                className="flex items-center justify-between w-full h-11 px-4 text-sm border border-stroke bg-white dark:bg-boxdark rounded dark:border-strokedark transition-colors text-left"
+              >
+                <span className="truncate text-black dark:text-white">
+                  {dateRange.startDate && dateRange.endDate
+                    ? `${dateRange.startDate} - ${dateRange.endDate}`
+                    : 'Select dates'}
+                </span>
+                <Filter size={16} className="text-gray-500 flex-shrink-0" />
+              </button>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Typography variant="label" as="span">Filter by Status</Typography>
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as any);
-                setCurrentPage(1);
-              }}
-              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setCurrentPage(1);
-              }}
-              className="w-full px-4 py-2.5 text-sm font-medium border border-stroke rounded hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
+          {/* Active Filters Display */}
+          {activeFiltersCount > 0 && (
+            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-primary">
+                  Active Filters ({activeFiltersCount}):
+                </span>
+                {appliedSearchTerm && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                    Search: {appliedSearchTerm}
+                  </span>
+                )}
+                {statusFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                    Status: {statusFilter}
+                  </span>
+                )}
+                {(dateRange.startDate || dateRange.endDate) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                    Date: {dateRange.startDate} - {dateRange.endDate}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleClearFilters}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
+              >
+                <X size={16} />
+                Clear All
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Dynamic Table Component */}
@@ -394,7 +484,7 @@ export default function CompaniesPage() {
           isLoading={isLoading}
         />
 
-        {/* Empty State when no companies are found (displayed if DynamicTable returns nothing) */}
+        {/* Empty State */}
         {companies.length === 0 && !isLoading && (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <Building size={48} className="mx-auto mb-3 opacity-50" />
@@ -460,6 +550,15 @@ export default function CompaniesPage() {
         confirmText={actionType === 'deactivate' ? 'Deactivate' : 'Activate'}
         cancelText="Cancel"
         isLoading={activateMutation.isPending || deactivateMutation.isPending}
+      />
+
+      {/* Date Range Picker Modal */}
+      <DateRangePicker
+        isOpen={showDatePicker}
+        dateRange={dateRange}
+        setDateRange={setDateRange}
+        onClose={() => setShowDatePicker(false)}
+        onApply={handleDateRangeApply}
       />
     </DefaultLayout>
   );

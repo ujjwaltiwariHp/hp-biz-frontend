@@ -10,7 +10,7 @@ export interface Invoice {
   billing_period_start: string;
   billing_period_end: string;
   due_date: string;
-  status: 'draft' | 'pending' | 'sent' | 'payment_received' | 'paid' | 'rejected' | 'overdue';
+  status: 'draft' | 'pending' | 'sent' | 'payment_received' | 'paid' | 'partially_paid' | 'overdue' | 'void' | 'cancelled' | 'rejected';
   payment_date: string | null;
   payment_method: string | null;
   payment_reference: string | null;

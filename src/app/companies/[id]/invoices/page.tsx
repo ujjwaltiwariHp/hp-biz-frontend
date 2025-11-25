@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState, useCallback } from 'react';
+import React, { use, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '@/services/invoice.service';
 import { companyService } from '@/services/company.service';
@@ -10,17 +10,16 @@ import { toast } from 'react-toastify';
 import {
   FileText,
   Download,
-  Eye,
   AlertCircle,
   CheckCircle,
   Clock,
   XCircle,
-  Search,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Typography } from '@/components/common/Typography';
-import { useSearch } from '@/hooks/useSearch';
+import StandardSearchInput from '@/components/common/StandardSearchInput';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import { Invoice } from '@/types/invoice';
@@ -96,36 +95,20 @@ const isOverdue = (dueDate: string | null | undefined, status: string) => {
   }
 };
 
-
 export default function CompanyInvoicesPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const companyId = parseInt(resolvedParams.id, 10);
   const router = useRouter();
+
+  // State
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const [finalSearchQuery, setFinalSearchQuery] = useState('');
+  // Search State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
 
   const queryClient = useQueryClient();
-  const MIN_SEARCH_LENGTH = 3;
-
-  const searchTrigger = useCallback(
-    async (q: string) => {
-      setFinalSearchQuery(q);
-      setCurrentPage(1);
-      return [];
-    },
-    []
-  );
-
-  const {
-    query: searchInputQuery,
-    handleSearch,
-    handleClear,
-    handleSearchSubmit,
-    isLoading: isSearchDebouncing,
-    error: searchError,
-  } = useSearch(searchTrigger, 400, MIN_SEARCH_LENGTH, '');
 
   const { data: companyResponse, isLoading: companyLoading } = useQuery({
     queryKey: ['company', companyId],
@@ -135,10 +118,10 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   });
 
   const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
-    queryKey: ['company-invoices', companyId, currentPage, statusFilter, finalSearchQuery],
+    queryKey: ['company-invoices', companyId, currentPage, statusFilter, appliedSearchTerm],
     queryFn: () =>
       invoiceService.getAllInvoices(currentPage, 10, {
-        search: finalSearchQuery || undefined,
+        search: appliedSearchTerm || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
       }),
     staleTime: 5 * 60 * 1000,
@@ -166,6 +149,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     },
   });
 
+  // Handlers
   const handleDownload = (invoiceId: number) => {
     downloadMutation.mutate(invoiceId);
   };
@@ -175,6 +159,23 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     setCurrentPage(1);
   };
 
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setCurrentPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setStatusFilter('all');
+    setCurrentPage(1);
+  };
 
   if (companyLoading || invoicesLoading) {
     return <Loader />;
@@ -187,6 +188,11 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   const companyInvoices = invoices.filter(
     (inv) => inv.company_id === companyId || !inv.company_id
   );
+
+  const activeFiltersCount = [
+    appliedSearchTerm,
+    statusFilter !== 'all'
+  ].filter(Boolean).length;
 
   if (!company) {
     return (
@@ -332,52 +338,76 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative">
-          <input
-              type="text"
-              placeholder={`Search by invoice number (min ${MIN_SEARCH_LENGTH} chars)...`}
-              value={searchInputQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-              className="w-full rounded border border-stroke py-2.5 pl-10 pr-10 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
-          />
-          <Search
-              size={18}
-              className={`absolute left-3 top-1/2 -translate-y-1/2 ${
-                isSearchDebouncing ? 'text-primary animate-spin' : 'text-gray-400'
-              }`}
-          />
-          <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-black dark:hover:text-white"
-              onClick={handleSearchSubmit}
-              aria-label="Search"
-          >
-            <Search size={18} />
-          </button>
-          {searchInputQuery && (
-              <XCircle
-                  size={18}
-                  className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-danger"
-                  onClick={handleClear}
-              />
-          )}
+      {/* Filters Section */}
+      <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1. Search */}
+            <div className="relative">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                    Search Invoices
+                </label>
+                <StandardSearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    onSearch={handleSearch}
+                    onClear={handleClearSearch}
+                    placeholder="Search by invoice number..."
+                    isLoading={invoicesLoading}
+                />
+            </div>
+
+            {/* 2. Status Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                Filter by Status
+              </label>
+             <select
+  value={statusFilter}
+  onChange={handleStatusChange}
+  className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
+>
+  <option value="all">All Status</option>
+  <option value="draft">Draft</option>
+  <option value="pending">Pending</option>
+  <option value="sent">Sent</option>
+  <option value="payment_received">Payment Received</option>
+  <option value="partially_paid">Partially Paid</option> {/* Added */}
+  <option value="paid">Paid</option>
+  <option value="overdue">Overdue</option>
+  <option value="void">Void</option> {/* Added */}
+  <option value="cancelled">Cancelled</option> {/* Added */}
+  <option value="rejected">Rejected</option>
+</select>
+            </div>
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={handleStatusChange}
-          className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary"
-        >
-          <option value="all">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="pending">Pending</option>
-          <option value="sent">Sent</option>
-          <option value="payment_received">Payment Received</option>
-          <option value="paid">Paid</option>
-          <option value="overdue">Overdue</option>
-          <option value="rejected">Rejected</option>
-        </select>
+        {/* Active Filters Display */}
+        {activeFiltersCount > 0 && (
+            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-primary">
+                        Active Filters ({activeFiltersCount}):
+                    </span>
+                    {appliedSearchTerm && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                            Search: {appliedSearchTerm}
+                        </span>
+                    )}
+                    {statusFilter !== 'all' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                            Status: {formatStatusText(statusFilter)}
+                        </span>
+                    )}
+                </div>
+                <button
+                    onClick={handleClearFilters}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                >
+                    <X size={16} />
+                    Clear All
+                </button>
+            </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-stroke dark:border-strokedark overflow-hidden">
@@ -385,20 +415,21 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
           <DynamicTable<Invoice>
             data={companyInvoices}
             columns={invoiceColumns}
-            isLoading={isSearchDebouncing}
+            isLoading={invoicesLoading}
           />
         ) : (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-boxdark">
             <FileText size={48} className="mx-auto mb-3 opacity-50" />
             <Typography variant="body1" className="text-base font-medium">
-              {finalSearchQuery ? `No invoices match "${finalSearchQuery}"` : "No invoices found"}
+              {appliedSearchTerm || statusFilter !== 'all'
+                ? `No invoices match your current filters.`
+                : "No invoices found"}
             </Typography>
-            {finalSearchQuery && (
-                <Typography variant="caption" className="text-xs mt-1">Try clearing the search or adjusting your filters.</Typography>
-            )}
-            {!finalSearchQuery && (
-                <Typography variant="caption" className="text-xs mt-1">Invoice data is currently unavailable.</Typography>
-            )}
+            <Typography variant="caption" className="text-xs mt-1">
+              {appliedSearchTerm || statusFilter !== 'all'
+                ? "Try clearing the search or adjusting your filters."
+                : "Invoice data is currently unavailable."}
+            </Typography>
           </div>
         )}
       </div>

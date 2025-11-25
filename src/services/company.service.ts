@@ -19,6 +19,8 @@ export interface CompanyFilters {
   limit?: number;
   search?: string;
   status?: 'active' | 'inactive';
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface UsageReportFilters {
@@ -27,8 +29,12 @@ export interface UsageReportFilters {
 }
 
 export const companyService = {
-  getDashboard: async (): Promise<DashboardResponse> => {
-    const response = await apiClient.get('/super-admin/companies/dashboard');
+  getDashboard: async (startDate?: string, endDate?: string): Promise<DashboardResponse> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    const response = await apiClient.get(`/super-admin/companies/dashboard?${params}`);
     return response.data;
   },
 
@@ -38,6 +44,8 @@ export const companyService = {
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.search) params.append('search', filters.search);
     if (filters.status) params.append('status', filters.status);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
 
     const response = await apiClient.get(`/super-admin/companies?${params}`);
     return response.data;

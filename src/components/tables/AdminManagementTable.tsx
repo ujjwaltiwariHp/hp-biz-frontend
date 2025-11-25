@@ -1,4 +1,3 @@
-// src/components/tables/AdminManagementTable.tsx
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Shield, CheckCircle, XCircle } from 'lucide-react';
@@ -9,6 +8,8 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { PermissionsModal } from '@/components/modal/PermissionsModal';
 import { hasPermission } from '@/utils/adminHelpers';
+import DynamicTable from '@/components/common/DynamicTable';
+import { TableColumn } from '@/types/table';
 
 interface AdminManagementTableProps {
   admins: SuperAdmin[];
@@ -27,9 +28,9 @@ export default function AdminManagementTable({
   const deleteDialog = useConfirmDialog();
   const toggleDialog = useConfirmDialog();
   const [selectedAdmin, setSelectedAdmin] = useState<SuperAdmin | null>(null);
-  const [showPermissionsModal, setShowPermissionsModal] =
-    useState<SuperAdminRole | null>(null);
+  const [showPermissionsModal, setShowPermissionsModal] = useState<SuperAdminRole | null>(null);
 
+  // --- Mutations ---
   const deleteMutation = useMutation({
     mutationFn: authService.deleteAdmin,
     onSuccess: () => {
@@ -56,6 +57,7 @@ export default function AdminManagementTable({
     },
   });
 
+  // --- Handlers ---
   const handleDelete = (admin: SuperAdmin) => {
     if (admin.id === profile.id) {
       toast.error("Cannot delete your own account");
@@ -83,6 +85,7 @@ export default function AdminManagementTable({
     }
   };
 
+  // --- Permission Checks ---
   const isAdminDeletable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
     if (admin.super_admin_role_id === 1) return false;
@@ -94,108 +97,119 @@ export default function AdminManagementTable({
     return hasPermission(permissions, 'super_admins', 'update');
   };
 
-  if (admins.length === 0) {
-    return <p className="py-6 text-center text-gray-500 text-sm">No administrators found.</p>;
-  }
+  // --- Table Configuration ---
+  const columns: TableColumn<SuperAdmin>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (admin) => (
+        <span className="font-medium text-black dark:text-white">
+          {admin.name}{' '}
+          {admin.id === profile.id && (
+            <span className="text-primary font-normal text-xs ml-1">(You)</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      render: (admin) => <span className="text-sm">{admin.email}</span>,
+    },
+    {
+      key: 'role_name',
+      header: 'Role',
+      render: (admin) => (
+        <button
+          onClick={() => handleViewPermissions(admin)}
+          className="hover:opacity-80 transition-opacity text-left"
+        >
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-xs font-medium ${
+              admin.super_admin_role_id === 1
+                ? 'bg-danger/10 text-danger border border-danger/20'
+                : 'bg-success/10 text-success border border-success/20'
+            }`}
+          >
+            <Shield size={12} />
+            {admin.role_name || 'N/A'}
+          </span>
+        </button>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (admin) => (
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-xs font-medium ${
+            admin.status === 'active'
+              ? 'bg-success/10 text-success border border-success/20'
+              : 'bg-danger/10 text-danger border border-danger/20'
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              admin.status === 'active' ? 'bg-success' : 'bg-danger'
+            }`}
+          ></span>
+          {admin.status.charAt(0).toUpperCase() + admin.status.slice(1)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      render: (admin) => (
+        <div className="flex items-center justify-end space-x-2">
+          {isAdminUpdatable(admin) && (
+            <button
+              onClick={() => handleToggleStatus(admin)}
+              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors ${
+                admin.status === 'active'
+                  ? 'text-danger hover:text-danger/80'
+                  : 'text-success hover:text-success/80'
+              } disabled:opacity-50`}
+              disabled={toggleStatusMutation.isPending}
+              title={admin.status === 'active' ? 'Deactivate' : 'Activate'}
+            >
+              {admin.status === 'active' ? (
+                <XCircle size={18} />
+              ) : (
+                <CheckCircle size={18} />
+              )}
+            </button>
+          )}
+          {hasPermission(permissions, 'super_admins', 'delete') && (
+            <button
+              onClick={() => handleDelete(admin)}
+              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 text-danger hover:text-danger/80 transition-colors ${
+                !isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={
+                deleteMutation.isPending ||
+                toggleStatusMutation.isPending ||
+                !isAdminDeletable(admin)
+              }
+              title="Delete Admin"
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto text-sm">
-          <thead>
-            <tr className="bg-gray-2 text-left dark:bg-meta-4">
-              <th className="py-2 px-3 font-semibold text-black dark:text-white">Name</th>
-              <th className="py-2 px-3 font-semibold text-black dark:text-white">Email</th>
-              <th className="py-2 px-3 font-semibold text-black dark:text-white">Role</th>
-              <th className="py-2 px-3 font-semibold text-black dark:text-white">Status</th>
-              <th className="py-2 px-3 font-semibold text-black dark:text-white">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {admins.map((admin) => (
-              <tr
-                key={admin.id}
-                className="border-b border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4/50 transition-colors"
-              >
-                <td className="py-2 px-3 text-black dark:text-white font-medium text-xs">
-                  {admin.name}{' '}
-                  {admin.id === profile.id && (
-                    <span className="text-primary font-normal">(You)</span>
-                  )}
-                </td>
-                <td className="py-2 px-3 text-black dark:text-white text-xs">{admin.email}</td>
-                <td className="py-2 px-3">
-                  <button
-                    onClick={() => handleViewPermissions(admin)}
-                    className="hover:text-primary text-left text-xs"
-                  >
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full py-0.5 px-2 text-xs font-medium ${
-                        admin.super_admin_role_id === 1
-                          ? 'bg-danger/10 text-danger'
-                          : 'bg-success/10 text-success'
-                      }`}
-                    >
-                      <Shield size={10} />
-                      {admin.role_name || 'N/A'}
-                    </span>
-                  </button>
-                </td>
-                <td className="py-2 px-3">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full py-0.5 px-2 text-xs font-medium ${
-                      admin.status === 'active'
-                        ? 'bg-success/10 text-success'
-                        : 'bg-danger/10 text-danger'
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        admin.status === 'active' ? 'bg-success' : 'bg-danger'
-                      }`}
-                    ></span>
-                    {admin.status}
-                  </span>
-                </td>
-                <td className="py-2 px-3 flex items-center space-x-1">
-                  {isAdminUpdatable(admin) && (
-                    <button
-                      onClick={() => handleToggleStatus(admin)}
-                      className={`${
-                        admin.status === 'active'
-                          ? 'text-danger hover:text-danger/80'
-                          : 'text-success hover:text-success/80'
-                      } disabled:opacity-50 p-1 transition-colors`}
-                      disabled={toggleStatusMutation.isPending}
-                    >
-                      {admin.status === 'active' ? (
-                        <XCircle size={16} />
-                      ) : (
-                        <CheckCircle size={16} />
-                      )}
-                    </button>
-                  )}
-                  {hasPermission(permissions, 'super_admins', 'delete') && (
-                    <button
-                      onClick={() => handleDelete(admin)}
-                      className={`text-danger hover:text-danger/80 ${
-                        !isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''
-                      } p-1 transition-colors`}
-                      disabled={
-                        deleteMutation.isPending ||
-                        toggleStatusMutation.isPending ||
-                        !isAdminDeletable(admin)
-                      }
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DynamicTable<SuperAdmin>
+        data={admins}
+        columns={columns}
+        isLoading={false} // Parent modal handles loading
+      />
 
       <PermissionsModal
         isOpen={!!showPermissionsModal}
@@ -203,6 +217,7 @@ export default function AdminManagementTable({
         role={showPermissionsModal}
       />
 
+      {/* Delete Confirmation */}
       <ConfirmDialog
         {...deleteDialog.confirmProps}
         type="danger"
@@ -216,11 +231,14 @@ export default function AdminManagementTable({
         isLoading={deleteMutation.isPending}
       />
 
+      {/* Status Toggle Confirmation */}
       <ConfirmDialog
         {...toggleDialog.confirmProps}
         type={selectedAdmin?.status === 'active' ? 'warning' : 'success'}
         title={`${selectedAdmin?.status === 'active' ? 'Deactivate' : 'Activate'} Administrator`}
-        message={`Are you sure you want to ${selectedAdmin?.status === 'active' ? 'deactivate' : 'activate'} "${selectedAdmin?.name}"?`}
+        message={`Are you sure you want to ${
+          selectedAdmin?.status === 'active' ? 'deactivate' : 'activate'
+        } "${selectedAdmin?.name}"?`}
         onConfirm={() => {
           if (selectedAdmin) toggleStatusMutation.mutate(selectedAdmin.id);
           toggleDialog.closeDialog();
