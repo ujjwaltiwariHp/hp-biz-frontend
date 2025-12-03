@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  CheckCheck,
 } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
@@ -61,6 +62,18 @@ const NotificationsPage = () => {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Failed to mark as read');
+    },
+  });
+
+  const { mutate: markAllAsReadMutate, isPending: isMarkingAll } = useMutation({
+    mutationFn: notificationService.markAllAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
+      toast.success('All notifications marked as read');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to mark all as read');
     },
   });
 
@@ -224,6 +237,17 @@ const NotificationsPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+            <button
+                onClick={() => markAllAsReadMutate()}
+                disabled={isMarkingAll}
+                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm rounded transition disabled:opacity-50"
+            >
+                <CheckCheck size={16} className="text-primary" />
+                <span className="hidden sm:inline">Mark all read</span>
+            </button>
+            )}
+
           <button
             onClick={() => refetch()}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
