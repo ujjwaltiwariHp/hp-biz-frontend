@@ -12,10 +12,33 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+const cleanUpAuth = () => {
+  removeAuthToken();
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('superAdmin');
+    if (!window.location.pathname.includes('/auth/signin')) {
+      window.location.href = '/auth/signin';
+    }
+  }
+};
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = getAuthToken();
-    if (token) {
+
+    const publicEndpoints = [
+      '/auth/login',
+      '/auth/refresh-token',
+      '/auth/forgot-password',
+      '/super-admin/auth/login',
+      '/super-admin/auth/refresh-token'
+    ];
+
+    const isPublicEndpoint = publicEndpoints.some(endpoint =>
+      config.url?.includes(endpoint)
+    );
+
+    if (token && !isPublicEndpoint) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -41,7 +64,6 @@ const processQueue = (error: any, token: string | null = null) => {
       prom.resolve(token!);
     }
   });
-
   failedQueue = [];
 };
 
@@ -74,13 +96,22 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await apiClient.post('/super-admin/auth/refresh-token');
+        const response = await axios.post(
+            `${API_BASE_URL}/super-admin/auth/refresh-token`,
+            {},
+            {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-device-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                }
+            }
+        );
 
         const { token } = response.data.data;
 
         if (token) {
             setAuthToken(token);
-
             apiClient.defaults.headers.common['Authorization'] = 'Bearer ' + token;
             processQueue(null, token);
 
@@ -93,10 +124,7 @@ apiClient.interceptors.response.use(
         }
       } catch (err) {
         processQueue(err, null);
-        removeAuthToken();
-        if (typeof window !== 'undefined' && window.location.pathname !== '/auth/signin') {
-          window.location.href = '/auth/signin';
-        }
+        cleanUpAuth();
         return Promise.reject(err);
       } finally {
         isRefreshing = false;
