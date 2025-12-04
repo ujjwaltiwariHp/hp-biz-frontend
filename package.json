@@ -2,14 +2,14 @@
   "name": "free-nextjs-admin-dashboard",
   "version": "1.3.5",
   "private": true,
-  "scripts": {
-    "dev": "npm run dev:local",
-    "dev:local": "next dev",
-    "dev:deployed": "NEXT_PUBLIC_API_BASE_URL=https://hp-biz-backend-9jnt.onrender.com/api/v1 next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+"scripts": {
+  "dev": "npm run dev:local",
+  "dev:local": "next dev",
+  "dev:deployed": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint"
+},
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.7",
