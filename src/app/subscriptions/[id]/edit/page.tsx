@@ -17,13 +17,11 @@ interface EditSubscriptionPageProps {
   }>;
 }
 
-
 export default function EditSubscriptionPage({ params }: EditSubscriptionPageProps) {
   const resolvedParams = use(params);
   const packageId = parseInt(resolvedParams.id);
   const router = useRouter();
   const queryClient = useQueryClient();
-
 
   const { data: packageResponse, isLoading, isError, error } = useQuery({
     queryKey: ['package', packageId],
@@ -31,7 +29,6 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
     enabled: !isNaN(packageId),
     staleTime: 5 * 60 * 1000,
   });
-
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdatePackageData) =>
@@ -55,13 +52,16 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
 
   const existingPackage = packageResponse?.data.package;
 
-  // HANDLE FORM SUBMISSION
-  const handleSubmit = (data: UpdatePackageData) => {
-    updateMutation.mutate(data);
+  const handleSubmit = (data: UpdatePackageData | any) => {
+    updateMutation.mutate(data as UpdatePackageData);
   };
 
   if (isLoading) {
-    return <Loader />;
+    return (
+        <DefaultLayout>
+            <Loader />
+        </DefaultLayout>
+    );
   }
 
   if (isError || !existingPackage) {
@@ -73,7 +73,7 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
   return (
     <DefaultLayout>
       <Breadcrumb pageName={`Edit Package: ${existingPackage.name}`} />
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-4xl">
         <PackageForm
           title={`Edit Package: ${existingPackage.name}`}
           initialData={existingPackage as SubscriptionPackage}

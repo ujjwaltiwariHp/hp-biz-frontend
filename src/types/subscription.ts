@@ -1,5 +1,12 @@
 export type SubscriptionDurationType = 'monthly' | 'yearly' | 'weekly' | 'quarterly' | 'one_time';
 
+export interface SubscriptionFeature {
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+}
+
 export interface SubscriptionPackage {
   id: number;
   name: string;
@@ -37,7 +44,6 @@ export interface CreatePackageData {
   max_leads_per_month: number;
   is_active?: boolean;
 
-  // fields for creation
   is_trial: boolean;
   trial_duration_days: number;
 }
@@ -60,7 +66,6 @@ export interface UpdatePackageData {
   trial_duration_days?: number;
 }
 
-
 export interface PackagesResponse {
   success: boolean;
   message: string;
@@ -74,6 +79,14 @@ export interface PackageResponse {
   message: string;
   data: {
     package: SubscriptionPackage;
+  };
+}
+
+export interface FeaturesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    features: SubscriptionFeature[];
   };
 }
 
