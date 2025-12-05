@@ -8,7 +8,7 @@ import {
   UpdatePackageResponse,
   ToggleStatusResponse,
   DeletePackageResponse,
-  SubscriptionPackage,
+  FeaturesResponse,
 } from '@/types/subscription';
 
 const BASE_URL = '/super-admin/subscriptions';
@@ -50,6 +50,11 @@ const formatOutgoingPackageData = (data: CreatePackageData | UpdatePackageData) 
 };
 
 export const subscriptionService = {
+  getFeatures: async (): Promise<FeaturesResponse> => {
+    const response = await apiClient.get<FeaturesResponse>(`${BASE_URL}/features`);
+    return response.data;
+  },
+
   getPackages: async (filters: PackageFilters = {}): Promise<PackagesResponse> => {
     const params = new URLSearchParams();
     if (filters.active_only !== undefined) {
@@ -57,15 +62,11 @@ export const subscriptionService = {
     }
 
     const response = await apiClient.get<PackagesResponse>(`${BASE_URL}?${params}`);
-
-
     return response.data;
   },
 
   getPackageById: async (id: number): Promise<PackageResponse> => {
     const response = await apiClient.get<PackageResponse>(`${BASE_URL}/${id}`);
-
-
     return response.data;
   },
 
