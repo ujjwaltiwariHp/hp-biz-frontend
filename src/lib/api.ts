@@ -27,9 +27,6 @@ apiClient.interceptors.request.use(
     const token = getAuthToken();
 
     const publicEndpoints = [
-      '/auth/login',
-      '/auth/refresh-token',
-      '/auth/forgot-password',
       '/super-admin/auth/login',
       '/super-admin/auth/refresh-token'
     ];
