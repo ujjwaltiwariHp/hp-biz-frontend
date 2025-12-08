@@ -36,10 +36,13 @@ apiClient.interceptors.request.use(
     );
 
     if (token && !isPublicEndpoint) {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (!config.headers) {
+        config.headers = {} as any;
+      }
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
 
-    if (!config.headers['x-device-timezone']) {
+    if (config.headers) {
         config.headers['x-device-timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     }
 
@@ -58,7 +61,11 @@ const processQueue = (error: any, token: string | null = null) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token!);
+      if (token) {
+        prom.resolve(token);
+      } else {
+        prom.reject(new Error('Token processing failed'));
+      }
     }
   });
   failedQueue = [];
@@ -68,6 +75,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
     if (error.response?.status === 401 && !originalRequest._retry) {
 
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
@@ -80,7 +88,8 @@ apiClient.interceptors.response.use(
         })
           .then((token) => {
             if (originalRequest.headers) {
-                originalRequest.headers.Authorization = 'Bearer ' + token;
+                // @ts-ignore
+                originalRequest.headers['Authorization'] = 'Bearer ' + token;
             }
             return apiClient(originalRequest);
           })
@@ -113,7 +122,7 @@ apiClient.interceptors.response.use(
             processQueue(null, token);
 
             if (originalRequest.headers) {
-                originalRequest.headers.Authorization = 'Bearer ' + token;
+                originalRequest.headers['Authorization'] = 'Bearer ' + token;
             }
             return apiClient(originalRequest);
         } else {
