@@ -10,11 +10,14 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { companyService } from '@/services/company.service';
 import { useSSE } from '@/hooks/useSSE';
+import { useSSEContext } from '@/context/SSEContext';
 
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
   setSidebarOpen: (arg0: boolean) => void;
 }) => {
+  const { subscribe } = useSSEContext();
+  const [isBlinking, setIsBlinking] = useState(false);
 
   const { data: notificationStats, refetch: refetchStats } = useQuery({
     queryKey: ['notifications', 'unreadCount', true],
@@ -22,7 +25,7 @@ const Header = (props: {
       const result = await notificationService.getSuperAdminUnreadCount();
       return result;
     },
-select: (data) => {
+    select: (data) => {
       const responsePayload = data as any;
       const actualPayload = responsePayload?.data || responsePayload;
       const count = actualPayload?.stats?.unread_notifications || actualPayload?.unread_count || 0;
@@ -32,6 +35,13 @@ select: (data) => {
   });
 
   useSSE('new_sa_notification', ['notifications', 'unreadCount', true]);
+
+  useEffect(() => {
+    const unsubscribe = subscribe('new_sa_notification', () => {
+      setIsBlinking(true);
+    });
+    return () => unsubscribe();
+  }, [subscribe]);
 
   const unreadCount = notificationStats || 0;
   const pathname = usePathname();
@@ -167,6 +177,7 @@ select: (data) => {
             <li>
               <Link
                 href="/notifications"
+                onClick={() => setIsBlinking(false)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
               >
                 {unreadCount > 0 && (
@@ -174,7 +185,7 @@ select: (data) => {
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-                <Bell className="w-5 h-5" />
+                <Bell className={`w-5 h-5 ${isBlinking ? 'animate-bell text-primary' : ''}`} />
               </Link>
             </li>
           </ul>
