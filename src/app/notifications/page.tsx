@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  CheckSquare,
 } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
@@ -27,7 +28,7 @@ const NotificationsPage = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const limit = 10;
-  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'normal' | 'low'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'normal'>('all');
 
   const queryFilters = { is_read: false };
 
@@ -61,6 +62,18 @@ const NotificationsPage = () => {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Failed to mark as read');
+    },
+  });
+
+  const { mutate: markAllAsRead, isPending: isMarkingAll } = useMutation({
+    mutationFn: notificationService.markAllAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['superAdminNotifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount', true] });
+      toast.success('All notifications marked as read');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to mark all as read');
     },
   });
 
@@ -169,10 +182,12 @@ const NotificationsPage = () => {
       : normalized.filter((n) => n.priority === priorityFilter);
 
   const totalPages = Math.ceil((data?.pagination?.totalCount || 0) / limit);
-  const unreadCount =
-    (statsData as any)?.stats?.unread_notifications ||
-    (statsData as any)?.unread_count ||
-    0;
+
+  const unreadCount = (() => {
+    const raw = statsData as any;
+    const payload = raw?.data || raw;
+    return payload?.stats?.unread_notifications || payload?.unread_count || 0;
+  })();
 
   if (isLoading)
     return (
@@ -206,9 +221,9 @@ const NotificationsPage = () => {
     <DefaultLayout>
       <Breadcrumb pageName=" Notifications" />
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex gap-2 flex-wrap">
-          {['all', 'high', 'normal', 'low'].map((level) => (
+          {['all', 'high', 'normal'].map((level) => (
             <button
               key={level}
               onClick={() => setPriorityFilter(level as any)}
@@ -224,12 +239,25 @@ const NotificationsPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllAsRead()}
+              disabled={isMarkingAll}
+              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-md text-sm font-medium hover:bg-opacity-90 disabled:opacity-50 transition"
+            >
+              <CheckSquare size={16} />
+              <span className="hidden sm:inline">Mark All Read</span>
+            </button>
+          )}
+
           <button
             onClick={() => refetch()}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+            title="Refresh"
           >
             <RefreshCw size={20} className="text-primary" />
           </button>
+
           {unreadCount > 0 && (
             <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium text-sm">
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -247,12 +275,12 @@ const NotificationsPage = () => {
             return (
               <div
                 key={n.id}
-                className={`flex items-center justify-between gap-4 p-4 border-l-4 rounded-md bg-white dark:bg-boxdark ${
-                  n.is_read ? 'opacity-60' : ''
+                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-l-4 rounded-md bg-white dark:bg-boxdark shadow-sm ${
+                  n.is_read ? 'opacity-60 border-gray-300' : 'border-primary'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  {getNotificationIcon(n.notification_type)}
+                <div className="flex items-start sm:items-center gap-3 min-w-0">
+                  <div className="mt-1 sm:mt-0">{getNotificationIcon(n.notification_type)}</div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-gray-100">{n.title}</p>
                     <p className="text-sm text-primary">{n.metadata?.company_name}</p>
@@ -263,7 +291,7 @@ const NotificationsPage = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 self-end sm:self-center">
                   {n.metadata?.invoice_id && (
                     <Link
                       href={`/invoices?invoice_id=${n.metadata.invoice_id}`}
@@ -293,7 +321,7 @@ const NotificationsPage = () => {
                   {!n.is_read && (
                     <button
                       onClick={() => markAsReadMutate(n.id)}
-                      className="px-3 py-1 border text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="px-3 py-1 border border-gray-300 dark:border-gray-600 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       Mark Read
                     </button>
@@ -310,7 +338,7 @@ const NotificationsPage = () => {
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
-            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-40 flex items-center gap-1"
+            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-40 flex items-center gap-1 dark:border-gray-600 dark:hover:bg-gray-700"
           >
             <ChevronLeft size={16} /> Prev
           </button>
@@ -320,7 +348,7 @@ const NotificationsPage = () => {
           <button
             disabled={page === totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-40 flex items-center gap-1"
+            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-40 flex items-center gap-1 dark:border-gray-600 dark:hover:bg-gray-700"
           >
             Next <ChevronRight size={16} />
           </button>

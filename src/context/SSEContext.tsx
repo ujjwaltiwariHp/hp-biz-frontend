@@ -85,7 +85,7 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     }
 
     connectionTimeoutRef.current = setTimeout(() => {
-        if (source.readyState !== EventSource.OPEN) {
+        if (source.readyState !== EventSource.OPEN && source.readyState !== EventSource.CONNECTING) {
             console.warn("SSE Connection: Timeout - connection did not establish");
             source.close();
             setEventSource(null);
@@ -158,7 +158,6 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     }
 
     return () => {
-      // Cleanup
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
       }
@@ -188,7 +187,8 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
   const subscribe = useCallback((eventType: SSEEventType, listener: SSEListener) => {
     if (!listenersRef.current.has(eventType)) {
       listenersRef.current.set(eventType, new Set());
-      if (eventSource && eventSource.readyState === EventSource.OPEN) {
+      // CHANGED: Allow adding listener even if connecting (readyState 0)
+      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
           eventSource.addEventListener(eventType, (event) => {
               dispatchMessage(eventType, event);
           });

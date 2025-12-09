@@ -17,14 +17,13 @@
 }
 
 @layer utilities {
-  /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
 
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .chat-height {
@@ -38,59 +37,45 @@
 .shadow-default {
   box-shadow: 0px 8px 13px -3px rgba(0, 0, 0, 0.07);
 }
-
 .shadow-card {
   box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.12);
 }
-
 .shadow-card-2 {
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
 }
-
 .shadow-switcher {
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
 }
-
 .shadow-chat {
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
 }
-
 .shadow-1 {
   box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.08);
 }
-
 .shadow-2 {
   box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.06);
 }
-
 .shadow-3 {
   box-shadow: 0px 1px 1px 0px rgba(0, 0, 0, 0.1);
 }
-
 .shadow-4 {
   box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
-
 .shadow-5 {
   box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
-
 .shadow-6 {
   box-shadow: 0px 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
-
 .shadow-7 {
   box-shadow: 0px 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
-
 .shadow-8 {
   box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.16);
 }
-
 .shadow-9 {
   box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.14);
 }
-
 .shadow-10 {
   box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.12);
 }
@@ -98,7 +83,38 @@
 .drop-shadow-1 {
   filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.1));
 }
-
 .drop-shadow-2 {
   filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.15));
+}
+
+@keyframes bell-blink-strong {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  20% {
+    transform: scale(1.25);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(0.85);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  80% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-bell {
+  animation: bell-blink-strong 0.8s ease-in-out infinite;
+  transform-origin: center;
 }

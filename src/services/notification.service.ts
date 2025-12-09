@@ -66,4 +66,5 @@ export const notificationService = {
   clearAllNotifications: async (): Promise<void> => {
     await apiClient.delete(`${SA_BASE_URL}`);
   },
+
 };
