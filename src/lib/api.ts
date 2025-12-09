@@ -14,8 +14,8 @@ export const apiClient = axios.create({
 
 const cleanUpAuth = () => {
   removeAuthToken();
+  // Removed unused localStorage item 'superAdmin'
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('superAdmin');
     if (!window.location.pathname.includes('/auth/signin')) {
       window.location.href = '/auth/signin';
     }

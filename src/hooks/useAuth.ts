@@ -6,15 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-toastify";
 import { LoginCredentials, SuperAdmin, SuperAdminPermissions } from "@/types/auth";
-
-const getTokenFromCookies = (): string | null => {
-  if (typeof document !== 'undefined') {
-    const cookies = document.cookie.split(';');
-    const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('auth-token='));
-    return tokenCookie ? tokenCookie.split('=')[1].trim() : null;
-  }
-  return null;
-};
+import { getAuthToken } from "@/lib/auth";
 
 export function useAuth() {
   const router = useRouter();
@@ -22,7 +14,7 @@ export function useAuth() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const currentToken = getTokenFromCookies();
+    const currentToken = getAuthToken() || null;
     setToken(currentToken);
 
     if (!currentToken) {
@@ -50,8 +42,8 @@ export function useAuth() {
     }
 
     if (isProfileError && token) {
-        toast.error("Session expired or invalid. Please log in again.");
-        authService.logout();
+      toast.error("Session expired or invalid. Please log in again.");
+      authService.logout();
     }
   }, [token, isProfileLoading, isProfileError]);
 
@@ -61,7 +53,6 @@ export function useAuth() {
 
   const isSuperAdmin = profile?.role_name === 'Super Admin';
   const isSubAdmin = profile?.role_name === 'Sub Admin';
-
 
   const loginMutation = useMutation({
     mutationFn: authService.login,
