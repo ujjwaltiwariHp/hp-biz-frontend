@@ -24,7 +24,6 @@ interface UpdatePageProps {
   }>;
 }
 
-// Default to 'monthly' since duration_type was removed from DB
 const calculateEndDate = (startDate: string, durationType: string = 'monthly'): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -44,7 +43,6 @@ const calculateEndDate = (startDate: string, durationType: string = 'monthly'): 
       end.setFullYear(start.getFullYear() + 1);
       break;
     default:
-      // Default fallback
       end.setMonth(start.getMonth() + 1);
       break;
   }
@@ -111,7 +109,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
         ? format(new Date(currentCompany.subscription_start_date), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd');
 
-      // FIX: Removed dependency on packageMap[pkgId]?.duration_type
       const endDate = currentCompany.subscription_end_date
         ? format(new Date(currentCompany.subscription_end_date), 'yyyy-MM-dd')
         : calculateEndDate(startDate, 'monthly');
@@ -125,7 +122,7 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   }, [currentCompany, packages, packageMap, formData.subscription_package_id]);
 
   if (isCompanyLoading || isPackagesLoading) {
-    return <Loader />;
+    return <Loader variant="page" />;
   }
 
   if (!currentCompany || isCompanyError) {
@@ -144,7 +141,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
       const startDate = name === 'subscription_start_date' ? value : newFormData.subscription_start_date;
 
       if (pkg && startDate) {
-        // FIX: Hardcoded 'monthly' calculation instead of accessing pkg.duration_type
         newFormData.subscription_end_date = calculateEndDate(startDate, 'monthly');
       }
     }
@@ -194,7 +190,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
                 <div className="space-y-6">
-                    {/* Current Package Info Block */}
                     <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
                         <Typography variant="label">Current Package</Typography>
                         <Typography variant="value" as="h5" className="mt-1">
@@ -205,7 +200,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
                         </Typography>
                     </div>
 
-                    {/* New Subscription Package Selection */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">New Subscription Package <span className="text-danger">*</span></Typography>
                         <select
@@ -218,21 +212,18 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
                             <option value={0} disabled>Select a package</option>
                             {packages.map(pkg => (
                                 <option key={pkg.id} value={pkg.id}>
-                                    {/* FIX: Use price_monthly and static text */}
                                     {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
                                 </option>
                             ))}
                         </select>
                         {selectedPackage && (
                             <Typography variant="caption" className="text-xs text-gray-500 mt-2">
-                                {/* FIX: Use price_monthly and static text */}
                                 New Package Price: {selectedPackage.currency || 'USD'} {Number(selectedPackage.price_monthly).toFixed(2)} / month
                             </Typography>
                         )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Start Date Input */}
                         <div>
                             <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
                             <input
@@ -244,7 +235,6 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
                                 className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
                             />
                         </div>
-                        {/* End Date Input */}
                         <div>
                             <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
                             <input
