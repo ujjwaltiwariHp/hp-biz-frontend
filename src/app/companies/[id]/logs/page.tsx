@@ -182,8 +182,9 @@ export default function CompanyLogsPage({ params }: PageProps) {
     }
   };
 
+  // UPDATED: Using consistent Common Loader Component
   if (companyLoading || logsLoading) {
-    return <Loader />;
+    return <Loader variant="page" />;
   }
 
   const company = companyResponse?.data?.company;

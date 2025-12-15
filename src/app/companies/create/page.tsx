@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
@@ -13,12 +13,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { CreateCompanyData, CreateCompanyResponse } from '@/types/company';
 import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
-import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Shield, User, DollarSign, ToggleRight, X, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Typography } from '@/components/common/Typography';
 
-// HELPER FUNCTION
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -38,7 +36,6 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
       end.setFullYear(start.getFullYear() + 1);
       break;
     default:
-      // Default to monthly
       end.setMonth(start.getMonth() + 1);
       break;
   }
@@ -46,10 +43,8 @@ const calculateEndDate = (startDate: string, durationType: string): string => {
   return format(end, 'yyyy-MM-dd');
 };
 
-// HELPER FUNCTION
 const getDefaultFormData = (selectedPackage: SubscriptionPackage | null): CreateCompanyData => {
   const today = format(new Date(), 'yyyy-MM-dd');
-  // FIXED: Removed dependency on duration_type, defaulting to monthly
   const duration = 'monthly';
   const endDate = calculateEndDate(today, duration);
 
@@ -65,7 +60,6 @@ const getDefaultFormData = (selectedPackage: SubscriptionPackage | null): Create
   };
 };
 
-// MAIN COMPONENT
 export default function CreateCompanyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -74,7 +68,6 @@ export default function CreateCompanyPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
 
-  // FETCH PACKAGES DATA
   const {
     data: packagesResponse,
     isLoading: packagesLoading,
@@ -85,16 +78,13 @@ export default function CreateCompanyPage() {
     staleTime: Infinity,
   });
 
-  // MEMOIZED PACKAGES
   const packages = useMemo(() => packagesResponse?.data.packages || [], [packagesResponse]);
 
-  // SYNC SELECTED PACKAGE AND END DATE
   useEffect(() => {
     const pkg = packages.find(p => p.id === formData.subscription_package_id);
     setSelectedPackage(pkg || null);
 
     if (pkg) {
-      // FIXED: Hardcoded 'monthly' instead of accessing pkg.duration_type
       const newEndDate = calculateEndDate(formData.subscription_start_date, 'monthly');
       setFormData(prev => ({
         ...prev,
@@ -104,7 +94,6 @@ export default function CreateCompanyPage() {
     }
   }, [formData.subscription_package_id, formData.subscription_start_date, packages]);
 
-  // VALIDATE FORM
   useEffect(() => {
     const { company_name, admin_email, admin_name, password, subscription_package_id, subscription_end_date } = formData;
 
@@ -122,7 +111,6 @@ export default function CreateCompanyPage() {
     setIsFormValid(valid);
   }, [formData]);
 
-  // CREATE COMPANY MUTATION
   const createCompanyMutation = useMutation<CreateCompanyResponse, Error, CreateCompanyData>({
     mutationFn: (data: CreateCompanyData) => companyService.createCompanyByAdmin(data),
     onSuccess: (data: CreateCompanyResponse) => {
@@ -135,7 +123,6 @@ export default function CreateCompanyPage() {
     },
   });
 
-  // HANDLE INPUT CHANGES
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     let newValue: string | number | boolean = value;
@@ -152,7 +139,6 @@ export default function CreateCompanyPage() {
     }));
   };
 
-  // HANDLE NEXT STEP
   const handleNext = () => {
       const { company_name, admin_email, admin_name, password } = formData;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -172,7 +158,6 @@ export default function CreateCompanyPage() {
       setStep(2);
   };
 
-  // HANDLE FORM SUBMISSION
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) {
@@ -191,7 +176,7 @@ export default function CreateCompanyPage() {
   };
 
   if (packagesLoading) {
-    return <Loader />;
+    return <Loader variant="page" />;
   }
 
   if (packagesError || packages.length === 0) {
@@ -229,36 +214,29 @@ export default function CreateCompanyPage() {
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
 
-              {/* Step 1: Company & Admin Details */}
               <div className={step === 1 ? 'block' : 'hidden'}>
                 <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><User size={18} /> Company & Admin Information</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Company Name */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Company Name <span className="text-danger">*</span></Typography>
                         <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Industry (Optional) */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Industry</Typography>
-                        <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                        <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} placeholder="e.g. Tech, E-commerce" className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Admin Name */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Admin Full Name <span className="text-danger">*</span></Typography>
                         <input type="text" name="admin_name" value={formData.admin_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Phone (Optional) */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Phone</Typography>
                         <input type="tel" name="phone" value={formData.phone || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Admin Email */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Admin Email <span className="text-danger">*</span></Typography>
                         <input type="email" name="admin_email" value={formData.admin_email} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Password */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Temporary Password <span className="text-danger">*</span></Typography>
                         <div className="relative">
@@ -274,11 +252,9 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
-              {/* Step 2: Subscription Details */}
               <div className={step === 2 ? 'block' : 'hidden'}>
                 <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><DollarSign size={18} /> Subscription & Billing</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Package Selection */}
                     <div className="md:col-span-2">
                         <Typography variant="label" className="mb-2.5 block">Subscription Package <span className="text-danger">*</span></Typography>
                         <div className="relative z-20 bg-white dark:bg-form-input">
@@ -286,14 +262,12 @@ export default function CreateCompanyPage() {
                                 <option value={0} disabled>Select a package</option>
                                 {packages.map(pkg => (
                                     <option key={pkg.id} value={pkg.id}>
-                                        {/* FIXED: Use price_monthly and static 'month' text */}
                                         {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
                                     </option>
                                 ))}
                             </select>
                         </div>
                     </div>
-                    {/* Package Info Card */}
                     {selectedPackage && (
                         <div className="md:col-span-2 p-4 border border-primary/20 bg-primary/5 rounded-lg">
                             <Typography variant="body2" as="h6" className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</Typography>
@@ -307,12 +281,10 @@ export default function CreateCompanyPage() {
                         </div>
                     )}
 
-                    {/* Subscription Start Date */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
                         <input type="date" name="subscription_start_date" value={formData.subscription_start_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
                     </div>
-                    {/* Subscription End Date */}
                     <div>
                         <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
                         <input type="date" name="subscription_end_date" value={formData.subscription_end_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
@@ -321,7 +293,6 @@ export default function CreateCompanyPage() {
                         )}
                     </div>
 
-                    {/* Send Welcome Email Toggle */}
                     <div className="md:col-span-2 flex items-center space-x-3 mt-4">
                         <label className="relative flex cursor-pointer select-none items-center">
                             <input
@@ -345,7 +316,6 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
-              {/* Navigation and Submission */}
               <div className="flex justify-between pt-6 mt-6 border-t border-stroke dark:border-strokedark">
                   {step === 2 && (
                       <button

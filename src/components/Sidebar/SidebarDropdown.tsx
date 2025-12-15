@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Typography } from "@/components/common/Typography";
 import { ChevronDown, LucideIcon } from 'lucide-react';
 
 interface DropdownItem {
   label: string;
   route: string;
+  icon: LucideIcon;
   isActive?: boolean;
 }
 
@@ -21,60 +21,78 @@ const SidebarDropdown = ({ label, icon: Icon, items, defaultOpen }: SidebarDropd
   const pathname = usePathname();
   const [open, setOpen] = useState(defaultOpen);
 
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setOpen(!open);
   };
 
+  const isParentActive = items.some(item => item.isActive);
+
   return (
-    <li className='relative'>
+    <li>
       <Link
         href="#"
         onClick={handleClick}
-        className={`group relative flex items-center gap-2.5 rounded-lg py-3 px-4 font-medium duration-300 ease-in-out transition-colors
-          ${open
-            ? 'bg-primary text-white dark:bg-primary dark:text-white shadow-md'
-            : 'text-bodydark1 hover:bg-gray-800 dark:hover:bg-meta-4'
+        className={`group relative flex items-center gap-3 rounded-lg py-2.5 px-4 font-medium duration-200 ease-in-out
+          ${isParentActive || open
+            ? 'bg-sky-500/20 text-white' // Parent Active/Open: Light Blue BG, White Text
+            : 'text-white hover:bg-white/5' // Inactive: White Text
           }
         `}
       >
-        <Icon size={18} />
-        <Typography as="span" variant="body1" className="text-inherit">
-          {label}
-        </Typography>
+        <Icon size={20} className="text-white transition-colors duration-200" />
+
+        <span className="text-sm font-medium flex-1">{label}</span>
+
         <ChevronDown
           size={16}
-          className={`absolute right-4 top-1/2 -translate-y-1/2 text-white transition-transform duration-200 ${
+          className={`transition-transform duration-300 ease-in-out text-white ${
             open ? 'rotate-180' : ''
           }`}
         />
+
+        {/* Parent Active Indicator */}
+        {isParentActive && (
+             <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]"></span>
+        )}
       </Link>
 
+      {/* Dropdown Content */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          open ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'
         }`}
       >
-        <ul className="mb-6 mt-4 flex flex-col gap-2.5 pl-6">
+        {/* Removed border-l (straight line) as requested */}
+        <div className="flex flex-col gap-1 pl-4">
           {items.map((subItem, index) => (
-            <li key={index}>
-              <Link
-                href={subItem.route}
-                className={`group relative flex items-center gap-2.5 rounded-md px-4 duration-300 ease-in-out`}
-              >
-                <Typography
-                  as="span"
-                  variant="body"
-                  className={`font-medium text-bodydark2 group-hover:text-white ${
-                    subItem.isActive ? "text-white" : ""
-                  }`}
-                >
+            <Link
+              key={index}
+              href={subItem.route}
+              className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm duration-200 ease-in-out
+                ${subItem.isActive
+                  ? 'text-white bg-sky-500/20' // Sub-item Active: Blue BG, White Text
+                  : 'text-white/70 hover:text-white hover:bg-white/5' // Sub-item Inactive: White-ish text
+                }
+              `}
+            >
+              <subItem.icon size={16} className={`flex-shrink-0 transition-colors ${subItem.isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
+
+              <span className={`transition-transform duration-200 ${subItem.isActive ? 'translate-x-1' : 'group-hover:translate-x-1'}`}>
                   {subItem.label}
-                </Typography>
-              </Link>
-            </li>
+              </span>
+
+              {/* Active Dot */}
+              {subItem.isActive && (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]"></span>
+              )}
+            </Link>
           ))}
-        </ul>
+        </div>
       </div>
     </li>
   );

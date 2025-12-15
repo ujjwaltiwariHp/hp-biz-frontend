@@ -14,6 +14,7 @@ import DateRangePicker from '@/components/common/DateRangePicker';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import { Company } from '@/types/company';
+import Loader from '@/components/common/Loader'; // Import Common Loader
 
 const parseNumeric = (value: any, defaultValue = 0) => {
     return Number(value) || defaultValue;
@@ -138,13 +139,11 @@ export default function Dashboard() {
 
   const isDataLoading = usageLoading || companiesLoading || dashboardLoading;
 
-  // FIX: Force loading state until mounted to match server render
+  // FIX: Replaced manual spinner with common Loader component
   if (!isMounted || dashboardLoading) {
     return (
       <DefaultLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-        </div>
+        <Loader variant="page" />
       </DefaultLayout>
     );
   }
