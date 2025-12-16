@@ -208,7 +208,7 @@ export default function Dashboard() {
     { name: 'Free/Trial', value: packages.paid_vs_free.free, color: '#80CAEE' }
   ], [packages]);
 
-  const topActiveCompanies = engagement.top_active_companies || [];
+  const topActiveCompanies = useMemo(() => engagement.top_active_companies || [], [engagement.top_active_companies]);
   const chartColors = ['#3C50E0', '#10B981', '#F0950C', '#80CAEE', '#E14D2A'];
 
   const lineChartData = useMemo(() => {

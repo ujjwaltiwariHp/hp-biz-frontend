@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/api';
 import {
   Company,
   CompanyStats,
-  DashboardStats,
+  DashboardData,
   DashboardResponse,
   CompaniesResponse,
   UsageReportResponse,
