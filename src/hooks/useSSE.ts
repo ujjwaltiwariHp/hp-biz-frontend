@@ -20,17 +20,21 @@ interface SSEInvalidationOptions {
   refetchQueries?: boolean;
 }
 
+type SSEHandlerOrKey = QueryKey | ((data?: any) => void);
+
 export const useSSE = (
   eventType: SSEEventType,
-  queryKey: QueryKey,
+  handlerOrKey: SSEHandlerOrKey,
   options: SSEInvalidationOptions = {}
 ) => {
   const { subscribe } = useSSEContext();
   const queryClient = useQueryClient();
   const { refetchQueries = false } = options;
+
   const effectiveEventType = useMemo(() => {
     const currentUser = authService.getCurrentUser();
-    const isSuperAdmin = !!currentUser && !!currentUser.id;
+
+    const isSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.is_super_admin || (!!currentUser && !!currentUser.id && !currentUser.company_id);
 
     if (isSuperAdmin) {
       if (eventType === 'new_activity_log') return 'sa_new_activity_log';
@@ -41,16 +45,18 @@ export const useSSE = (
   }, [eventType]);
 
   const handleEvent = useCallback((data: any) => {
+    if (typeof handlerOrKey === 'function') {
+      handlerOrKey(data);
+    } else if (Array.isArray(handlerOrKey)) {
+      queryClient.invalidateQueries({ queryKey: handlerOrKey });
 
-    queryClient.invalidateQueries({ queryKey });
-
-    if (refetchQueries) {
-      queryClient.refetchQueries({ queryKey });
+      if (refetchQueries) {
+        queryClient.refetchQueries({ queryKey: handlerOrKey });
+      }
     }
-  }, [queryClient, queryKey, refetchQueries]);
+  }, [queryClient, handlerOrKey, refetchQueries]);
 
   useEffect(() => {
-
     const unsubscribe = subscribe(effectiveEventType, handleEvent);
 
     return () => {
