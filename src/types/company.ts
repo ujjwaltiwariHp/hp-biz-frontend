@@ -1,3 +1,4 @@
+//
 export interface Company {
   id: number;
   unique_company_id: string;
@@ -9,7 +10,7 @@ export interface Company {
   website: string;
   industry: string;
   company_size: string;
-  subscription_package_id: number; // <-- FIXED: Added this crucial field
+  subscription_package_id: number;
   subscription_start_date: string;
   subscription_end_date: string;
   is_active: boolean;
@@ -21,7 +22,6 @@ export interface Company {
   package_currency: string;
 }
 
-// Interface for Company Provisioning (Creation by Super Admin)
 export interface CreateCompanyData {
   company_name: string;
   admin_email: string;
@@ -30,8 +30,6 @@ export interface CreateCompanyData {
   subscription_package_id: number;
   subscription_start_date: string;
   subscription_end_date: string;
-
-  // Optional fields
   phone?: string;
   address?: string;
   website?: string;
@@ -40,7 +38,6 @@ export interface CreateCompanyData {
   send_welcome_email?: boolean;
 }
 
-// Response interface for Company Creation
 export interface CreateCompanyResponse {
   success: boolean;
   message: string;
@@ -62,11 +59,64 @@ export interface CompanyStats {
   total_activities: number;
 }
 
-export interface DashboardStats {
+export interface DashboardOverview {
   total_companies: number;
   active_companies: number;
   inactive_companies: number;
-  new_companies_this_month: number;
+  new_companies_period: number;
+}
+
+export interface DashboardFinancials {
+  total_revenue: string;
+  mrr_estimate: string;
+  currency: string;
+}
+
+export interface PackageDistributionItem {
+  name: string;
+  count: number;
+  is_trial: boolean;
+}
+
+export interface DashboardPackages {
+  distribution: PackageDistributionItem[];
+  paid_vs_free: {
+    paid: number;
+    free: number;
+  };
+}
+
+// Updated interface to match backend response (no ID returned in aggregate query)
+export interface ActiveCompany {
+  id?: number;
+  company_name: string;
+  activity_count: number;
+}
+
+export interface ExpiredCompany {
+  company_name: string;
+  admin_email: string;
+  subscription_end_date: string;
+}
+
+export interface DashboardEngagement {
+  top_active_companies: ActiveCompany[];
+  recent_expiries: ExpiredCompany[];
+}
+
+export interface DashboardData {
+  overview: DashboardOverview;
+  financials: DashboardFinancials;
+  packages: DashboardPackages;
+  engagement: DashboardEngagement;
+}
+
+export interface DashboardResponse {
+  success: boolean;
+  message: string;
+  data: {
+    dashboard: DashboardData;
+  };
 }
 
 export interface UsageReport {
@@ -105,13 +155,6 @@ export interface CompanyResponse {
   };
 }
 
-export interface DashboardResponse {
-  success: boolean;
-  message: string;
-  data: {
-    stats: DashboardStats;
-  };
-}
 export interface SubscriptionUpdate {
   subscription_package_id: number;
   subscription_start_date: string;
@@ -153,11 +196,4 @@ export interface DeleteCompanyResponse {
       unique_company_id: string;
     };
   };
-}
-
-// Final, required exported interface for subscription updates
-export interface SubscriptionUpdate {
-  subscription_package_id: number;
-  subscription_start_date: string;
-  subscription_end_date: string;
 }
