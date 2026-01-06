@@ -18,6 +18,7 @@ import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import DateRangePicker from '@/components/common/DateRangePicker';
 import StandardSearchInput from '@/components/common/StandardSearchInput';
+import Loader from '@/components/common/Loader'; // Import Common Loader
 
 export default function CompaniesPage() {
   const { isSuperAdmin } = useAuth();
@@ -341,12 +342,11 @@ export default function CompaniesPage() {
     },
   ];
 
+  // UPDATED: Using consistent Common Loader Component
   if (isLoading) {
     return (
       <DefaultLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+        <Loader variant="page" />
       </DefaultLayout>
     );
   }

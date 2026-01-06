@@ -28,7 +28,6 @@ interface PageProps {
   }>;
 }
 
-// Fixed date calculation to default to monthly since duration_type was removed
 const calculateEndDate = (startDate: string, durationType: string = 'monthly'): string => {
   if (!startDate) return '';
   const start = new Date(startDate);
@@ -48,7 +47,6 @@ const calculateEndDate = (startDate: string, durationType: string = 'monthly'): 
       end.setFullYear(start.getFullYear() + 1);
       break;
     default:
-      // Default to 30 days if unknown
       end.setMonth(start.getMonth() + 1);
       break;
   }
@@ -56,7 +54,6 @@ const calculateEndDate = (startDate: string, durationType: string = 'monthly'): 
   return format(end, 'yyyy-MM-dd');
 };
 
-// Helper component to display key/value pair with icon
 const InfoValue = ({ label, value, icon, className = '' }: { label: string, value: React.ReactNode, icon?: React.ReactNode, className?: string }) => (
     <div className={`flex flex-col ${className}`}>
         <Typography variant="label" className="mb-1">{label}</Typography>
@@ -159,14 +156,12 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         name === 'subscription_package_id'
           ? parseInt(value)
           : newFormData.subscription_package_id;
-      // const pkg = packageMap[pkgId]; // Not strictly needed for calculation anymore since duration_type is gone
       const startDate =
         name === 'subscription_start_date'
           ? value
           : newFormData.subscription_start_date;
 
       if (startDate) {
-        // Defaulting to 'monthly' calculation as duration_type is removed
         newFormData.subscription_end_date = calculateEndDate(
           startDate,
           'monthly'
@@ -209,7 +204,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
   };
 
   if (companyLoading || packagesLoading) {
-    return <Loader />;
+    return <Loader variant="page" />;
   }
 
   if (!company) {
@@ -235,7 +230,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Page Title */}
       <div>
         <Typography variant="page-title" as="h2">
           Subscription Management
@@ -262,13 +256,10 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Main Content Grid: Current Info (Left) + Update Form (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* LEFT COLUMN (Current Info & Package Features) */}
         <div className="lg:col-span-1 space-y-6">
 
-          {/* Current Subscription Info */}
           <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
             <Typography variant="card-title" as="h3" className="mb-6 flex items-center gap-2">
               <Package size={20} className="text-primary" />
@@ -292,7 +283,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                         ? parseFloat(company.package_price).toFixed(2)
                         : company.package_price.toFixed(2)
                   } / month`}
-                  // Fixed: Hardcoded / month and removed duration_type
                   icon={<DollarSign size={16} className="text-primary/70 dark:text-white/70" />}
               />
 
@@ -335,7 +325,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Package Features (Compact) */}
           {selectedPackage && (
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
               <Typography variant="card-title" as="h3" className="mb-4">
@@ -368,7 +357,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         </div>
 
 
-        {/* RIGHT COLUMN (Update Form) */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 h-full">
             <Typography variant="card-title" as="h3" className="mb-6">
@@ -376,7 +364,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
             </Typography>
 
             <div className="space-y-6">
-              {/* Package Selection */}
               <div>
                 <Typography variant="label" className="mb-2.5 block">
                   Select New Package <span className="text-danger">*</span>
@@ -394,7 +381,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   </option>
                   {packages.map((pkg: any) => (
                     <option key={pkg.id} value={pkg.id}>
-                      {/* FIXED: Used price_monthly and removed duration_type */}
                       {pkg.name} ({pkg.currency || 'USD'} {pkg.price_monthly} / month)
                     </option>
                   ))}
@@ -403,7 +389,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 {selectedPackage && (
                   <div className="mt-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
                     <Typography variant="body2" className="font-medium text-primary mb-2">
-                      {/* FIXED: Used price_monthly */}
                       <span className='font-bold'>New Plan:</span> {selectedPackage.name} ({selectedPackage.currency || 'USD'} {selectedPackage.price_monthly} / month)
                     </Typography>
                   </div>
@@ -411,7 +396,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Start Date Input */}
                 <div>
                   <Typography variant="label" className="mb-2.5 block">
                     Start Date <span className="text-danger">*</span>
@@ -427,7 +411,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   />
                 </div>
 
-                {/* End Date Input */}
                 <div>
                   <Typography variant="label" className="mb-2.5 block">
                     End Date <span className="text-danger">*</span>
@@ -452,10 +435,8 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Form Actions and Auto-Calculation Info */}
             <div className="pt-6 mt-6 border-t border-stroke dark:border-strokedark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 
-              {/* Auto-Calculation Info */}
               <div className="flex items-start gap-3 w-full sm:w-1/2">
                 <CheckCircle size={20} className="text-success mt-0.5 flex-shrink-0" />
                 <div>
@@ -466,7 +447,6 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 w-full sm:w-auto justify-end">
                 <button
                   type="button"

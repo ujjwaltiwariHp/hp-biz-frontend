@@ -1,243 +1,107 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Home,
-  Building,
-  CreditCard,
-  Settings,
-  ChevronLeft,
-  LogOut,
-  Activity,
-  Users,
-  LayoutDashboard,
-  ClipboardList,
-  User as ProfileIcon,
-  FileText,
-  Package,
-  LucideIcon,
-} from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Building, X, LogOut } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { useAuth } from '@/hooks/useAuth';
+import { getMenuItems, MenuItem } from './menuItems';
+import SidebarItem from './SidebarItem';
 import { Typography } from '@/components/common/Typography';
-import SidebarDropdown from './SidebarDropdown';
-
-interface MenuItem {
-    label: string;
-    route: string;
-    icon: LucideIcon;
-    requiredResource: string;
-}
-
-const getCompanyIdFromPath = (path: string): string | null => {
-  const match = path.match(/^\/companies\/(\d+)/);
-  return match ? match[1] : null;
-};
-
-const checkPermission = (permissions: Record<string, string[]>, resource: string): boolean => {
-    if (permissions.all && permissions.all.includes('crud')) {
-        return true;
-    }
-    const allowedActions = permissions[resource];
-    return allowedActions && (allowedActions.includes('view') || allowedActions.includes('crud'));
-};
-
-const menuItems: MenuItem[] = [
-  {
-    label: 'Dashboard',
-    route: '/dashboard',
-    icon: LayoutDashboard,
-    requiredResource: 'dashboard',
-  },
-  {
-    label: 'Companies',
-    route: '/companies',
-    icon: Building,
-    requiredResource: 'companies',
-  },
-  {
-    label: 'Subscriptions',
-    route: '/subscriptions',
-    icon: CreditCard,
-    requiredResource: 'subscriptions',
-  },
-  {
-    label: 'Invoices & Payments',
-    route: '/invoices',
-    icon: ClipboardList,
-    requiredResource: 'invoices',
-  },
-  {
-    label: 'Activity Logs',
-    route: '/logs',
-    icon: Activity,
-    requiredResource: 'logging',
-  },
-  {
-    label: 'Admin Management',
-    route: '/settings',
-    icon: Users,
-    requiredResource: 'super_admins',
-  },
-];
 
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (arg: boolean) => void;
 }
 
+const checkPermission = (permissions: Record<string, string[]>, resource?: string): boolean => {
+  if (!resource) return true;
+  if (permissions.all?.includes('crud')) return true;
+  const actions = permissions[resource];
+  return !!(actions && (actions.includes('view') || actions.includes('crud')));
+};
+
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const pathname = usePathname();
   const { isInitialized, isAuthenticated, permissions } = useAuth();
+
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
 
   useEffect(() => {
-    setCompanyId(getCompanyIdFromPath(pathname));
+    const match = pathname.match(/^\/companies\/(\d+)/);
+    setCompanyId(match ? match[1] : null);
   }, [pathname]);
 
-
-  const handleLogout = () => {
-    authService.logout();
-  };
-
-  const isActive = (route: string) => {
-    if (route === '/dashboard') {
-      return pathname === '/dashboard' || pathname === '/';
+  useEffect(() => {
+    if (openMenus.length === 0) {
+      if (pathname.includes('/companies')) setOpenMenus(['/companies']);
+      if (pathname.includes('/subscriptions')) setOpenMenus(['/subscriptions']);
     }
-    return pathname.startsWith(route);
+  }, [pathname]);
+
+  const handleToggle = (route: string) => {
+    setOpenMenus((prev) =>
+      prev.includes(route)
+        ? prev.filter((item) => item !== route)
+        : [...prev, route]
+    );
   };
 
-  const isCompanyDetailRoute = !!companyId;
+  if (!isInitialized || !isAuthenticated) return null;
 
-
-  if (!isInitialized || !isAuthenticated) {
-      return null;
-  }
-
-  const filteredMenuItems = menuItems.filter(item =>
-      checkPermission(permissions, item.requiredResource)
+  const menuItems: MenuItem[] = getMenuItems(companyId);
+  const filteredItems = menuItems.filter((item: MenuItem) =>
+    checkPermission(permissions, item.requiredResource)
   );
-
-  const companySubMenuItems = companyId ? [
-    {
-        label: 'Details',
-        route: `/companies/${companyId}`,
-        icon: ProfileIcon,
-        isActive: pathname === `/companies/${companyId}` || pathname === `/companies/${companyId}/details`,
-    },
-    {
-        label: 'Subscriptions',
-        route: `/companies/${companyId}/subscriptions`,
-        icon: Package,
-        isActive: pathname.startsWith(`/companies/${companyId}/subscriptions`),
-    },
-    {
-        label: 'Invoices',
-        route: `/companies/${companyId}/invoices`,
-        icon: FileText,
-        isActive: pathname.startsWith(`/companies/${companyId}/invoices`),
-    },
-    {
-        label: 'Activity Logs',
-        route: `/companies/${companyId}/logs`,
-        icon: Activity,
-        isActive: pathname.startsWith(`/companies/${companyId}/logs`),
-    },
-  ] : [];
 
   return (
     <aside
-      className={`absolute left-0 top-0 z-9999 flex h-screen w-64 flex-col overflow-y-hidden bg-black duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
+      className={`absolute left-0 top-0 z-99999 flex h-screen w-72.5 flex-col overflow-y-hidden bg-[#1c2434] duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5 border-b border-gray-800 dark:border-gray-700">
-        <Link href="/dashboard">
-          <Typography
-            as="span"
-            variant="page-title"
-            className="!text-white tracking-wider"
-          >
+      <div className="flex items-center justify-between gap-2 px-6 py-5 border-b border-white/10">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
+           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 group-hover:bg-sky-500 group-hover:text-white transition-all duration-300">
+             <Building size={24} />
+          </div>
+          <Typography as="span" variant="page-title" className="!text-white tracking-wider text-xl font-bold">
             HP-BIZ
           </Typography>
         </Link>
 
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-controls="sidebar"
-          className="lg:hidden text-white w-8 h-8 rounded-full flex items-center justify-center opacity-70
-                     bg-gradient-to-r from-primary to-meta-4 hover:opacity-100 transition-all duration-200 shadow-lg"
+          onClick={() => setSidebarOpen(false)}
+          className="lg:hidden text-white/70 hover:text-white"
         >
-          <ChevronLeft size={16} className="text-white" />
+          <X size={24} />
         </button>
       </div>
 
-      <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear flex-1">
-        <nav className="mt-5 py-4 px-4 lg:mt-9 lg:px-4">
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear flex-1 no-scrollbar">
+        <nav className="mt-2 py-2 px-4 lg:px-6">
           <ul className="mb-6 flex flex-col gap-1.5">
-            {filteredMenuItems.map((item) => {
-              if (item.route === '/companies' && isCompanyDetailRoute) {
-                return (
-                  <SidebarDropdown
-                    key={item.route}
-                    icon={item.icon}
-                    label={item.label}
-                    items={companySubMenuItems}
-                    defaultOpen={isCompanyDetailRoute}
-                  />
-                );
-              }
-
-              return (
-                <li key={item.route}>
-                  <Link
-                    href={item.route}
-                    className={`group relative flex items-center gap-2.5 rounded-lg py-3 px-4 font-medium duration-300 ease-in-out transition-colors
-                      ${isActive(item.route)
-                          ? 'bg-primary text-white dark:bg-primary dark:text-white shadow-md'
-                          : 'text-bodydark1 hover:bg-gray-800 dark:hover:bg-meta-4'
-                      }
-                    `}
-                  >
-                    <item.icon size={18} />
-                    <Typography
-                      as="span"
-                      variant="body1"
-                      className="text-inherit"
-                    >
-                      {item.label}
-                    </Typography>
-                  </Link>
-                </li>
-              );
-            })}
+            {filteredItems.map((item: MenuItem, index: number) => (
+              <SidebarItem
+                key={index}
+                item={item}
+                isOpen={openMenus.includes(item.route)}
+                onToggle={handleToggle}
+              />
+            ))}
           </ul>
-          {filteredMenuItems.length === 0 && (
-              <Typography
-                as="p"
-                variant="body1"
-                className="text-gray-500 dark:text-gray-400 p-4 text-center"
-              >
-                No permissions granted.
-              </Typography>
-          )}
         </nav>
       </div>
 
-      <div className="p-4 border-t border-gray-800 dark:border-gray-700">
+      <div className="p-4 border-t border-white/10">
         <button
-          onClick={handleLogout}
-         className="mt-2 flex w-full items-center  gap-2.5 rounded-lg py-3 px-4 font-bold text-danger text-lg transition-colors hover:bg-danger/10 dark:hover:bg-danger/20"
-
+          onClick={() => authService.logout()}
+          className="flex w-full items-center gap-3 rounded-lg py-2.5 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-red-500/10 hover:text-red-500"
         >
-          <LogOut size={18} />
-          <Typography
-            as="span"
-            variant="body"
-            className="text-inherit text-base"
-          >
-            Logout
-          </Typography>
+          <LogOut size={20} />
+          <span>Logout</span>
         </button>
       </div>
     </aside>

@@ -178,7 +178,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   };
 
   if (companyLoading || invoicesLoading) {
-    return <Loader />;
+    return <Loader variant="page" />;
   }
 
   const company = companyResponse?.data?.company;
@@ -371,11 +371,11 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   <option value="pending">Pending</option>
   <option value="sent">Sent</option>
   <option value="payment_received">Payment Received</option>
-  <option value="partially_paid">Partially Paid</option> {/* Added */}
+  <option value="partially_paid">Partially Paid</option>
   <option value="paid">Paid</option>
   <option value="overdue">Overdue</option>
-  <option value="void">Void</option> {/* Added */}
-  <option value="cancelled">Cancelled</option> {/* Added */}
+  <option value="void">Void</option>
+  <option value="cancelled">Cancelled</option>
   <option value="rejected">Rejected</option>
 </select>
             </div>
