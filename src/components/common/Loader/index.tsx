@@ -31,7 +31,16 @@ const Loader: React.FC<LoaderProps> = ({
   fullScreen = false,
   className = '',
 }) => {
-  const spinnerClass = `${sizeClasses[size]} animate-spin rounded-full border-solid border-primary border-t-transparent`;
+  // Check if className contains a border color override
+  const borderColorMatch = className.match(/border-(?:primary|white|black|gray-\d+|danger|success|warning|info)/);
+  const borderColor = borderColorMatch ? borderColorMatch[0] : 'border-primary';
+  
+  // Filter out border color classes from className for container
+  const containerClassName = className.split(' ').filter(cls => 
+    !cls.startsWith('border-') && cls !== 'border-t-transparent'
+  ).join(' ');
+  
+  const spinnerClass = `${sizeClasses[size]} animate-spin rounded-full border-solid ${borderColor} border-t-transparent`;
 
   if (fullScreen) {
     return (
@@ -44,7 +53,7 @@ const Loader: React.FC<LoaderProps> = ({
   const containerClass = variantContainerClasses[variant];
 
   return (
-    <div className={`${containerClass} ${className}`}>
+    <div className={`${containerClass} ${containerClassName}`}>
       <div className={spinnerClass}></div>
     </div>
   );

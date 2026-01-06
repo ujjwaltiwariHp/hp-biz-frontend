@@ -34,12 +34,31 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
     : isChildActive && !isOpen;
 
   useEffect(() => {
-    if (isOpen && contentSpace.current) {
-      setHeight(`${contentSpace.current.scrollHeight}px`);
-    } else {
-      setHeight('0px');
-    }
-  }, [isOpen]);
+    // Use requestAnimationFrame to ensure DOM is fully rendered before measuring
+    const updateHeight = () => {
+      if (isOpen && contentSpace.current) {
+        // Double-check that children are actually rendered
+        const hasContent = contentSpace.current.scrollHeight > 0;
+        if (hasContent) {
+          setHeight(`${contentSpace.current.scrollHeight}px`);
+        } else {
+          // If no content yet, retry after a short delay
+          setTimeout(() => {
+            if (contentSpace.current) {
+              setHeight(`${contentSpace.current.scrollHeight}px`);
+            }
+          }, 10);
+        }
+      } else {
+        setHeight('0px');
+      }
+    };
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      requestAnimationFrame(updateHeight);
+    });
+  }, [isOpen, item.children]); // Add item.children as dependency to recalculate when menu items change
 
   if (item.children) {
     return (

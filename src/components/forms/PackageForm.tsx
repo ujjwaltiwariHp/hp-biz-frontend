@@ -7,6 +7,7 @@ import { Info, AlertCircle } from 'lucide-react';
 import { Typography } from '@/components/common/Typography';
 import { useQuery } from '@tanstack/react-query';
 import { subscriptionService } from '@/services/subscription.service';
+import Loader from '@/components/common/Loader';
 
 // Define the shape of the form data, combining create and update fields
 type PackageFormState = CreatePackageData & { is_active?: boolean };
@@ -427,7 +428,7 @@ export default function PackageForm({
 
             {isFeaturesLoading ? (
               <div className="flex items-center justify-center py-6 text-gray-500 text-sm">
-                <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2"></span>
+                <Loader size="sm" variant="inline" className="mr-2" />
                 Loading features...
               </div>
             ) : availableFeatures.length === 0 ? (
@@ -497,7 +498,7 @@ export default function PackageForm({
           className="inline-flex items-center justify-center rounded-md bg-primary py-2 px-6 text-center font-medium text-white hover:bg-opacity-90 disabled:opacity-50 shadow-sm transition-all text-sm"
         >
           {isLoading && (
-            <span className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+            <Loader size="xs" variant="inline" className="mr-2" />
           )}
           {isEditMode ? 'Save Changes' : 'Create Package'}
         </button>

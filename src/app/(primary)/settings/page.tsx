@@ -17,6 +17,7 @@ import { ViewAdminsModal } from '@/components/modal/ViewAdminsModal';
 import { hasPermission } from '@/utils/adminHelpers';
 import { UpdateProfileData, ChangePasswordData } from '@/types/auth';
 import { BillingSettings } from '@/types/billing';
+import Loader from '@/components/common/Loader';
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -145,11 +146,7 @@ export default function SettingsPage() {
   };
 
   if (!isInitialized || !profile || rolesLoading || billingLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-      </div>
-    );
+    return <Loader variant="page" size="lg" />;
   }
 
   const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');

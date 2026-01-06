@@ -22,6 +22,7 @@ import { toast } from 'react-toastify';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useSSE } from '@/hooks/useSSE';
+import Loader from '@/components/common/Loader';
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
@@ -192,9 +193,7 @@ const NotificationsPage = () => {
     return (
       <>
         <Breadcrumb pageName=" Notifications" />
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        <Loader variant="inline" size="lg" className="h-40" />
       </>
     );
 

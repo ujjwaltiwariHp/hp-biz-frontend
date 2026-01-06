@@ -16,7 +16,7 @@ export default function DefaultLayout({
 
   return (
     <div className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen">
-
+      {/* Background components with hydration guards to prevent SSR/CSR mismatch */}
       <AnimatedBackground />
       <GlassmorphicShapes />
 

@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import { useEffect, type FC, type ReactNode } from "react";
 import { AlertTriangle, Trash2, CheckCircle, Info, XCircle, X } from "lucide-react";
+import Loader from "@/components/common/Loader";
 
 type DialogType = "danger" | "warning" | "success" | "info";
 
@@ -15,7 +16,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 const dialogConfig = {
@@ -49,7 +50,7 @@ const dialogConfig = {
   },
 };
 
-export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+export const ConfirmDialog: FC<ConfirmDialogProps> = ({
   isOpen,
   type = "warning",
   title = "Are you sure?",
@@ -62,7 +63,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   children,
 }) => {
   // Prevent background scroll when dialog is open
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
     }
@@ -133,7 +134,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  <Loader size="xs" variant="inline" className="border-white" />
                   Loading...
                 </span>
               ) : (
