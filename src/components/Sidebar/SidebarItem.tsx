@@ -1,74 +1,165 @@
-import React from "react";
-import Link from "next/link";
-import SidebarDropdown from "@/components/Sidebar/SidebarDropdown";
-import { usePathname } from "next/navigation";
-import { Typography } from "@/components/common/Typography"; // Import Typography
+'use client';
+import React, { useRef, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ChevronDown } from 'lucide-react';
+import { MenuItem } from './menuItems';
 
-const SidebarItem = ({ item, pageName, setPageName }: any) => {
-  const handleClick = () => {
-    const updatedPageName =
-      pageName !== item.label.toLowerCase() ? item.label.toLowerCase() : "";
-    return setPageName(updatedPageName);
-  };
+interface SidebarItemProps {
+  item: MenuItem;
+  isOpen: boolean;
+  onToggle: (route: string) => void;
+}
 
+const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
   const pathname = usePathname();
+  const contentSpace = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState('0px');
 
-  const isActive = (item: any) => {
-    if (item.route === pathname) return true;
-    if (item.children) {
-      return item.children.some((child: any) => isActive(child));
+  const isExactActive =
+    item.route === pathname || (item.route === '/dashboard' && pathname === '/');
+
+  const isChildActive = item.children?.some(
+    (child) =>
+      pathname === child.route ||
+      pathname.startsWith(child.route) ||
+      child.children?.some(
+        (nested) =>
+          pathname === nested.route || pathname.startsWith(nested.route)
+      )
+  );
+
+  const isParentHighlighted = !item.children
+    ? isExactActive
+    : isChildActive && !isOpen;
+
+  useEffect(() => {
+    if (isOpen && contentSpace.current) {
+      setHeight(`${contentSpace.current.scrollHeight}px`);
+    } else {
+      setHeight('0px');
     }
-    return false;
-  };
+  }, [isOpen]);
 
-  const isItemActive = isActive(item);
+  if (item.children) {
+    return (
+      <li className="flex flex-col">
+        <button
+          onClick={() => onToggle(item.route)}
+          className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-base transition-all duration-200 ease-in-out w-full
+            ${
+              isParentHighlighted
+                ? 'bg-sky-500/20 text-white'
+                : 'text-bodydark1 hover:text-white'
+            }
+          `}
+        >
+          <item.icon
+            size={20}
+            className={isParentHighlighted ? 'text-sky-400' : 'text-inherit'}
+          />
+
+          <span className="flex-1 text-left whitespace-nowrap">
+            {item.label}
+          </span>
+
+          <ChevronDown
+            size={16}
+            className={`transition-transform duration-300 ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+          />
+
+          {isParentHighlighted && (
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md bg-sky-400 shadow-glow"></span>
+          )}
+        </button>
+
+        <div
+          ref={contentSpace}
+          style={{ maxHeight: height }}
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+        >
+          <div className="mt-1 flex flex-col gap-1 pl-9 pr-2">
+            {item.children.map((child, idx) => {
+              const isActive = pathname === child.route;
+
+              return (
+                <div key={idx}>
+                  <Link
+                    href={child.route}
+                    className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-base font-medium transition-colors duration-200
+                      ${
+                        isActive
+                          ? 'text-white bg-sky-500/20'
+                          : 'text-bodydark2 hover:text-white'
+                      }
+                    `}
+                  >
+                    {child.icon && <child.icon size={16} />}
+                    <span>{child.label}</span>
+
+                    {isActive && (
+                      <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-glow"></span>
+                    )}
+                  </Link>
+
+                  {child.children && (
+                    <div className="mt-1 flex flex-col gap-1 pl-5">
+                      {child.children.map((nested, nIdx) => {
+                        const nestedActive = pathname === nested.route;
+
+                        return (
+                          <Link
+                            key={nIdx}
+                            href={nested.route}
+                            className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-sm font-medium transition-colors duration-200
+                              ${
+                                nestedActive
+                                  ? 'text-white bg-sky-500/20'
+                                  : 'text-bodydark2 hover:text-white'
+                              }
+                            `}
+                          >
+                            {nested.icon && <nested.icon size={14} />}
+                            <span>{nested.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </li>
+    );
+  }
 
   return (
-    <>
-      <li>
-        <Link
-          href={item.route}
-          onClick={handleClick}
-          // Removed font-medium text-bodydark1 from here
-          className={`${isItemActive ? "bg-graydark dark:bg-meta-4" : ""} group relative flex items-center gap-2.5 rounded-sm px-4 py-2 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4`}
-        >
-          {item.icon}
-          {/* Wrapped item.label in Typography and passed the removed classes */}
-          <Typography as="span" variant="body" className="font-medium text-bodydark1">
-            {item.label}
-          </Typography>
-          {item.children && (
-            <svg
-              className={`absolute right-4 top-1/2 -translate-y-1/2 fill-current ${
-                pageName === item.label.toLowerCase() && "rotate-180"
-              }`}
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M4.41107 6.9107C4.73651 6.58527 5.26414 6.58527 5.58958 6.9107L10.0003 11.3214L14.4111 6.91071C14.7365 6.58527 15.2641 6.58527 15.5896 6.91071C15.915 7.23614 15.915 7.76378 15.5896 8.08922L10.5896 13.0892C10.2641 13.4147 9.73651 13.4147 9.41107 13.0892L4.41107 8.08922C4.08563 7.76378 4.08563 7.23614 4.41107 6.9107Z"
-                fill=""
-              />
-            </svg>
-          )}
-        </Link>
+    <li>
+      <Link
+        href={item.route}
+        className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-base transition-all duration-200 ease-in-out
+          ${
+            isExactActive
+              ? 'bg-sky-500/20 text-white'
+              : 'text-bodydark1 hover:text-white'
+          }
+        `}
+      >
+        <item.icon
+          size={20}
+          className={isExactActive ? 'text-sky-400' : 'text-inherit'}
+        />
+        <span>{item.label}</span>
 
-        {item.children && (
-          <div
-            className={`translate transform overflow-hidden ${
-              pageName !== item.label.toLowerCase() && "hidden"
-            }`}
-          >
-           <SidebarDropdown items={item.children} label={item.label} icon={item.icon} defaultOpen={true} />
-          </div>
+        {isExactActive && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md bg-sky-400 shadow-glow"></span>
         )}
-      </li>
-    </>
+      </Link>
+    </li>
   );
 };
 
