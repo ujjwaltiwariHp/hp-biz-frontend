@@ -1,6 +1,5 @@
 'use client';
 
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { useState } from 'react';
@@ -344,15 +343,11 @@ export default function CompaniesPage() {
 
   // UPDATED: Using consistent Common Loader Component
   if (isLoading) {
-    return (
-      <DefaultLayout>
-        <Loader variant="page" />
-      </DefaultLayout>
-    );
+    return <Loader variant="page" />;
   }
 
   return (
-    <DefaultLayout>
+    <>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
 
         {/* Header with Provisioning Button */}
@@ -560,6 +555,6 @@ export default function CompaniesPage() {
         onClose={() => setShowDatePicker(false)}
         onApply={handleDateRangeApply}
       />
-    </DefaultLayout>
+    </>
   );
 }

@@ -2,7 +2,6 @@ import '@/css/style.css';
 import '@/css/satoshi.css';
 import '@/css/typography.css';
 import React, { ReactNode } from 'react';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import QueryProvider  from '@/context/QueryProvider';
 import { SSEProvider } from '@/context/SSEContext';
 

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { logsService } from '@/services/logs.service';
 import { ActivityLog, LogFilters, SystemLog } from '@/types/logs';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { Typography } from '@/components/common/Typography';
 import DynamicTable from '@/components/common/DynamicTable';
@@ -525,7 +524,7 @@ export default function LogsPage() {
   );
 
   return (
-    <DefaultLayout>
+    <>
       <Breadcrumb pageName="Logs Management" />
 
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -626,6 +625,6 @@ export default function LogsPage() {
         onClose={() => setShowDatePicker(false)}
         onApply={handleDateRangeApply}
       />
-    </DefaultLayout>
+    </>
   );
 }

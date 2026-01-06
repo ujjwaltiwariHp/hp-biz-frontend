@@ -15,7 +15,6 @@ import {
   CheckSquare,
 } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { notificationService } from '@/services/notification.service';
 import { invoiceService } from '@/services/invoice.service';
 import { SuperAdminNotification } from '@/types/notification';
@@ -191,17 +190,17 @@ const NotificationsPage = () => {
 
   if (isLoading)
     return (
-      <DefaultLayout>
+      <>
         <Breadcrumb pageName=" Notifications" />
         <div className="flex justify-center items-center h-40">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </DefaultLayout>
+      </>
     );
 
   if (error)
     return (
-      <DefaultLayout>
+      <>
         <Breadcrumb pageName="Notifications" />
         <div className="text-center py-16">
           <AlertCircle size={48} className="mx-auto mb-4 text-red-400" />
@@ -214,11 +213,11 @@ const NotificationsPage = () => {
             Retry
           </button>
         </div>
-      </DefaultLayout>
+      </>
     );
 
   return (
-    <DefaultLayout>
+    <>
       <Breadcrumb pageName=" Notifications" />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -386,7 +385,7 @@ const NotificationsPage = () => {
           />
         </div>
       </ConfirmDialog>
-    </DefaultLayout>
+    </>
   );
 };
 

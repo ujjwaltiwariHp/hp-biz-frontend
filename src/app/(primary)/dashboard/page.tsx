@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { Typography } from '@/components/common/Typography';
 import {
   Building2,
@@ -303,10 +302,10 @@ export default function Dashboard() {
     },
   ];
 
-  if (!isMounted) return <DefaultLayout><Loader variant="page" /></DefaultLayout>;
+  if (!isMounted) return <Loader variant="page" />;
 
   return (
-    <DefaultLayout>
+    <>
       <div className="mx-auto w-full max-w-full p-3 h-full min-h-[calc(100vh-80px)] overflow-y-auto lg:overflow-hidden flex flex-col gap-3">
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between shrink-0 px-1 gap-2">
@@ -513,6 +512,6 @@ export default function Dashboard() {
         setDateRange={setDateRange}
         onClose={() => setIsDatePickerOpen(false)}
       />
-    </DefaultLayout>
+    </>
   );
 }

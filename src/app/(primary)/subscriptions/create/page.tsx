@@ -1,6 +1,5 @@
 'use client';
 
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import PackageForm from '@/components/forms/PackageForm';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -31,7 +30,7 @@ export default function CreateSubscriptionPage() {
   };
 
   return (
-    <DefaultLayout>
+    <>
       <Breadcrumb pageName="Create Subscription Package" />
       <div className="mx-auto max-w-4xl">
         <PackageForm
@@ -41,6 +40,6 @@ export default function CreateSubscriptionPage() {
           isEditMode={false}
         />
       </div>
-    </DefaultLayout>
+    </>
   );
 }

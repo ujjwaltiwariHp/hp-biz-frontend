@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/auth.service';
 import { billingService } from '@/services/billing.service';
@@ -147,11 +146,9 @@ export default function SettingsPage() {
 
   if (!isInitialized || !profile || rolesLoading || billingLoading) {
     return (
-      <DefaultLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-        </div>
-      </DefaultLayout>
+      <div className="flex items-center justify-center h-screen">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
+      </div>
     );
   }
 
@@ -164,7 +161,7 @@ export default function SettingsPage() {
   const billingSettings = billingResponse;
 
   return (
-    <DefaultLayout>
+    <>
       <div className="mx-auto max-w-screen-2xl">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-title-md2 font-semibold text-black dark:text-white">
@@ -338,7 +335,7 @@ export default function SettingsPage() {
           canEdit={canEditBilling}
         />
       )}
-    </DefaultLayout>
+    </>
   );
 }
 

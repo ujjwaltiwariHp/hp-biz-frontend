@@ -1,6 +1,5 @@
 'use client';
 
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionService } from '@/services/subscription.service';
 import { useState, useMemo } from 'react';
@@ -141,11 +140,7 @@ export default function SubscriptionsPage() {
   };
 
   if (isLoading) {
-    return (
-      <DefaultLayout>
-        <Loader />
-      </DefaultLayout>
-    );
+    return <Loader />;
   }
 
   const toggleDialogProps = selectedPackage
@@ -159,7 +154,7 @@ export default function SubscriptionsPage() {
 
 
   return (
-    <DefaultLayout>
+    <>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark font-satoshi">
         <div className="py-6 px-4 md:px-6 xl:px-7.5 flex justify-between items-center border-b border-stroke dark:border-strokedark">
           <div>
@@ -420,6 +415,6 @@ export default function SubscriptionsPage() {
         confirmText={toggleDialogProps.confirmText}
         isLoading={toggleStatusMutation.isPending}
       />
-    </DefaultLayout>
+    </>
   );
 }

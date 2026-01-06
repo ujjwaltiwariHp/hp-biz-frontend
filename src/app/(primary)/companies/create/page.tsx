@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -181,7 +180,7 @@ export default function CreateCompanyPage() {
 
   if (packagesError || packages.length === 0) {
       return (
-        <DefaultLayout>
+        <>
             <Breadcrumb pageName="Create Company" />
             <div className="p-6 text-center border border-danger/50 bg-danger/10 rounded-lg">
                 <XCircle size={32} className="text-danger mx-auto mb-3" />
@@ -196,12 +195,12 @@ export default function CreateCompanyPage() {
                     <Typography variant="body2" as="span">Go to Subscriptions Page</Typography>
                 </button>
             </div>
-        </DefaultLayout>
+        </>
       );
   }
 
   return (
-    <DefaultLayout>
+    <>
       <Breadcrumb pageName="Provision New Company" />
       <div className="mx-auto max-w-3xl">
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -353,6 +352,6 @@ export default function CreateCompanyPage() {
           </form>
         </div>
       </div>
-    </DefaultLayout>
+    </>
   );
 }
