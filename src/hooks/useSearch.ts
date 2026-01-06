@@ -12,9 +12,15 @@ export const useSearch = <T = any>(
   const [error, setError] = useState('');
   const debounceTimer = useRef<NodeJS.Timeout>();
   const cacheRef = useRef<Record<string, T[]>>({});
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const executeSearch = useCallback(
     async (searchQuery: string) => {
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
       // If query is present but shorter than minLength, we do not call the API.
       if (searchQuery.length > 0 && searchQuery.length < minLength) {
          setResults([]);
@@ -38,19 +44,35 @@ export const useSearch = <T = any>(
         return;
       }
 
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       setIsLoading(true);
       setError('');
 
       try {
         const data = await searchFn(searchQuery);
-        setResults(data);
-        cacheRef.current[searchQuery] = data;
-      } catch (err) {
+        
+        // Only update if request wasn't aborted
+        if (!abortController.signal.aborted) {
+          setResults(data);
+          cacheRef.current[searchQuery] = data;
+        }
+      } catch (err: any) {
+        // Ignore abort errors
+        if (err?.name === 'AbortError' || abortController.signal.aborted) {
+          return;
+        }
         console.error("Search execution failed:", err);
-        setError('Search failed. Please try again.');
-        setResults([]);
+        if (!abortController.signal.aborted) {
+          setError('Search failed. Please try again.');
+          setResults([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     },
     [searchFn, minLength]
@@ -104,12 +126,32 @@ export const useSearch = <T = any>(
 
 
   const handleClear = useCallback(() => {
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
     setQuery('');
     setResults([]);
     setError('');
+    setIsLoading(false);
     // Explicitly execute search with an empty string to reset the TanStack query dependency
     executeSearch('');
   }, [executeSearch]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   return {
     query,

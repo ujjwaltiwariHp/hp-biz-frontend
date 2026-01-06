@@ -14,8 +14,17 @@ interface Dot {
 
 const AnimatedBackground = () => {
     const [dots, setDots] = useState<Dot[]>([]);
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Hydration guard: only render after client-side mount
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
+        // Only initialize dots after mount to prevent SSR/CSR mismatch
+        if (!isMounted) return;
+
         // Function to create initial dots
         const createDots = (): Dot[] => {
             const newDots: Dot[] = [];
@@ -58,7 +67,16 @@ const AnimatedBackground = () => {
         }, 50);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [isMounted]);
+
+    // Render static background during SSR and before hydration
+    if (!isMounted) {
+        return (
+            <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
+            </div>
+        );
+    }
 
     return (
         // Fixed positioning ensures it covers the entire viewport and stays behind content

@@ -47,10 +47,11 @@ export default function SubscriptionsPage() {
   // Filter logic applied on the client side to fix the backend "Inactive Only" issue
   const filteredPackages = useMemo(() => {
     const allPackages = packagesData?.data?.packages || [];
-    if (activeFilter === 'all') return allPackages;
+    // Always return a new array to prevent mutation issues
+    if (activeFilter === 'all') return [...allPackages];
     if (activeFilter === 'active') return allPackages.filter(p => p.is_active);
     if (activeFilter === 'inactive') return allPackages.filter(p => !p.is_active);
-    return allPackages;
+    return [...allPackages];
   }, [packagesData, activeFilter]);
 
   const toggleStatusMutation = useMutation({
@@ -346,7 +347,7 @@ export default function SubscriptionsPage() {
                   <div className="p-4 bg-gray-50 dark:bg-boxdark-2 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center gap-3 h-16">
                     {isProcessing ? (
                        <div className="flex items-center justify-center w-full text-primary text-xs font-medium animate-pulse">
-                           <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+                           <Loader size="sm" variant="inline" className="mr-2" />
                            Processing...
                        </div>
                     ) : isSuperAdmin && (

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getMenuItems, MenuItem } from './menuItems';
 import SidebarItem from './SidebarItem';
 import { Typography } from '@/components/common/Typography';
+import { useHydrated } from '@/hooks/useHydrated';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -25,6 +26,7 @@ const checkPermission = (permissions: Record<string, string[]>, resource?: strin
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const pathname = usePathname();
   const { isInitialized, isAuthenticated, permissions } = useAuth();
+  const isHydrated = useHydrated();
 
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -49,7 +51,43 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     );
   };
 
-  if (!isInitialized || !isAuthenticated) return null;
+  // Render empty sidebar structure during SSR/hydration to prevent layout shift
+  // Only hide content if not authenticated after hydration
+  if (!isHydrated) {
+    return (
+      <aside
+        className={`absolute left-0 top-0 z-99999 flex h-screen w-72.5 flex-col overflow-y-hidden bg-[#1c2434] duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2 px-6 py-5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400">
+              <Building size={24} />
+            </div>
+            <Typography as="span" variant="page-title" className="!text-white tracking-wider text-xl font-bold">
+              HP-BIZ
+            </Typography>
+          </div>
+        </div>
+        <div className="flex flex-col overflow-y-auto duration-300 ease-linear flex-1 no-scrollbar">
+          <nav className="mt-2 py-2 px-4 lg:px-6">
+            <ul className="mb-6 flex flex-col gap-1.5">
+              {/* Placeholder items during hydration */}
+              {[1, 2, 3, 4].map((i) => (
+                <li key={i} className="h-10 bg-white/5 rounded-lg animate-pulse" />
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </aside>
+    );
+  }
+
+  // After hydration, check authentication
+  if (!isInitialized || !isAuthenticated) {
+    return null;
+  }
 
   const menuItems: MenuItem[] = getMenuItems(companyId);
   const filteredItems = menuItems.filter((item: MenuItem) =>

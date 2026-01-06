@@ -55,9 +55,11 @@ export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
   };
 
   const handleSearch = () => {
-    if (localValue.length === 0 || localValue.length >= minLength) {
-      onSearch();
+    // Prevent search if value is less than minLength
+    if (localValue.length > 0 && localValue.length < minLength) {
+      return;
     }
+    onSearch();
   };
 
   const handleClear = () => {
