@@ -34,31 +34,53 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
     : isChildActive && !isOpen;
 
   useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is fully rendered before measuring
+    if (!contentSpace.current) return;
+
+    let retryTimeout: NodeJS.Timeout | null = null;
+    let rafId1: number | null = null;
+    let rafId2: number | null = null;
+
     const updateHeight = () => {
       if (isOpen && contentSpace.current) {
-        // Double-check that children are actually rendered
-        const hasContent = contentSpace.current.scrollHeight > 0;
-        if (hasContent) {
-          setHeight(`${contentSpace.current.scrollHeight}px`);
+        const scrollHeight = contentSpace.current.scrollHeight;
+        if (scrollHeight > 0) {
+          setHeight(`${scrollHeight}px`);
         } else {
-          // If no content yet, retry after a short delay
-          setTimeout(() => {
+          // Retry if content not ready yet
+          retryTimeout = setTimeout(() => {
             if (contentSpace.current) {
               setHeight(`${contentSpace.current.scrollHeight}px`);
             }
-          }, 10);
+          }, 50);
         }
       } else {
         setHeight('0px');
       }
     };
 
-    // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(() => {
-      requestAnimationFrame(updateHeight);
+    // Use double RAF to ensure DOM is fully rendered
+    rafId1 = requestAnimationFrame(() => {
+      rafId2 = requestAnimationFrame(updateHeight);
     });
-  }, [isOpen, item.children]); // Add item.children as dependency to recalculate when menu items change
+
+    // Also use ResizeObserver to handle dynamic content changes
+    const resizeObserver = new ResizeObserver(() => {
+      if (isOpen && contentSpace.current) {
+        setHeight(`${contentSpace.current.scrollHeight}px`);
+      }
+    });
+
+    if (contentSpace.current) {
+      resizeObserver.observe(contentSpace.current);
+    }
+
+    return () => {
+      if (rafId1 !== null) cancelAnimationFrame(rafId1);
+      if (rafId2 !== null) cancelAnimationFrame(rafId2);
+      if (retryTimeout !== null) clearTimeout(retryTimeout);
+      resizeObserver.disconnect();
+    };
+  }, [isOpen, item.children]);
 
   if (item.children) {
     return (

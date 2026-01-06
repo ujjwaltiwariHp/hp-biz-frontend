@@ -143,6 +143,8 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
         }
         setEventSource(null);
         setIsConnected(false);
+        // Clear all listeners when disconnecting
+        listenersRef.current.clear();
         return;
     }
 
@@ -183,6 +185,25 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
         };
     }
   }, [isConnected, isAuthenticated, isInitialized, eventSource, connectionAttempts, connect]);
+
+  // Cleanup on unmount - prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Close EventSource connection
+      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+      }
+      // Clear all listeners to prevent memory leaks
+      listenersRef.current.clear();
+      // Clear timeouts
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
+  }, [eventSource]);
 
   const subscribe = useCallback((eventType: SSEEventType, listener: SSEListener) => {
     if (!listenersRef.current.has(eventType)) {

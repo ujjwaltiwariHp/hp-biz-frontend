@@ -72,7 +72,12 @@ export default function CompanyOverviewPage({ params }: PageProps) {
   }
 
   const company = companyResponse?.data?.company;
-  const stats = companyResponse?.data?.stats;
+  const stats = companyResponse?.data?.stats || {
+    total_staff: 0,
+    total_leads: 0,
+    leads_this_month: 0,
+    total_activities: 0,
+  };
   const pkg = packageResponse?.data?.package;
   const allInvoices = invoicesResponse?.invoices || [];
 

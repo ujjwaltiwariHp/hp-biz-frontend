@@ -44,7 +44,12 @@ const Loader: React.FC<LoaderProps> = ({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50">
+      <div 
+        className="fixed inset-0 z-999999 flex items-center justify-center bg-black/50"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading"
+      >
         <div className={spinnerClass}></div>
       </div>
     );
@@ -53,7 +58,12 @@ const Loader: React.FC<LoaderProps> = ({
   const containerClass = variantContainerClasses[variant];
 
   return (
-    <div className={`${containerClass} ${containerClassName}`}>
+    <div 
+      className={`${containerClass} ${containerClassName}`}
+      role="status"
+      aria-live="polite"
+      aria-label="Loading"
+    >
       <div className={spinnerClass}></div>
     </div>
   );

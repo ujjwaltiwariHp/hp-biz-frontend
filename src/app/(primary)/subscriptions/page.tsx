@@ -47,10 +47,11 @@ export default function SubscriptionsPage() {
   // Filter logic applied on the client side to fix the backend "Inactive Only" issue
   const filteredPackages = useMemo(() => {
     const allPackages = packagesData?.data?.packages || [];
-    if (activeFilter === 'all') return allPackages;
+    // Always return a new array to prevent mutation issues
+    if (activeFilter === 'all') return [...allPackages];
     if (activeFilter === 'active') return allPackages.filter(p => p.is_active);
     if (activeFilter === 'inactive') return allPackages.filter(p => !p.is_active);
-    return allPackages;
+    return [...allPackages];
   }, [packagesData, activeFilter]);
 
   const toggleStatusMutation = useMutation({

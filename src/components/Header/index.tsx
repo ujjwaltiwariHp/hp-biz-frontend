@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { companyService } from '@/services/company.service';
 import { useSSE } from '@/hooks/useSSE';
 import { useSSEContext } from '@/context/SSEContext';
+import { useHydrated } from '@/hooks/useHydrated';
 
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
@@ -18,6 +19,7 @@ const Header = (props: {
 }) => {
   const { subscribe } = useSSEContext();
   const [isBlinking, setIsBlinking] = useState(false);
+  const isHydrated = useHydrated();
 
   const { data: notificationStats, refetch: refetchStats } = useQuery({
     queryKey: ['notifications', 'unreadCount', true],
@@ -128,6 +130,8 @@ const Header = (props: {
     }
   }, [pathname]);
 
+  // Always render header structure to prevent layout shift
+  // Content will be populated after hydration
   return (
     <header className="sticky top-0 z-999 flex w-full bg-white drop-shadow-1 dark:bg-boxdark dark:drop-shadow-none">
       <div className="flex flex-grow items-center justify-between px-4 py-4 shadow-2 md:px-6 2xl:px-11">
@@ -149,30 +153,34 @@ const Header = (props: {
         </div>
 
         <div className="hidden sm:flex items-center gap-1">
-          {breadcrumbs.map((crumb, index) => (
-            <div key={index} className="flex items-center gap-1">
-              {index > 0 && (
-                <ChevronRight size={16} className="text-gray-400 dark:text-gray-600 mx-1" />
-              )}
-              {crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="text-sm font-medium text-black dark:text-white">
-                  {crumb.label}
-                </span>
-              )}
-            </div>
-          ))}
+          {isHydrated && breadcrumbs.length > 0 ? (
+            breadcrumbs.map((crumb, index) => (
+              <div key={index} className="flex items-center gap-1">
+                {index > 0 && (
+                  <ChevronRight size={16} className="text-gray-400 dark:text-gray-600 mx-1" />
+                )}
+                {crumb.href ? (
+                  <Link
+                    href={crumb.href}
+                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className="text-sm font-medium text-black dark:text-white">
+                    {crumb.label}
+                  </span>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          )}
         </div>
 
         <div className="flex items-center gap-3 2xsm:gap-7">
           <ul className="flex items-center gap-2 2xsm:gap-4">
-            <DarkModeSwitcher />
+            {isHydrated && <DarkModeSwitcher />}
 
             <li>
               <Link
@@ -180,16 +188,16 @@ const Header = (props: {
                 onClick={() => setIsBlinking(false)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
               >
-                {unreadCount > 0 && (
+                {isHydrated && unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 z-10 inline-flex items-center justify-center rounded-full bg-meta-1 p-1 text-xs font-medium text-white ring-2 ring-white dark:ring-boxdark min-w-[20px] h-5">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-                <Bell className={`w-5 h-5 ${isBlinking ? 'animate-bell text-primary' : ''}`} />
+                <Bell className={`w-5 h-5 ${isHydrated && isBlinking ? 'animate-bell text-primary' : ''}`} />
               </Link>
             </li>
           </ul>
-          <DropdownUser />
+          {isHydrated && <DropdownUser />}
         </div>
       </div>
     </header>
