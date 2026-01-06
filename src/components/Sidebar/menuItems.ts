@@ -18,40 +18,27 @@ export interface SubItem {
   label: string;
   route: string;
   icon?: LucideIcon;
+  children?: SubItem[];
 }
 
 export interface MenuItem {
   label: string;
   route: string;
   icon: LucideIcon;
-  requiredResource?: string; // For permission checking
+  requiredResource?: string;
   children?: SubItem[];
 }
 
-// Function to generate items (allows injecting dynamic IDs like companyId)
 export const getMenuItems = (companyId: string | null): MenuItem[] => {
 
-  // 1. Define the base "Companies" children
-  const companyChildren: SubItem[] = [
-    {
-      label: 'All Companies',
-      route: '/companies',
-      icon: List,
-    },
-    {
-      label: 'Create Company',
-      route: '/companies/create',
-      icon: Plus,
-    }
-  ];
+  const allCompaniesChildren: SubItem[] = [];
 
-  // 2. If a Company ID is selected, inject the context-specific features
   if (companyId) {
-    companyChildren.push(
+    allCompaniesChildren.push(
       {
         label: 'Overview',
         route: `/companies/${companyId}`,
-        icon: Store, // Differentiates the specific company view
+        icon: Store,
       },
       {
         label: 'Subscriptions',
@@ -71,6 +58,20 @@ export const getMenuItems = (companyId: string | null): MenuItem[] => {
     );
   }
 
+  const companyChildren: SubItem[] = [
+    {
+      label: 'All Companies',
+      route: '/companies',
+      icon: List,
+      children: allCompaniesChildren,
+    },
+    {
+      label: 'Create Company',
+      route: '/companies/create',
+      icon: Plus,
+    }
+  ];
+
   return [
     {
       label: 'Dashboard',
@@ -80,20 +81,19 @@ export const getMenuItems = (companyId: string | null): MenuItem[] => {
     },
     {
       label: 'Companies',
-      route: '/companies', // Parent route
+      route: '/companies',
       icon: Building,
       requiredResource: 'companies',
-      children: companyChildren, // Use the dynamic array
+      children: companyChildren,
     },
-    // Global Subscription Management (Plans/Packages)
     {
-      label: 'Plan Management', // Renamed for clarity vs Company Subscriptions
+      label: 'Subscription Management',
       route: '/subscriptions',
       icon: CreditCard,
       requiredResource: 'subscriptions',
       children: [
         {
-          label: 'Package List',
+          label: 'All Plans',
           route: '/subscriptions',
           icon: List,
         },
@@ -104,7 +104,6 @@ export const getMenuItems = (companyId: string | null): MenuItem[] => {
         }
       ]
     },
-    // Global/System Logs & Invoices (if needed, otherwise these can be removed)
     {
       label: 'All Invoices',
       route: '/invoices',

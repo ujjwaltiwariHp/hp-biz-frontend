@@ -16,18 +16,23 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
   const contentSpace = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState('0px');
 
-  // 1. Check if this specific item is the current page
-  const isExactActive = item.route === pathname || (item.route === '/dashboard' && pathname === '/');
+  const isExactActive =
+    item.route === pathname || (item.route === '/dashboard' && pathname === '/');
 
-  // 2. Check if any child is active
-  const isChildActive = item.children?.some((child) => pathname === child.route || pathname.startsWith(child.route));
+  const isChildActive = item.children?.some(
+    (child) =>
+      pathname === child.route ||
+      pathname.startsWith(child.route) ||
+      child.children?.some(
+        (nested) =>
+          pathname === nested.route || pathname.startsWith(nested.route)
+      )
+  );
 
-  // 3. Highlight Parent ONLY if collapsed and active (Show "You are here" marker)
   const isParentHighlighted = !item.children
     ? isExactActive
-    : (isChildActive && !isOpen);
+    : isChildActive && !isOpen;
 
-  // Handle Height Animation
   useEffect(() => {
     if (isOpen && contentSpace.current) {
       setHeight(`${contentSpace.current.scrollHeight}px`);
@@ -36,20 +41,23 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
     }
   }, [isOpen]);
 
-  // --- RENDER: DROPDOWN PARENT ---
   if (item.children) {
     return (
       <li className="flex flex-col">
         <button
           onClick={() => onToggle(item.route)}
           className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-sm transition-all duration-200 ease-in-out w-full
-            ${isParentHighlighted
-              ? "bg-sky-500/20 text-white" // Active (Collapsed): Blue BG
-              : "text-bodydark1 hover:text-white" // Inactive/Open: No BG, just text color hover
+            ${
+              isParentHighlighted
+                ? 'bg-sky-500/20 text-white'
+                : 'text-bodydark1 hover:text-white'
             }
           `}
         >
-          <item.icon size={20} className={isParentHighlighted ? 'text-sky-400' : 'text-inherit'} />
+          <item.icon
+            size={20}
+            className={isParentHighlighted ? 'text-sky-400' : 'text-inherit'}
+          />
 
           <span className="flex-1 text-left whitespace-nowrap">
             {item.label}
@@ -57,16 +65,16 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
 
           <ChevronDown
             size={16}
-            className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+            className={`transition-transform duration-300 ${
+              isOpen ? 'rotate-180' : ''
+            }`}
           />
 
-          {/* Active Bar Indicator (Only when closed & active) */}
           {isParentHighlighted && (
             <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md bg-sky-400 shadow-glow"></span>
           )}
         </button>
 
-        {/* Dropdown Content */}
         <div
           ref={contentSpace}
           style={{ maxHeight: height }}
@@ -75,25 +83,52 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
           <div className="mt-1 flex flex-col gap-1 pl-9 pr-2">
             {item.children.map((child, idx) => {
               const isActive = pathname === child.route;
-              return (
-                <Link
-                  key={idx}
-                  href={child.route}
-                  className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-sm font-medium transition-colors duration-200
-                    ${isActive
-                      ? "text-white bg-sky-500/20"  // Active Child: Blue BG
-                      : "text-bodydark2 hover:text-white" // Inactive Child: No BG, just text hover
-                    }
-                  `}
-                >
-                  {child.icon && <child.icon size={16} />}
-                  <span>{child.label}</span>
 
-                  {/* Child Active Dot */}
-                  {isActive && (
-                    <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-glow"></span>
+              return (
+                <div key={idx}>
+                  <Link
+                    href={child.route}
+                    className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-sm font-medium transition-colors duration-200
+                      ${
+                        isActive
+                          ? 'text-white bg-sky-500/20'
+                          : 'text-bodydark2 hover:text-white'
+                      }
+                    `}
+                  >
+                    {child.icon && <child.icon size={16} />}
+                    <span>{child.label}</span>
+
+                    {isActive && (
+                      <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-glow"></span>
+                    )}
+                  </Link>
+
+                  {child.children && (
+                    <div className="mt-1 flex flex-col gap-1 pl-5">
+                      {child.children.map((nested, nIdx) => {
+                        const nestedActive = pathname === nested.route;
+
+                        return (
+                          <Link
+                            key={nIdx}
+                            href={nested.route}
+                            className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-sm font-medium transition-colors duration-200
+                              ${
+                                nestedActive
+                                  ? 'text-white bg-sky-500/20'
+                                  : 'text-bodydark2 hover:text-white'
+                              }
+                            `}
+                          >
+                            {nested.icon && <nested.icon size={14} />}
+                            <span>{nested.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   )}
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -102,23 +137,26 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
     );
   }
 
-  // --- RENDER: SINGLE LINK ---
   return (
     <li>
       <Link
         href={item.route}
         className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-sm transition-all duration-200 ease-in-out
-          ${isExactActive
-            ? "bg-sky-500/20 text-white"
-            : "text-bodydark1 hover:text-white" // No BG on hover
+          ${
+            isExactActive
+              ? 'bg-sky-500/20 text-white'
+              : 'text-bodydark1 hover:text-white'
           }
         `}
       >
-        <item.icon size={20} className={isExactActive ? 'text-sky-400' : 'text-inherit'} />
+        <item.icon
+          size={20}
+          className={isExactActive ? 'text-sky-400' : 'text-inherit'}
+        />
         <span>{item.label}</span>
 
         {isExactActive && (
-           <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md bg-sky-400 shadow-glow"></span>
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-md bg-sky-400 shadow-glow"></span>
         )}
       </Link>
     </li>
