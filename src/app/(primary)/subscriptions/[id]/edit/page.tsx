@@ -1,6 +1,5 @@
 'use client';
 
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import PackageForm from '@/components/forms/PackageForm';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
@@ -57,11 +56,7 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
   };
 
   if (isLoading) {
-    return (
-        <DefaultLayout>
-            <Loader />
-        </DefaultLayout>
-    );
+    return <Loader />;
   }
 
   if (isError || !existingPackage) {
@@ -71,7 +66,7 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
   }
 
   return (
-    <DefaultLayout>
+    <>
       <Breadcrumb pageName={`Edit Package: ${existingPackage.name}`} />
       <div className="mx-auto max-w-4xl">
         <PackageForm
@@ -82,6 +77,6 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
           isEditMode={true}
         />
       </div>
-    </DefaultLayout>
+    </>
   );
 }

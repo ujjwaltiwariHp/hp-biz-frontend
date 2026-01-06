@@ -7,7 +7,6 @@ import Loader from '@/components/common/Loader';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Building, UserCheck, UserX, Trash2 } from 'lucide-react';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { Typography } from '@/components/common/Typography';
 import { useAuth } from '@/hooks/useAuth';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -134,12 +133,7 @@ export default function CompanyDetailLayout({
   }, [isError, error, companyId, router]);
 
   if (isLoading) {
-    return (
-      <DefaultLayout>
-        {/* Fixed: Use 'page' variant for proper centering */}
-        <Loader variant="page" />
-      </DefaultLayout>
-    );
+    return <Loader variant="page" />;
   }
 
   if (isError || !companyResponse?.data?.company) {
@@ -149,7 +143,7 @@ export default function CompanyDetailLayout({
   const company = companyResponse.data.company;
 
   return (
-    <DefaultLayout>
+    <>
       {/* Company Info Header Bar */}
       <div className="mb-6 rounded-lg border border-stroke bg-white dark:bg-boxdark dark:border-strokedark shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-4 md:px-6">
@@ -248,6 +242,6 @@ export default function CompanyDetailLayout({
         cancelText="Cancel"
         isLoading={deleteMutation.isPending}
       />
-    </DefaultLayout>
+    </>
   );
 }

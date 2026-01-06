@@ -1,6 +1,5 @@
 'use client';
 
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '@/services/invoice.service';
 import { useState } from 'react';
@@ -342,16 +341,14 @@ export default function InvoicesPage() {
 
   if (isLoading) {
     return (
-      <DefaultLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
-      </DefaultLayout>
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <DefaultLayout>
+    <>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
           <div className="flex justify-between items-start">
@@ -534,6 +531,6 @@ export default function InvoicesPage() {
         cancelText="Cancel"
         isLoading={markPaymentMutation.isPending}
       />
-    </DefaultLayout>
+    </>
   );
 }
