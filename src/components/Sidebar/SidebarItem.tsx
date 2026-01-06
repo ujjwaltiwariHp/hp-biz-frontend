@@ -46,7 +46,7 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
       <li className="flex flex-col">
         <button
           onClick={() => onToggle(item.route)}
-          className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-sm transition-all duration-200 ease-in-out w-full
+          className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-base transition-all duration-200 ease-in-out w-full
             ${
               isParentHighlighted
                 ? 'bg-sky-500/20 text-white'
@@ -88,7 +88,7 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
                 <div key={idx}>
                   <Link
                     href={child.route}
-                    className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-sm font-medium transition-colors duration-200
+                    className={`relative flex items-center gap-2 rounded-md py-2 px-3 text-base font-medium transition-colors duration-200
                       ${
                         isActive
                           ? 'text-white bg-sky-500/20'
@@ -141,7 +141,7 @@ const SidebarItem = ({ item, isOpen, onToggle }: SidebarItemProps) => {
     <li>
       <Link
         href={item.route}
-        className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-sm transition-all duration-200 ease-in-out
+        className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 font-medium text-base transition-all duration-200 ease-in-out
           ${
             isExactActive
               ? 'bg-sky-500/20 text-white'

@@ -87,13 +87,13 @@ export const getMenuItems = (companyId: string | null): MenuItem[] => {
       children: companyChildren,
     },
     {
-      label: 'Subscription Management',
+      label: 'Subscriptions',
       route: '/subscriptions',
       icon: CreditCard,
       requiredResource: 'subscriptions',
       children: [
         {
-          label: 'All Plans',
+          label: 'All Packages',
           route: '/subscriptions',
           icon: List,
         },
