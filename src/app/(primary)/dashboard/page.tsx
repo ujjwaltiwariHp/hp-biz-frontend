@@ -62,11 +62,12 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// Force currency to USD by default
 const formatCurrency = (amount: string | number, currency: string = 'USD') => {
   const num = Number(amount);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currency,
+    currency: 'USD', // Hardcoded to ensure $ symbol
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(num);
@@ -185,7 +186,7 @@ export default function Dashboard() {
 
   const dashboardStats = useMemo(() => dashboardData?.data?.dashboard || {
     overview: { total_companies: 0, active_companies: 0, inactive_companies: 0, new_companies_period: 0 },
-    financials: { total_revenue: '0', mrr_estimate: '0', currency: 'INR' },
+    financials: { total_revenue: '0', mrr_estimate: '0', currency: 'USD' },
     packages: { distribution: [], paid_vs_free: { paid: 0, free: 0 } },
     engagement: { top_active_companies: [], recent_expiries: [] }
   }, [dashboardData]);
@@ -351,12 +352,13 @@ export default function Dashboard() {
             icon={UserX} title="Inactive" value={overview.inactive_companies} subtitle="Churned"
             iconColor="text-rose-500" iconBg="bg-rose-500/10 dark:bg-rose-500/20"
           />
+          {/* Explicitly passing 'USD' to force dollar sign */}
           <KPICard
-            icon={DollarSign} title="Revenue" value={formatCurrency(financials.total_revenue, financials.currency)} subtitle="Lifetime"
+            icon={DollarSign} title="Revenue" value={formatCurrency(financials.total_revenue, 'USD')} subtitle="Lifetime"
             trendUp={true} iconColor="text-emerald-600" iconBg="bg-emerald-600/10 dark:bg-emerald-600/20"
           />
           <KPICard
-            icon={TrendingUp} title="MRR" value={formatCurrency(financials.mrr_estimate, financials.currency)} subtitle="Recurring"
+            icon={TrendingUp} title="MRR" value={formatCurrency(financials.mrr_estimate, 'USD')} subtitle="Recurring"
             trendUp={true} iconColor="text-blue-500" iconBg="bg-blue-500/10 dark:bg-blue-500/20"
           />
           <KPICard

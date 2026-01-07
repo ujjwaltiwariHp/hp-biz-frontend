@@ -248,12 +248,12 @@ export default function PackageForm({
             {/* Pricing Section */}
             <div className="lg:col-span-2">
               <label className="mb-1.5 block text-sm font-medium text-primary">
-                Pricing (INR ₹)
+                Pricing (USD $)
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    Monthly (₹)
+                    Monthly ($)
                   </label>
                   <input
                     type="number"
@@ -269,7 +269,7 @@ export default function PackageForm({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    Quarterly (₹)
+                    Quarterly ($)
                   </label>
                   <input
                     type="number"
@@ -285,7 +285,7 @@ export default function PackageForm({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    Yearly (₹)
+                    Yearly ($)
                   </label>
                   <input
                     type="number"
