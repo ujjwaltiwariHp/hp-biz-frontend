@@ -245,14 +245,14 @@ export default function InvoicesPage() {
         <div>
           <div className="flex items-baseline gap-1">
             <Typography variant="value" as="span" className="font-semibold text-black dark:text-white">
-              {invoice.currency}
+              $
             </Typography>
             <Typography variant="value" as="span" className="text-lg font-bold text-primary">
               {parseFloat(invoice.total_amount).toFixed(2)}
             </Typography>
           </div>
           <Typography variant="caption" className="text-xs text-gray-500 mt-1">
-            Inc. {invoice.currency} {parseFloat(invoice.tax_amount).toFixed(2)} tax
+            Inc. $ {parseFloat(invoice.tax_amount).toFixed(2)} tax
           </Typography>
         </div>
       ),
@@ -522,7 +522,7 @@ export default function InvoicesPage() {
         {...paymentDialog.confirmProps}
         type="success"
         title="Mark Payment Received"
-        message={`Record payment received for invoice ${selectedInvoice?.invoice_number}? (Amount: ${selectedInvoice?.currency} ${parseFloat(selectedInvoice?.total_amount || '0').toFixed(2)})`}
+        message={`Record payment received for invoice ${selectedInvoice?.invoice_number}? (Amount: $ ${parseFloat(selectedInvoice?.total_amount || '0').toFixed(2)})`}
         onConfirm={confirmMarkPayment}
         confirmText="Mark as Received"
         cancelText="Cancel"

@@ -44,15 +44,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   }, [pathname]);
 
   const handleToggle = (route: string) => {
-    setOpenMenus((prev) =>
-      prev.includes(route)
-        ? prev.filter((item) => item !== route)
-        : [...prev, route]
-    );
+    setOpenMenus((prev) => (prev.includes(route) ? [] : [route]));
   };
 
-  // Render empty sidebar structure during SSR/hydration to prevent layout shift
-  // Only hide content if not authenticated after hydration
   if (!isHydrated) {
     return (
       <aside
@@ -84,7 +78,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     );
   }
 
-  // After hydration, check authentication
   if (!isInitialized || !isAuthenticated) {
     return null;
   }
