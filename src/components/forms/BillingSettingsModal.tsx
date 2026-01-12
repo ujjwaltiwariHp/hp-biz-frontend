@@ -62,18 +62,20 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
 
     return (
         <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4">
-            <ClickOutside onOutsideClick={onClose}>
-                <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-boxdark shadow-2xl max-h-[85vh] overflow-y-auto">
-                    <div className="flex items-center justify-between border-b dark:border-strokedark px-5 py-3">
+            <ClickOutside onOutsideClick={onClose} className="w-full max-w-4xl max-h-[90vh] flex flex-col">
+                <div className="w-full rounded-lg bg-white dark:bg-boxdark shadow-2xl flex flex-col max-h-full">
+                    <div className="flex items-center justify-between border-b dark:border-strokedark px-4 sm:px-6 py-3 shrink-0">
                         <h3 className="text-lg font-semibold text-black dark:text-white">
-                            {canEdit ? 'Edit Billing Settings' : 'Billing Settings (View Only)'}
+                            {canEdit ? 'Edit Billing Settings' : 'Billing Settings'}
                         </h3>
                         <button onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white">
                             <X size={20} />
                         </button>
                     </div>
-                        <form onSubmit={handleSubmit} className="p-5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+
+                    <div className="overflow-y-auto p-4 sm:p-6">
+                        <form id="billing-form" onSubmit={handleSubmit}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                                 <div>
                                     <label className="block font-medium text-black dark:text-white mb-1">Company Name</label>
                                     <input
@@ -194,26 +196,28 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
                                     </div>
                                 )}
                             </div>
-
-                            <div className="flex justify-end gap-3 mt-5 pt-4 border-t dark:border-strokedark">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="px-5 py-2 text-sm font-medium rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
-                                >
-                                    {canEdit ? 'Cancel' : 'Close'}
-                                </button>
-                                {canEdit && (
-                                    <button
-                                        type="submit"
-                                        disabled={mutation.isPending}
-                                        className="px-5 py-2 text-sm font-medium rounded bg-success text-white hover:bg-success/90 disabled:opacity-50 transition-colors shadow-md"
-                                    >
-                                        {mutation.isPending ? 'Saving...' : 'Save Settings'}
-                                    </button>
-                                )}
-                            </div>
                         </form>
+                    </div>
+
+                    <div className="flex justify-end gap-3 border-t dark:border-strokedark px-4 sm:px-6 py-3 shrink-0">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-5 py-2 text-sm font-medium rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            {canEdit ? 'Cancel' : 'Close'}
+                        </button>
+                        {canEdit && (
+                            <button
+                                type="submit"
+                                form="billing-form"
+                                disabled={mutation.isPending}
+                                className="px-5 py-2 text-sm font-medium rounded bg-success text-white hover:bg-success/90 disabled:opacity-50 transition-colors shadow-md"
+                            >
+                                {mutation.isPending ? 'Saving...' : 'Save Settings'}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </ClickOutside>
         </div>

@@ -151,28 +151,64 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-270">
-        <Breadcrumb pageName="Settings" />
-        <div className="grid grid-cols-5 gap-8">
-          <div className="col-span-5 xl:col-span-3">
-            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-              <div className="border-b border-stroke py-4 px-7 dark:border-strokedark">
-                <SkeletonRect className="h-6 w-32" />
-              </div>
-              <div className="p-7 space-y-4">
-                <SkeletonRect className="h-12 w-full" />
-                <SkeletonRect className="h-12 w-full" />
-                <SkeletonRect className="h-12 w-full" />
-                <SkeletonRect className="h-32 w-full" />
+      <div className="mx-auto max-w-screen-2xl">
+        <div className="mb-6">
+          <Breadcrumb pageName="Settings" />
+        </div>
+
+        <div className="space-y-6">
+          {/* Section 1 Skeleton: Admin Actions */}
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-6 border-b border-stroke dark:border-strokedark">
+              <SkeletonRect className="h-6 w-48" />
+            </div>
+            <div className="p-6">
+              <SkeletonRect className="h-5 w-32 mb-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="rounded border border-stroke p-4 dark:border-strokedark">
+                    <div className="flex justify-between mb-4">
+                      <SkeletonRect className="h-6 w-24" />
+                      <SkeletonRect className="h-6 w-6 rounded-full" />
+                    </div>
+                    <SkeletonRect className="h-4 w-full mb-6" />
+                    <SkeletonRect className="h-9 w-full rounded" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-          <div className="col-span-5 xl:col-span-2">
-            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-7">
-              <div className="mb-4 flex flex-col items-center">
-                <SkeletonRect className="h-32 w-32 rounded-full mb-4" />
-                <SkeletonRect className="h-6 w-48 mb-2" />
-                <SkeletonRect className="h-4 w-32" />
+
+          {/* Section 2 Skeleton: Account Info */}
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-6 border-b border-stroke dark:border-strokedark">
+              <SkeletonRect className="h-6 w-48" />
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="p-3">
+                    <SkeletonRect className="h-3 w-16 mb-2" />
+                    <SkeletonRect className="h-4 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3 Skeleton: Billing Settings */}
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-6 border-b border-stroke dark:border-strokedark">
+              <SkeletonRect className="h-6 w-56" />
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className="p-3">
+                    <SkeletonRect className="h-3 w-20 mb-2" />
+                    <SkeletonRect className="h-4 w-28" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

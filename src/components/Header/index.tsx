@@ -47,72 +47,60 @@ const Header = (props: {
 
   const unreadCount = notificationStats || 0;
   const pathname = usePathname();
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href?: string }>>([]);
   const [companyName, setCompanyName] = useState<string>('');
 
-  useEffect(() => {
-  }, [unreadCount]);
+  const companyIdMatch = pathname?.match(/\/companies\/(\d+)/);
+  const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
 
-  useEffect(() => {
-    refetchStats();
-  }, [refetchStats]);
+  let breadcrumbs: Array<{ label: string; href?: string }> = [
+    { label: 'Dashboard', href: '/dashboard' },
+  ];
 
-  useEffect(() => {
-    const companyIdMatch = pathname.match(/\/companies\/(\d+)/);
-    const companyId = companyIdMatch ? parseInt(companyIdMatch[1]) : null;
+  if (pathname === '/dashboard') {
+    breadcrumbs = [{ label: 'Dashboard' }];
+  } else if (pathname === '/companies') {
+    breadcrumbs.push({ label: 'Companies' });
+  } else if (pathname?.startsWith('/companies/create')) {
+    breadcrumbs.push(
+      { label: 'Companies', href: '/companies' },
+      { label: 'Create Company' }
+    );
+  } else if (companyId && pathname?.startsWith(`/companies/${companyId}`)) {
+    breadcrumbs.push(
+      { label: 'Companies', href: '/companies' },
+      { label: companyName || `Company #${companyId}`, href: `/companies/${companyId}` }
+    );
 
-    let newBreadcrumbs: Array<{ label: string; href?: string }> = [
-      { label: 'Dashboard', href: '/dashboard' },
-    ];
-
-    if (pathname === '/dashboard') {
-      newBreadcrumbs = [{ label: 'Dashboard' }];
-    } else if (pathname === '/companies') {
-      newBreadcrumbs.push({ label: 'Companies' });
-    } else if (pathname.startsWith('/companies/create')) {
-      newBreadcrumbs.push(
-        { label: 'Companies', href: '/companies' },
-        { label: 'Create Company' }
-      );
-    } else if (companyId && pathname.startsWith(`/companies/${companyId}`)) {
-      newBreadcrumbs.push(
-        { label: 'Companies', href: '/companies' },
-        { label: companyName || `Company #${companyId}`, href: `/companies/${companyId}` }
-      );
-
-      if (pathname.includes('/details')) {
-        newBreadcrumbs.push({ label: 'Details' });
-      } else if (pathname.includes('/invoices')) {
-        newBreadcrumbs.push({ label: 'Invoices' });
-      } else if (pathname.includes('/logs')) {
-        newBreadcrumbs.push({ label: 'Activity Logs' });
-      } else if (pathname.includes('/subscriptions')) {
-        newBreadcrumbs.push({ label: 'Subscriptions' });
-      }
-    } else if (pathname === '/subscriptions') {
-      newBreadcrumbs.push({ label: 'Subscriptions' });
-    } else if (pathname.startsWith('/subscriptions/')) {
-      newBreadcrumbs.push(
-        { label: 'Subscriptions', href: '/subscriptions' },
-        { label: pathname.includes('/create') ? 'Create Package' : 'Edit Package' }
-      );
-    } else if (pathname === '/invoices') {
-      newBreadcrumbs.push({ label: 'Invoices' });
-    } else if (pathname === '/logs') {
-      newBreadcrumbs.push({ label: 'Activity Logs' });
-    } else if (pathname.startsWith('/logs/')) {
-      newBreadcrumbs.push(
-        { label: 'Activity Logs', href: '/logs' },
-        { label: pathname.includes('/all') ? 'All Logs' : pathname.includes('/system') ? 'System Logs' : 'Company Logs' }
-      );
-    } else if (pathname === '/notifications') {
-      newBreadcrumbs.push({ label: 'Notifications' });
-    } else if (pathname === '/settings') {
-      newBreadcrumbs.push({ label: 'Settings' });
+    if (pathname?.includes('/details')) {
+      breadcrumbs.push({ label: 'Details' });
+    } else if (pathname?.includes('/invoices')) {
+      breadcrumbs.push({ label: 'Invoices' });
+    } else if (pathname?.includes('/logs')) {
+      breadcrumbs.push({ label: 'Activity Logs' });
+    } else if (pathname?.includes('/subscriptions')) {
+      breadcrumbs.push({ label: 'Subscriptions' });
     }
-
-    setBreadcrumbs(newBreadcrumbs);
-  }, [pathname, companyName]);
+  } else if (pathname === '/subscriptions') {
+    breadcrumbs.push({ label: 'Subscriptions' });
+  } else if (pathname?.startsWith('/subscriptions/')) {
+    breadcrumbs.push(
+      { label: 'Subscriptions', href: '/subscriptions' },
+      { label: pathname?.includes('/create') ? 'Create Package' : 'Edit Package' }
+    );
+  } else if (pathname === '/invoices') {
+    breadcrumbs.push({ label: 'Invoices' });
+  } else if (pathname === '/logs') {
+    breadcrumbs.push({ label: 'Activity Logs' });
+  } else if (pathname?.startsWith('/logs/')) {
+    breadcrumbs.push(
+      { label: 'Activity Logs', href: '/logs' },
+      { label: pathname?.includes('/all') ? 'All Logs' : pathname?.includes('/system') ? 'System Logs' : 'Company Logs' }
+    );
+  } else if (pathname === '/notifications') {
+    breadcrumbs.push({ label: 'Notifications' });
+  } else if (pathname === '/settings') {
+    breadcrumbs.push({ label: 'Settings' });
+  }
 
   useEffect(() => {
     const companyIdMatch = pathname.match(/\/companies\/(\d+)/);

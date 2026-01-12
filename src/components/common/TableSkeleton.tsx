@@ -40,11 +40,20 @@ const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 5, columns = 4, sh
                                 key={`row-${rowIndex}`}
                                 className="border-b border-stroke dark:border-strokedark last:border-0 hover:bg-gray-50 dark:hover:bg-meta-4"
                             >
-                                {Array.from({ length: columnCount }).map((_, colIndex) => (
-                                    <td key={`cell-${rowIndex}-${colIndex}`} className={`py-5 px-4 ${columnDefs?.[colIndex]?.className || ''}`}>
-                                        <SkeletonText className="h-4 w-full max-w-[80%]" />
-                                    </td>
-                                ))}
+                                {Array.from({ length: columnCount }).map((_, colIndex) => {
+                                    // Make skeletons look like real column data by varying width PER COLUMN
+                                    // consistent for the whole column, but different between columns
+                                    const widthClasses = [
+                                        'w-1/2', 'w-3/4', 'w-2/3', 'w-full', 'w-1/3'
+                                    ];
+                                    const widthClass = widthClasses[colIndex % widthClasses.length];
+
+                                    return (
+                                        <td key={`cell-${rowIndex}-${colIndex}`} className={`py-5 px-4 ${columnDefs?.[colIndex]?.className || ''}`}>
+                                            <SkeletonText className={`h-4 ${widthClass}`} />
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))}
                     </tbody>
