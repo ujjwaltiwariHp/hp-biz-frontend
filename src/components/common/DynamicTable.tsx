@@ -11,7 +11,9 @@ const DynamicTable = <T extends Record<string, any>>({
 }: DynamicTableProps<T>) => {
 
   if (isLoading) {
-    return <TableSkeleton columns={columns.length} />;
+    if (isLoading) {
+      return <TableSkeleton columns={columns} />;
+    }
   }
 
   if (!data || data.length === 0) {

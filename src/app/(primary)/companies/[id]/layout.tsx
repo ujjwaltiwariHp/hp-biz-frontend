@@ -3,7 +3,8 @@
 import React, { use, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
-import Loader from '@/components/common/Loader';
+import { SkeletonRect } from '@/components/common/Skeleton';
+import { Company } from '@/types/company';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Building, UserCheck, UserX, Trash2 } from 'lucide-react';
@@ -133,7 +134,19 @@ export default function CompanyDetailLayout({
   }, [isError, error, companyId, router]);
 
   if (isLoading) {
-    return <Loader variant="page" />;
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          <SkeletonRect className="h-10 w-full max-w-md mb-6" /> {/* Breadcrumbish */}
+          <div className="flex gap-4 border-b border-stroke dark:border-strokedark pb-4">
+            <SkeletonRect className="h-8 w-24" />
+            <SkeletonRect className="h-8 w-24" />
+            <SkeletonRect className="h-8 w-24" />
+          </div>
+          <SkeletonRect className="h-96 w-full" />
+        </div>
+      );
+    }
   }
 
   if (isError || !companyResponse?.data?.company) {
@@ -170,11 +183,10 @@ export default function CompanyDetailLayout({
                   <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
                     ID: {company.unique_company_id}
                   </Typography>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                    company.is_active
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${company.is_active
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
                     {company.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -188,11 +200,10 @@ export default function CompanyDetailLayout({
               <button
                 onClick={handleToggleStatus}
                 disabled={activateMutation.isPending || deactivateMutation.isPending}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all hover:shadow-md ${
-                  company.is_active
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                } disabled:opacity-50`}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all hover:shadow-md ${company.is_active
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+                  } disabled:opacity-50`}
               >
                 {company.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
                 {company.is_active ? 'Deactivate' : 'Activate'}
@@ -213,7 +224,7 @@ export default function CompanyDetailLayout({
 
       {/* Page Content */}
       <div className="min-w-0">
-          {children}
+        {children}
       </div>
 
       {/* Confirmation Dialogs (Placed in Layout to work across all sub-pages) */}
@@ -221,11 +232,10 @@ export default function CompanyDetailLayout({
         {...toggleDialog.confirmProps}
         type={selectedAction === 'deactivate' ? 'warning' : 'success'}
         title={`${selectedAction === 'deactivate' ? 'Deactivate' : 'Activate'} Company`}
-        message={`Are you sure you want to ${selectedAction} "${company.company_name}"? ${
-          selectedAction === 'deactivate'
-            ? 'The company will lose access to the platform.'
-            : 'The company will regain full access to the platform.'
-        }`}
+        message={`Are you sure you want to ${selectedAction} "${company.company_name}"? ${selectedAction === 'deactivate'
+          ? 'The company will lose access to the platform.'
+          : 'The company will regain full access to the platform.'
+          }`}
         onConfirm={confirmToggleStatus}
         confirmText={selectedAction === 'deactivate' ? 'Deactivate' : 'Activate'}
         cancelText="Cancel"

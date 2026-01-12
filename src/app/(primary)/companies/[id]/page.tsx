@@ -6,6 +6,7 @@ import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
 import { invoiceService } from '@/services/invoice.service';
 import Loader from '@/components/common/Loader';
+import { SkeletonRect } from '@/components/common/Skeleton';
 import {
   Mail, Phone, Globe, MapPin, Users, TrendingUp, CreditCard,
   UserCheck, CheckCircle, AlertCircle, Activity, ArrowRight,
@@ -69,7 +70,28 @@ export default function CompanyOverviewPage({ params }: PageProps) {
   });
 
   if (companyLoading) {
-    return <Loader variant="page" />;
+    return (
+      <div className="space-y-5 p-4 md:p-6">
+        {/* KPI Skeletons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SkeletonRect className="h-32 w-full" />
+          <SkeletonRect className="h-32 w-full" />
+          <SkeletonRect className="h-32 w-full" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-5">
+            <SkeletonRect className="h-64 w-full" />
+            <SkeletonRect className="h-48 w-full" />
+            <SkeletonRect className="h-96 w-full" /> {/* Table area */}
+          </div>
+          <div className="lg:col-span-1 space-y-5">
+            <SkeletonRect className="h-64 w-full" />
+            <SkeletonRect className="h-48 w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const company = companyResponse?.data?.company;

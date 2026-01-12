@@ -17,6 +17,8 @@ import { ViewAdminsModal } from '@/components/modal/ViewAdminsModal';
 import { hasPermission } from '@/utils/adminHelpers';
 import { UpdateProfileData, ChangePasswordData } from '@/types/auth';
 import { BillingSettings } from '@/types/billing';
+import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
+import { SkeletonRect } from '@/components/common/Skeleton';
 import Loader from '@/components/common/Loader';
 
 export default function SettingsPage() {
@@ -145,9 +147,40 @@ export default function SettingsPage() {
     createAdminMutation.mutate(data);
   };
 
-  if (!isInitialized || !profile || rolesLoading || billingLoading) {
-    return <Loader variant="page" size="lg" />;
+  const isLoading = !isInitialized || !profile || rolesLoading || billingLoading;
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-270">
+        <Breadcrumb pageName="Settings" />
+        <div className="grid grid-cols-5 gap-8">
+          <div className="col-span-5 xl:col-span-3">
+            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+              <div className="border-b border-stroke py-4 px-7 dark:border-strokedark">
+                <SkeletonRect className="h-6 w-32" />
+              </div>
+              <div className="p-7 space-y-4">
+                <SkeletonRect className="h-12 w-full" />
+                <SkeletonRect className="h-12 w-full" />
+                <SkeletonRect className="h-12 w-full" />
+                <SkeletonRect className="h-32 w-full" />
+              </div>
+            </div>
+          </div>
+          <div className="col-span-5 xl:col-span-2">
+            <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-7">
+              <div className="mb-4 flex flex-col items-center">
+                <SkeletonRect className="h-32 w-32 rounded-full mb-4" />
+                <SkeletonRect className="h-6 w-48 mb-2" />
+                <SkeletonRect className="h-4 w-32" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
+
 
   const isViewAllowed = hasPermission(permissions, 'super_admins', 'view');
   const isCreateAllowed = hasPermission(permissions, 'super_admins', 'create');
@@ -270,11 +303,10 @@ export default function SettingsPage() {
                   <div className="border-t border-stroke dark:border-strokedark pt-4 flex justify-end">
                     <button
                       onClick={() => setShowBillingSettings(true)}
-                      className={`rounded py-2 px-6 text-white transition-colors text-sm font-medium ${
-                        canEditBilling
-                          ? 'bg-success hover:bg-success/90'
-                          : 'bg-primary hover:bg-primary/90'
-                      }`}
+                      className={`rounded py-2 px-6 text-white transition-colors text-sm font-medium ${canEditBilling
+                        ? 'bg-success hover:bg-success/90'
+                        : 'bg-primary hover:bg-primary/90'
+                        }`}
                     >
                       {canEditBilling ? 'Edit Billing Settings' : 'View Billing Details'}
                     </button>
@@ -314,15 +346,18 @@ export default function SettingsPage() {
         isLoading={createAdminMutation.isPending}
       />
 
-     { showViewAdmins && (<ViewAdminsModal
-        isOpen={showViewAdmins}
-        onClose={() => setShowViewAdmins(false)}
-        admins={admins}
-        profile={profile}
-        roles={roles}
-        permissions={permissions}
-        isLoading={adminsLoading}
-      />)}
+      {/* Modals */}
+      {profile && (
+        <ViewAdminsModal
+          isOpen={showViewAdmins}
+          onClose={() => setShowViewAdmins(false)}
+          admins={admins}
+          profile={profile}
+          roles={roles}
+          permissions={permissions}
+          isLoading={adminsLoading}
+        />
+      )}
 
       {billingSettings && showBillingSettings && (
         <BillingSettingsModal

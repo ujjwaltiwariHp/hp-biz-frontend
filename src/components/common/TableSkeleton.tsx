@@ -1,36 +1,48 @@
 import React from 'react';
+import { SkeletonRect, SkeletonText } from './Skeleton';
+import { TableColumn } from '@/types/table';
 
 interface TableSkeletonProps {
     rows?: number;
-    columns?: number;
+    // Accept either a count or the actual columns definition to replicate widths
+    columns?: number | TableColumn<any>[];
+    showHeader?: boolean;
 }
 
-const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 5, columns = 4 }) => {
+const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 5, columns = 4, showHeader = true }) => {
+    const columnCount = typeof columns === 'number' ? columns : columns.length;
+    const columnDefs = typeof columns === 'number' ? null : columns;
+
     return (
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
             <div className="max-w-full overflow-x-auto">
                 <table className="w-full table-auto">
-                    <thead>
-                        <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                            {Array.from({ length: columns }).map((_, i) => (
-                                <th
-                                    key={`header-${i}`}
-                                    className="py-4 px-4 font-medium text-black dark:text-white"
-                                >
-                                    <div className="h-6 w-24 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
+                    {/* Header Skeleton - Matches visual style of DynamicTable header */}
+                    {showHeader && (
+                        <thead>
+                            <tr className="bg-boxdark text-left dark:bg-boxdark-2">
+                                {Array.from({ length: columnCount }).map((_, i) => (
+                                    <th
+                                        key={`header-${i}`}
+                                        className={`py-4 px-4 font-semibold text-base text-white dark:text-white whitespace-nowrap ${columnDefs?.[i]?.headerClassName || ''}`}
+                                    >
+                                        {/* Use a Rect skeleton with light opacity to look good on dark bg */}
+                                        <SkeletonRect className="h-5 w-24 bg-white/20 dark:bg-white/10" />
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                    )}
+
                     <tbody>
                         {Array.from({ length: rows }).map((_, rowIndex) => (
                             <tr
                                 key={`row-${rowIndex}`}
-                                className="border-b border-stroke dark:border-strokedark last:border-0"
+                                className="border-b border-stroke dark:border-strokedark last:border-0 hover:bg-gray-50 dark:hover:bg-meta-4"
                             >
-                                {Array.from({ length: columns }).map((_, colIndex) => (
-                                    <td key={`cell-${rowIndex}-${colIndex}`} className="py-5 px-4">
-                                        <div className="h-5 w-full rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                                {Array.from({ length: columnCount }).map((_, colIndex) => (
+                                    <td key={`cell-${rowIndex}-${colIndex}`} className={`py-5 px-4 ${columnDefs?.[colIndex]?.className || ''}`}>
+                                        <SkeletonText className="h-4 w-full max-w-[80%]" />
                                     </td>
                                 ))}
                             </tr>

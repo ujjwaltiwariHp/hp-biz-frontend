@@ -10,20 +10,17 @@ import { getAuthToken } from "@/lib/auth";
 
 export function useAuth() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => getAuthToken() || null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const currentToken = getAuthToken() || null;
-    setToken(currentToken);
-
+    // Only set initialized if we don't have a token (logged out)
+    // If we have a token, we wait for profile (or initial data)
+    const currentToken = getAuthToken();
     if (!currentToken) {
       setIsInitialized(true);
-      if (window.location.pathname !== "/auth/signin") {
-        router.push("/auth/signin");
-      }
     }
-  }, [router]);
+  }, []);
 
   const {
     data: profileResponse,
@@ -34,10 +31,28 @@ export function useAuth() {
     queryFn: authService.getProfile,
     enabled: !!token,
     staleTime: 5 * 60 * 1000,
+    initialData: () => {
+      const user = authService.getCurrentUser();
+      if (user) {
+        return {
+          success: true,
+          message: 'Loaded from storage',
+          data: user,
+          meta: { timezone: 'UTC', timezone_abbr: 'UTC' }
+        } as any; // Cast to satisfy strict typing if needed, mostly matches
+      }
+      return undefined;
+    }
   });
 
   useEffect(() => {
-    if (!!token && !isProfileLoading) {
+    // If we have profile data (even from cache), we are initialized
+    if (profileResponse?.data) {
+      setIsInitialized(true);
+    }
+
+    if (!!token && !isProfileLoading && !profileResponse) {
+      // Loaded but no profile?
       setIsInitialized(true);
     }
 
@@ -45,9 +60,9 @@ export function useAuth() {
       toast.error("Session expired or invalid. Please log in again.");
       authService.logout();
     }
-  }, [token, isProfileLoading, isProfileError]);
+  }, [token, isProfileLoading, isProfileError, profileResponse]);
 
-  const isAuthenticated = !!token && !!profileResponse?.data.id;
+  const isAuthenticated = !!token && !!profileResponse?.data?.id;
   const profile: SuperAdmin | undefined = profileResponse?.data;
   const permissions: SuperAdminPermissions = profile?.permissions || {};
 

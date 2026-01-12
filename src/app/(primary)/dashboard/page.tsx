@@ -38,6 +38,9 @@ import { getAuthToken } from '@/lib/auth';
 import { useSSE } from '@/hooks/useSSE';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
+import CardDataStats from '@/components/CardDataStats';
+import { SkeletonRect } from '@/components/common/Skeleton';
+import dynamic from 'next/dynamic';
 import { Company } from '@/types/company';
 import Loader from '@/components/common/Loader';
 import DateRangePicker from '@/components/common/DateRangePicker';
@@ -108,9 +111,8 @@ const KPICard = ({
 
     {trend && (
       <div className="mt-auto pt-2 border-t border-stroke dark:border-strokedark relative">
-        <div className={`flex items-center gap-1 text-xs font-bold ${
-          trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-        }`}>
+        <div className={`flex items-center gap-1 text-xs font-bold ${trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+          }`}>
           <span className={`inline-block text-xs ${trendUp ? 'rotate-0' : 'rotate-180'}`}>
             {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
           </span>
@@ -280,11 +282,10 @@ export default function Dashboard() {
       header: 'Status',
       headerClassName: 'min-w-[70px] text-xs font-bold text-slate-500 dark:text-slate-400',
       render: (company) => (
-        <span className={`inline-flex rounded-full py-1 px-2 text-xs font-bold ${
-          company.is_active
-            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-            : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400'
-        }`}>
+        <span className={`inline-flex rounded-full py-1 px-2 text-xs font-bold ${company.is_active
+          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+          : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400'
+          }`}>
           {company.is_active ? 'Active' : 'Inactive'}
         </span>
       ),
@@ -295,15 +296,27 @@ export default function Dashboard() {
       headerClassName: 'min-w-[80px] text-xs font-bold text-slate-500 dark:text-slate-400 text-right pr-3',
       render: (company) => (
         <div className="text-right pr-1">
-            <Typography variant="body" className="text-slate-600 dark:text-slate-300 text-xs">
-                {formatDate(company.created_at)}
-            </Typography>
+          <Typography variant="body" className="text-slate-600 dark:text-slate-300 text-xs">
+            {formatDate(company.created_at)}
+          </Typography>
         </div>
       ),
     },
   ];
 
-  if (!isMounted) return <Loader variant="page" />;
+  if (!isMounted) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <SkeletonRect className="h-40 w-full" />
+        <SkeletonRect className="h-40 w-full" />
+        <SkeletonRect className="h-40 w-full" />
+        <SkeletonRect className="h-40 w-full" />
+        <div className="col-span-full h-96">
+          <SkeletonRect className="w-full h-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -320,22 +333,22 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-             <button
-                onClick={() => setIsDatePickerOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-boxdark border border-stroke dark:border-strokedark shadow-sm hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
-             >
-                <Calendar size={13} className="text-slate-500" />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                    {dateRange.startDate} - {dateRange.endDate}
-                </span>
-             </button>
+            <button
+              onClick={() => setIsDatePickerOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-boxdark border border-stroke dark:border-strokedark shadow-sm hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
+            >
+              <Calendar size={13} className="text-slate-500" />
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                {dateRange.startDate} - {dateRange.endDate}
+              </span>
+            </button>
 
-             <button
-                onClick={() => { refetchDashboard(); refetchCompanies(); refetchUsage(); }}
-                className="p-1.5 rounded-md bg-primary text-white hover:bg-opacity-90 shadow-sm transition-transform active:scale-95"
-             >
-                <RefreshCw size={14} />
-             </button>
+            <button
+              onClick={() => { refetchDashboard(); refetchCompanies(); refetchUsage(); }}
+              className="p-1.5 rounded-md bg-primary text-white hover:bg-opacity-90 shadow-sm transition-transform active:scale-95"
+            >
+              <RefreshCw size={14} />
+            </button>
           </div>
         </div>
 
@@ -377,7 +390,7 @@ export default function Dashboard() {
             icon={Activity} title="Activities" value={usageSummary.totalActivities.toLocaleString()} subtitle="Events"
             iconColor="text-fuchsia-500" iconBg="bg-fuchsia-500/10 dark:bg-fuchsia-500/20"
           />
-           <KPICard
+          <KPICard
             icon={BarChart3} title="Active Rate" value={`${activePercent}%`} subtitle="Engagement"
             iconColor="text-teal-500" iconBg="bg-teal-500/10 dark:bg-teal-500/20"
           />
@@ -385,7 +398,7 @@ export default function Dashboard() {
             icon={AlertCircle} title="Expiries" value={engagement.recent_expiries.length} subtitle="Next 30d"
             iconColor="text-orange-500" iconBg="bg-orange-500/10 dark:bg-orange-500/20"
           />
-           <KPICard
+          <KPICard
             icon={PackageCheck} title="Packages" value={totalPackages} subtitle={`${packages.distribution.length} Types`}
             iconColor="text-cyan-500" iconBg="bg-cyan-500/10 dark:bg-cyan-500/20"
           />
@@ -396,114 +409,114 @@ export default function Dashboard() {
           <div className="col-span-1 lg:col-span-4 h-[400px] lg:h-[480px] flex flex-col rounded-lg border border-stroke bg-white p-4 shadow-sm dark:border-strokedark dark:bg-boxdark">
 
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-stroke dark:border-strokedark">
-               <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                    <TrendingUp size={16} className="text-primary" />
-                    Top Active Companies
-                  </h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Logs (User + System)</p>
-               </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <TrendingUp size={16} className="text-primary" />
+                  Top Active Companies
+                </h3>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Logs (User + System)</p>
+              </div>
             </div>
             <div className="flex-1 min-h-0 w-full">
-               {lineChartData.length > 0 ? (
-                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={lineChartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-                       <defs>
-                          {topActiveCompanies.map((company, index) => (
-                             <linearGradient key={`grad-${index}`} id={`color-${index}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0.1}/>
-                                <stop offset="95%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0}/>
-                             </linearGradient>
-                          ))}
-                       </defs>
-                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.4} />
-                       <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} dy={5} />
-                       <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value} />
-                       <Tooltip content={<CustomTooltip />} />
-                       <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                       {topActiveCompanies.map((company, index) => (
-                          <Area
-                            key={company.company_name}
-                            type="monotone"
-                            dataKey={company.company_name}
-                            stroke={chartColors[index % chartColors.length]}
-                            fill={`url(#color-${index})`}
-                            strokeWidth={2}
-                            activeDot={{ r: 5, strokeWidth: 0 }}
-                          />
-                       ))}
-                    </AreaChart>
-                 </ResponsiveContainer>
-               ) : (
-                  <div className="flex h-full items-center justify-center text-slate-400"><Zap size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
-               )}
+              {lineChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={lineChartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+                    <defs>
+                      {topActiveCompanies.map((company, index) => (
+                        <linearGradient key={`grad-${index}`} id={`color-${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0.1} />
+                          <stop offset="95%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.4} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} dy={5} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    {topActiveCompanies.map((company, index) => (
+                      <Area
+                        key={company.company_name}
+                        type="monotone"
+                        dataKey={company.company_name}
+                        stroke={chartColors[index % chartColors.length]}
+                        fill={`url(#color-${index})`}
+                        strokeWidth={2}
+                        activeDot={{ r: 5, strokeWidth: 0 }}
+                      />
+                    ))}
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-slate-400"><Zap size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
+              )}
             </div>
           </div>
 
           <div className="col-span-1 lg:col-span-3 h-[400px] lg:h-[480px] flex flex-col rounded-lg border border-stroke bg-white p-4 shadow-sm dark:border-strokedark dark:bg-boxdark">
 
-             <div className="mb-3 pb-3 border-b border-stroke dark:border-strokedark">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                   <Activity size={16} className="text-primary" />
-                   Distribution
-                </h3>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Paid vs Free</p>
-             </div>
-             <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative w-full">
-                {overview.total_companies > 0 ? (
-                  <>
-                     <ResponsiveContainer width="100%" height={260}>
-                        <PieChart>
-                           <Pie data={paymentPieData} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={3} dataKey="value" stroke="none">
-                              {paymentPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                           </Pie>
-                           <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                     </ResponsiveContainer>
-                     <div className="flex flex-col items-center justify-center mt-2">
-                        <span className="text-lg font-bold text-slate-800 dark:text-white">{overview.total_companies}</span>
-                        <span className="text-xs text-slate-500 uppercase font-bold">Total</span>
-                     </div>
-                  </>
-                ) : (
-                   <div className="flex h-full items-center justify-center text-slate-400"><Activity size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
-                )}
-             </div>
-             <div className="mt-3 pt-3 border-t border-stroke dark:border-strokedark flex flex-col gap-2">
-                {paymentPieData.map((item, idx) => (
-                   <div key={idx} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full ring-1 ring-slate-100 dark:ring-slate-700" style={{ backgroundColor: item.color }} />
-                        <span className="text-slate-600 dark:text-slate-300 font-medium">{item.name}</span>
-                      </div>
-                      <span className="font-bold text-slate-800 dark:text-white">{item.value}</span>
-                   </div>
-                ))}
-             </div>
+            <div className="mb-3 pb-3 border-b border-stroke dark:border-strokedark">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Activity size={16} className="text-primary" />
+                Distribution
+              </h3>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Paid vs Free</p>
+            </div>
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative w-full">
+              {overview.total_companies > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={paymentPieData} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={3} dataKey="value" stroke="none">
+                        {paymentPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-col items-center justify-center mt-2">
+                    <span className="text-lg font-bold text-slate-800 dark:text-white">{overview.total_companies}</span>
+                    <span className="text-xs text-slate-500 uppercase font-bold">Total</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center text-slate-400"><Activity size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
+              )}
+            </div>
+            <div className="mt-3 pt-3 border-t border-stroke dark:border-strokedark flex flex-col gap-2">
+              {paymentPieData.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full ring-1 ring-slate-100 dark:ring-slate-700" style={{ backgroundColor: item.color }} />
+                    <span className="text-slate-600 dark:text-slate-300 font-medium">{item.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-800 dark:text-white">{item.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="col-span-1 lg:col-span-5 h-[400px] lg:h-[480px] flex flex-col rounded-lg border border-stroke bg-white p-4 shadow-sm dark:border-strokedark dark:bg-boxdark">
 
-             <div className="mb-3 pb-3 border-b border-stroke dark:border-strokedark">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <Building2 size={16} className="text-primary" />
-                  New Arrivals
-                </h3>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest 5 Registered</p>
-             </div>
-             <div className="flex-1 min-h-0 relative w-full">
-                {recentCompanies.length > 0 ? (
-                   <div className="absolute inset-0 overflow-y-auto scrollbar-hide">
-                      <DynamicTable<Company>
-                        data={recentCompanies}
-                        columns={recentCompaniesColumns}
-                        isLoading={false}
-                      />
-                   </div>
-                ) : (
-                   <div className="flex h-full items-center justify-center text-slate-400"><UserX size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
-                )}
-             </div>
+            <div className="mb-3 pb-3 border-b border-stroke dark:border-strokedark">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Building2 size={16} className="text-primary" />
+                New Arrivals
+              </h3>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest 5 Registered</p>
+            </div>
+            <div className="flex-1 min-h-0 relative w-full">
+              {recentCompanies.length > 0 ? (
+                <div className="absolute inset-0 overflow-y-auto scrollbar-hide">
+                  <DynamicTable<Company>
+                    data={recentCompanies}
+                    columns={recentCompaniesColumns}
+                    isLoading={false}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center text-slate-400"><UserX size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
+              )}
+            </div>
           </div>
         </div>
       </div>

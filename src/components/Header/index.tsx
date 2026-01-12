@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { companyService } from '@/services/company.service';
 import { useSSE } from '@/hooks/useSSE';
 import { useSSEContext } from '@/context/SSEContext';
-import { useHydrated } from '@/hooks/useHydrated';
+
 
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
@@ -19,7 +19,7 @@ const Header = (props: {
 }) => {
   const { subscribe } = useSSEContext();
   const [isBlinking, setIsBlinking] = useState(false);
-  const isHydrated = useHydrated();
+
 
   const { data: notificationStats, refetch: refetchStats } = useQuery({
     queryKey: ['notifications', 'unreadCount', true],
@@ -153,7 +153,7 @@ const Header = (props: {
         </div>
 
         <div className="hidden sm:flex items-center gap-1">
-          {isHydrated && breadcrumbs.length > 0 ? (
+          {breadcrumbs.length > 0 ? (
             breadcrumbs.map((crumb, index) => (
               <div key={index} className="flex items-center gap-1">
                 {index > 0 && (
@@ -180,7 +180,7 @@ const Header = (props: {
 
         <div className="flex items-center gap-3 2xsm:gap-7">
           <ul className="flex items-center gap-2 2xsm:gap-4">
-            {isHydrated ? <DarkModeSwitcher /> : <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />}
+            <DarkModeSwitcher />
 
             <li>
               <Link
@@ -188,16 +188,16 @@ const Header = (props: {
                 onClick={() => setIsBlinking(false)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
               >
-                {isHydrated && unreadCount > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 z-10 inline-flex items-center justify-center rounded-full bg-meta-1 p-1 text-xs font-medium text-white ring-2 ring-white dark:ring-boxdark min-w-[20px] h-5">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-                <Bell className={`w-5 h-5 ${isHydrated && isBlinking ? 'animate-bell text-primary' : ''}`} />
+                <Bell className={`w-5 h-5 ${isBlinking ? 'animate-bell text-primary' : ''}`} />
               </Link>
             </li>
           </ul>
-          {isHydrated ? <DropdownUser /> : <div className="h-10 w-32 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
+          <DropdownUser />
         </div>
       </div>
     </header>

@@ -23,6 +23,9 @@ import Link from 'next/link';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import StandardSearchInput from '@/components/common/StandardSearchInput';
+import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
+import TableSkeleton from '@/components/common/TableSkeleton';
+import { SkeletonRect } from '@/components/common/Skeleton';
 import DateRangePicker from '@/components/common/DateRangePicker';
 import Loader from '@/components/common/Loader';
 
@@ -325,7 +328,7 @@ export default function InvoicesPage() {
               Mark Payment
             </button>
           ) : invoice.status === 'paid' ? (
-             <button
+            <button
               disabled
               className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-success rounded-lg shadow-sm w-full max-w-[150px] opacity-100 cursor-default"
             >
@@ -333,7 +336,7 @@ export default function InvoicesPage() {
               Paid
             </button>
           ) : (
-             <span className="w-full max-w-[150px]"></span>
+            <span className="w-full max-w-[150px]"></span>
           )}
         </div>
       ),
@@ -341,7 +344,23 @@ export default function InvoicesPage() {
   ];
 
   if (isLoading) {
-    return <Loader variant="page" size="xl" />;
+    if (isLoading) {
+      return (
+        <>
+          <Breadcrumb pageName="Invoices" />
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-boxdark p-4 rounded-sm border border-stroke dark:border-strokedark mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SkeletonRect className="h-10 w-full" />
+                <SkeletonRect className="h-10 w-full" />
+                <SkeletonRect className="h-10 w-full" />
+              </div>
+            </div>
+            <TableSkeleton columns={7} />
+          </div>
+        </>
+      );
+    }
   }
 
   return (
@@ -358,7 +377,7 @@ export default function InvoicesPage() {
               </Typography>
             </div>
             {isSuperAdmin && (
-               <Link
+              <Link
                 href="/companies"
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
               >

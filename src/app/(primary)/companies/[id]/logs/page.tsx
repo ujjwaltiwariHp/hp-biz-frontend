@@ -20,6 +20,8 @@ import {
 import { Typography } from '@/components/common/Typography';
 import StandardSearchInput from '@/components/common/StandardSearchInput';
 import DynamicTable from '@/components/common/DynamicTable';
+import TableSkeleton from '@/components/common/TableSkeleton';
+import { SkeletonRect } from '@/components/common/Skeleton';
 import { TableColumn } from '@/types/table';
 import { ActivityLog, LogFilters } from '@/types/logs';
 import DateRangePicker from '@/components/common/DateRangePicker';
@@ -54,23 +56,23 @@ const getFormattedDateTime = (dateString: string) => {
 };
 
 const getActionColor = (action: string) => {
-    const safeAction = action?.toUpperCase() || '';
-    if (safeAction.includes('CREATE') || safeAction.includes('ADD')) return 'bg-success/10 text-success border-success/20';
-    if (safeAction.includes('UPDATE') || safeAction.includes('EDIT')) return 'bg-warning/10 text-warning border-warning/20';
-    if (safeAction.includes('DELETE') || safeAction.includes('REMOVE')) return 'bg-danger/10 text-danger border-danger/20';
-    if (safeAction.includes('LOGIN')) return 'bg-primary/10 text-primary border-primary/20';
-    return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-meta-4 dark:text-gray-300 dark:border-strokedark';
+  const safeAction = action?.toUpperCase() || '';
+  if (safeAction.includes('CREATE') || safeAction.includes('ADD')) return 'bg-success/10 text-success border-success/20';
+  if (safeAction.includes('UPDATE') || safeAction.includes('EDIT')) return 'bg-warning/10 text-warning border-warning/20';
+  if (safeAction.includes('DELETE') || safeAction.includes('REMOVE')) return 'bg-danger/10 text-danger border-danger/20';
+  if (safeAction.includes('LOGIN')) return 'bg-primary/10 text-primary border-primary/20';
+  return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-meta-4 dark:text-gray-300 dark:border-strokedark';
 };
 
 const getIsoDate = (dateInput: string | Date | undefined, endOfDay: boolean = false) => {
-    if (!dateInput) return undefined;
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return undefined;
+  if (!dateInput) return undefined;
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return undefined;
 
-    if (endOfDay) d.setHours(23, 59, 59, 999);
-    else d.setHours(0, 0, 0, 0);
+  if (endOfDay) d.setHours(23, 59, 59, 999);
+  else d.setHours(0, 0, 0, 0);
 
-    return d.toISOString();
+  return d.toISOString();
 };
 
 export default function CompanyLogsPage({ params }: PageProps) {
@@ -184,7 +186,12 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
   // UPDATED: Using consistent Common Loader Component
   if (companyLoading || logsLoading) {
-    return <Loader variant="page" />;
+    return (
+      <div className="space-y-4">
+        <SkeletonRect className="h-12 w-full mb-4" /> {/* Filter bar */}
+        <TableSkeleton columns={5} />
+      </div>
+    );
   }
 
   const company = companyResponse?.data?.company;
@@ -238,9 +245,9 @@ export default function CompanyLogsPage({ params }: PageProps) {
           <div className="flex items-center gap-2">
             <User size={14} className="shrink-0 text-gray-400" />
             <div title={log.user_name || 'System'}>
-                <Typography variant="value" className="text-sm font-bold text-black dark:text-white truncate max-w-[180px]">
+              <Typography variant="value" className="text-sm font-bold text-black dark:text-white truncate max-w-[180px]">
                 {log.user_name || 'System'}
-                </Typography>
+              </Typography>
             </div>
           </div>
 
@@ -256,15 +263,15 @@ export default function CompanyLogsPage({ params }: PageProps) {
 
           {/* Row 3: Role Badge */}
           <div className="flex items-center gap-2">
-             <Shield size={14} className="shrink-0 text-gray-400" />
-             <span className={`
+            <Shield size={14} className="shrink-0 text-gray-400" />
+            <span className={`
                inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border
                ${log.super_admin_id || log.user_type === 'Super Admin'
-                 ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
-                 : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'}
+                ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
+                : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'}
              `}>
-               {log.super_admin_id || log.user_type === 'Super Admin' ? 'Super Admin' : (log.user_type || 'Staff')}
-             </span>
+              {log.super_admin_id || log.user_type === 'Super Admin' ? 'Super Admin' : (log.user_type || 'Staff')}
+            </span>
           </div>
         </div>
       ),
@@ -345,112 +352,112 @@ export default function CompanyLogsPage({ params }: PageProps) {
       {/* Filters */}
       <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* 1. Search */}
-            <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                    Search User/Details
-                </label>
-                <StandardSearchInput
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    onSearch={handleSearch}
-                    onClear={handleClearSearch}
-                    placeholder="Search logs..."
-                    isLoading={logsLoading}
-                />
-            </div>
+          {/* 1. Search */}
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+              Search User/Details
+            </label>
+            <StandardSearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              onSearch={handleSearch}
+              onClear={handleClearSearch}
+              placeholder="Search logs..."
+              isLoading={logsLoading}
+            />
+          </div>
 
-            {/* 2. Action Type */}
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                Action Type
-              </label>
-              <select
-                name="action_type"
-                value={filters.action_type}
-                onChange={handleFilterChange}
-                className="w-full rounded border border-stroke py-2.5 px-3 text-sm text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white"
-              >
-                <option value="">All Actions</option>
-                <option value="CREATE">Create</option>
-                <option value="UPDATE">Update</option>
-                <option value="DELETE">Delete</option>
-                <option value="LOGIN">Login</option>
-                <option value="LOGOUT">Logout</option>
-              </select>
-            </div>
+          {/* 2. Action Type */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+              Action Type
+            </label>
+            <select
+              name="action_type"
+              value={filters.action_type}
+              onChange={handleFilterChange}
+              className="w-full rounded border border-stroke py-2.5 px-3 text-sm text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white"
+            >
+              <option value="">All Actions</option>
+              <option value="CREATE">Create</option>
+              <option value="UPDATE">Update</option>
+              <option value="DELETE">Delete</option>
+              <option value="LOGIN">Login</option>
+              <option value="LOGOUT">Logout</option>
+            </select>
+          </div>
 
-            {/* 3. Date Range */}
-            <div className="flex flex-col">
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                Date Range
-              </label>
-              <button
-                onClick={() => setShowDatePicker(true)}
-                className="inline-flex items-center justify-between gap-2 px-3 py-2.5 text-sm border border-stroke rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-meta-4 w-full text-left"
-              >
-                <span className="truncate text-black dark:text-white">
-                    {dateRange.startDate && dateRange.endDate ? `${dateRange.startDate} - ${dateRange.endDate}` : 'Filter by Date'}
-                </span>
-                <Filter size={16} className="text-gray-500" />
-              </button>
-            </div>
+          {/* 3. Date Range */}
+          <div className="flex flex-col">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+              Date Range
+            </label>
+            <button
+              onClick={() => setShowDatePicker(true)}
+              className="inline-flex items-center justify-between gap-2 px-3 py-2.5 text-sm border border-stroke rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-meta-4 w-full text-left"
+            >
+              <span className="truncate text-black dark:text-white">
+                {dateRange.startDate && dateRange.endDate ? `${dateRange.startDate} - ${dateRange.endDate}` : 'Filter by Date'}
+              </span>
+              <Filter size={16} className="text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Active Filters Display */}
         {activeFiltersCount > 0 && (
-            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-primary">
-                        Active Filters ({activeFiltersCount}):
-                    </span>
-                    {appliedSearchTerm && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                            Search: {appliedSearchTerm}
-                        </span>
-                    )}
-                    {filters.action_type && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                            Action: {filters.action_type}
-                        </span>
-                    )}
-                    {(dateRange.startDate || dateRange.endDate) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                            Date: {dateRange.startDate} - {dateRange.endDate}
-                        </span>
-                    )}
-                </div>
-                <button
-                    onClick={handleClearFilters}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                >
-                    <X size={16} />
-                    Clear All
-                </button>
+          <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-primary">
+                Active Filters ({activeFiltersCount}):
+              </span>
+              {appliedSearchTerm && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                  Search: {appliedSearchTerm}
+                </span>
+              )}
+              {filters.action_type && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                  Action: {filters.action_type}
+                </span>
+              )}
+              {(dateRange.startDate || dateRange.endDate) && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                  Date: {dateRange.startDate} - {dateRange.endDate}
+                </span>
+              )}
             </div>
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
+            >
+              <X size={16} />
+              Clear All
+            </button>
+          </div>
         )}
       </div>
 
       {/* Table */}
       <div className="rounded-lg border border-stroke dark:border-strokedark overflow-hidden shadow-sm bg-white dark:bg-boxdark">
         {logs.length > 0 || logsLoading ? (
-            <DynamicTable<ActivityLog>
-                data={logs as ActivityLog[]}
-                columns={logColumns}
-                isLoading={logsLoading}
-            />
+          <DynamicTable<ActivityLog>
+            data={logs as ActivityLog[]}
+            columns={logColumns}
+            isLoading={logsLoading}
+          />
         ) : (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                <Activity size={48} className="mx-auto mb-3 opacity-50" />
-                <Typography variant="body1" className="text-base font-medium">
-                    {appliedSearchTerm || filters.action_type || filters.resource_type || dateRange.startDate || dateRange.endDate
-                         ? 'No activities found matching filters.'
-                         : `No activity logs recorded for ${company.company_name}.`}
-                </Typography>
-                <Typography variant="caption" className="text-xs mt-1">
-                    Try adjusting or clearing your filters.
-                </Typography>
-            </div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <Activity size={48} className="mx-auto mb-3 opacity-50" />
+            <Typography variant="body1" className="text-base font-medium">
+              {appliedSearchTerm || filters.action_type || filters.resource_type || dateRange.startDate || dateRange.endDate
+                ? 'No activities found matching filters.'
+                : `No activity logs recorded for ${company.company_name}.`}
+            </Typography>
+            <Typography variant="caption" className="text-xs mt-1">
+              Try adjusting or clearing your filters.
+            </Typography>
+          </div>
         )}
       </div>
 
@@ -496,13 +503,13 @@ export default function CompanyLogsPage({ params }: PageProps) {
         </div>
       )}
 
-    <DateRangePicker
+      <DateRangePicker
         isOpen={showDatePicker}
         dateRange={dateRange}
         setDateRange={setDateRange}
         onClose={() => setShowDatePicker(false)}
         onApply={handleDateRangeApply}
-    />
+      />
     </div>
   );
 }

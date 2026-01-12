@@ -16,8 +16,12 @@ import { useSSE } from '@/hooks/useSSE';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import DateRangePicker from '@/components/common/DateRangePicker';
+import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
+import TableSkeleton from '@/components/common/TableSkeleton';
+import { SkeletonRect } from '@/components/common/Skeleton';
 import StandardSearchInput from '@/components/common/StandardSearchInput';
 import Loader from '@/components/common/Loader'; // Import Common Loader
+
 
 export default function CompaniesPage() {
   const { isSuperAdmin } = useAuth();
@@ -241,11 +245,10 @@ export default function CompaniesPage() {
       render: (company) => (
         <div className="flex flex-col space-y-2">
           <span
-            className={`inline-flex w-fit rounded-full py-1.5 px-3 text-sm font-semibold ${
-              company.is_active
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-            }`}
+            className={`inline-flex w-fit rounded-full py-1.5 px-3 text-sm font-semibold ${company.is_active
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              }`}
           >
             <Typography variant="badge">{company.is_active ? 'Active' : 'Inactive'}</Typography>
           </span>
@@ -270,16 +273,14 @@ export default function CompaniesPage() {
           <Typography variant="body" className="text-black dark:text-white font-medium">
             <Typography variant="caption" as="span" className="font-normal text-gray-500 dark:text-gray-400">End:</Typography> {formatDate(company.subscription_end_date)}
           </Typography>
-          <span className={`inline-flex items-center gap-1 mt-2 text-xs font-semibold w-fit ${
-            isSubscriptionExpired(company.subscription_end_date)
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-green-600 dark:text-green-400'
-          }`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${
-              isSubscriptionExpired(company.subscription_end_date)
-                ? 'bg-red-600 dark:bg-red-400'
-                : 'bg-green-600 dark:bg-green-400'
-            }`}></span>
+          <span className={`inline-flex items-center gap-1 mt-2 text-xs font-semibold w-fit ${isSubscriptionExpired(company.subscription_end_date)
+            ? 'text-red-600 dark:text-red-400'
+            : 'text-green-600 dark:text-green-400'
+            }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${isSubscriptionExpired(company.subscription_end_date)
+              ? 'bg-red-600 dark:bg-red-400'
+              : 'bg-green-600 dark:bg-green-400'
+              }`}></span>
             <Typography variant="caption" as="span" className="font-semibold">{isSubscriptionExpired(company.subscription_end_date) ? 'Expired' : 'Active'}</Typography>
           </span>
         </div>
@@ -302,23 +303,21 @@ export default function CompaniesPage() {
           {isSuperAdmin && (
             <>
               <Link
-                  href={`/companies/${company.id}/subscriptions`}
-                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
-                  title="Update Subscription"
+                href={`/companies/${company.id}/subscriptions`}
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
+                title="Update Subscription"
               >
-                  <Package size={18} />
+                <Package size={18} />
               </Link>
               <button
                 onClick={() => handleToggleStatus(company)}
-                className={`p-2 rounded-lg transition-colors ${
-                  activateMutation.isPending || deactivateMutation.isPending
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                } ${
-                  company.is_active
+                className={`p-2 rounded-lg transition-colors ${activateMutation.isPending || deactivateMutation.isPending
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                  } ${company.is_active
                     ? 'text-red-600 dark:text-red-400 hover:text-red-700'
                     : 'text-green-600 dark:text-green-400 hover:text-green-700'
-                }`}
+                  }`}
                 disabled={activateMutation.isPending || deactivateMutation.isPending}
                 title={company.is_active ? 'Deactivate Company' : 'Activate Company'}
               >
@@ -326,9 +325,8 @@ export default function CompaniesPage() {
               </button>
               <button
                 onClick={() => handleDelete(company)}
-                className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${
-                  deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 disabled={deleteMutation.isPending}
                 title="Delete Company"
               >
@@ -343,7 +341,20 @@ export default function CompaniesPage() {
 
   // UPDATED: Using consistent Common Loader Component
   if (isLoading) {
-    return <Loader variant="page" />;
+    if (isLoading) {
+      return (
+        <>
+          <Breadcrumb pageName="Companies" />
+          <div className="space-y-4">
+            <div className="flex justify-between items-center bg-white dark:bg-boxdark p-4 rounded-sm border border-stroke dark:border-strokedark">
+              <SkeletonRect className="h-10 w-64" />
+              <SkeletonRect className="h-10 w-32" />
+            </div>
+            <TableSkeleton columns={7} />
+          </div>
+        </>
+      );
+    }
   }
 
   return (
@@ -536,11 +547,10 @@ export default function CompaniesPage() {
         {...toggleDialog.confirmProps}
         type={actionType === 'deactivate' ? 'warning' : 'success'}
         title={`${actionType === 'deactivate' ? 'Deactivate' : 'Activate'} Company`}
-        message={`Are you sure you want to ${actionType} "${selectedCompany?.company_name}"? ${
-          actionType === 'deactivate'
-            ? 'The company will lose access to the platform.'
-            : 'The company will regain full access to the platform.'
-        }`}
+        message={`Are you sure you want to ${actionType} "${selectedCompany?.company_name}"? ${actionType === 'deactivate'
+          ? 'The company will lose access to the platform.'
+          : 'The company will regain full access to the platform.'
+          }`}
         onConfirm={confirmToggleStatus}
         confirmText={actionType === 'deactivate' ? 'Deactivate' : 'Activate'}
         cancelText="Cancel"

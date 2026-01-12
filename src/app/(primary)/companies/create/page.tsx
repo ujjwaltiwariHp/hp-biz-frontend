@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
+import { SkeletonRect, SkeletonText } from '@/components/common/Skeleton';
+import Button from '@/components/common/Button';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
@@ -127,9 +129,9 @@ export default function CreateCompanyPage() {
     let newValue: string | number | boolean = value;
 
     if (type === 'checkbox') {
-        newValue = (e.target as HTMLInputElement).checked;
+      newValue = (e.target as HTMLInputElement).checked;
     } else if (type === 'number') {
-        newValue = Number(value);
+      newValue = Number(value);
     }
 
     setFormData(prev => ({
@@ -139,64 +141,77 @@ export default function CreateCompanyPage() {
   };
 
   const handleNext = () => {
-      const { company_name, admin_email, admin_name, password } = formData;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const { company_name, admin_email, admin_name, password } = formData;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-      if (!company_name || !admin_email || !admin_name || !password) {
-          toast.error('Please fill all required Company Admin fields.');
-          return;
-      }
-      if (!emailRegex.test(admin_email)) {
-          toast.error('Please provide a valid Admin Email.');
-          return;
-      }
-      if (password.length < 6) {
-          toast.error('Password must be at least 6 characters long.');
-          return;
-      }
-      setStep(2);
+    if (!company_name || !admin_email || !admin_name || !password) {
+      toast.error('Please fill all required Company Admin fields.');
+      return;
+    }
+    if (!emailRegex.test(admin_email)) {
+      toast.error('Please provide a valid Admin Email.');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters long.');
+      return;
+    }
+    setStep(2);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) {
-        toast.error('Please fix all validation errors before submitting.');
-        return;
+      toast.error('Please fix all validation errors before submitting.');
+      return;
     }
 
     const dataToSend = {
-        ...formData,
-        subscription_package_id: Number(formData.subscription_package_id),
-        subscription_start_date: formData.subscription_start_date,
-        subscription_end_date: formData.subscription_end_date,
+      ...formData,
+      subscription_package_id: Number(formData.subscription_package_id),
+      subscription_start_date: formData.subscription_start_date,
+      subscription_end_date: formData.subscription_end_date,
     };
 
     createCompanyMutation.mutate(dataToSend);
   };
 
   if (packagesLoading) {
-    return <Loader variant="page" />;
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        <SkeletonText className="h-8 w-48 mb-4" />
+        <div className="rounded-sm border border-stroke bg-white p-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+          <SkeletonText className="h-6 w-64 mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (packagesError || packages.length === 0) {
-      return (
-        <>
-            <Breadcrumb pageName="Create Company" />
-            <div className="p-6 text-center border border-danger/50 bg-danger/10 rounded-lg">
-                <XCircle size={32} className="text-danger mx-auto mb-3" />
-                <Typography variant="page-title" as="h3">Error Loading Packages</Typography>
-                <Typography variant="body" className="text-danger mt-2">
-                    Could not fetch active subscription packages. Please ensure packages are configured in the backend.
-                </Typography>
-                <button
-                    onClick={() => router.push('/subscriptions')}
-                    className="mt-4 text-primary hover:underline text-sm"
-                >
-                    <Typography variant="body2" as="span">Go to Subscriptions Page</Typography>
-                </button>
-            </div>
-        </>
-      );
+    return (
+      <>
+        <Breadcrumb pageName="Create Company" />
+        <div className="p-6 text-center border border-danger/50 bg-danger/10 rounded-lg">
+          <XCircle size={32} className="text-danger mx-auto mb-3" />
+          <Typography variant="page-title" as="h3">Error Loading Packages</Typography>
+          <Typography variant="body" className="text-danger mt-2">
+            Could not fetch active subscription packages. Please ensure packages are configured in the backend.
+          </Typography>
+          <button
+            onClick={() => router.push('/subscriptions')}
+            className="mt-4 text-primary hover:underline text-sm"
+          >
+            <Typography variant="body2" as="span">Go to Subscriptions Page</Typography>
+          </button>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -216,137 +231,137 @@ export default function CreateCompanyPage() {
               <div className={step === 1 ? 'block' : 'hidden'}>
                 <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><User size={18} /> Company & Admin Information</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Company Name <span className="text-danger">*</span></Typography>
-                        <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Company Name <span className="text-danger">*</span></Typography>
+                    <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Industry</Typography>
+                    <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} placeholder="e.g. Tech, E-commerce" className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Admin Full Name <span className="text-danger">*</span></Typography>
+                    <input type="text" name="admin_name" value={formData.admin_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Phone</Typography>
+                    <input type="tel" name="phone" value={formData.phone || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Admin Email <span className="text-danger">*</span></Typography>
+                    <input type="email" name="admin_email" value={formData.admin_email} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Temporary Password <span className="text-danger">*</span></Typography>
+                    <div className="relative">
+                      <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-500 hover:text-black dark:hover:text-white">
+                        {showPassword ? <X size={20} /> : <Shield size={20} />}
+                      </button>
                     </div>
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Industry</Typography>
-                        <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} placeholder="e.g. Tech, E-commerce" className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                    </div>
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Admin Full Name <span className="text-danger">*</span></Typography>
-                        <input type="text" name="admin_name" value={formData.admin_name} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                    </div>
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Phone</Typography>
-                        <input type="tel" name="phone" value={formData.phone || ''} onChange={handleChange} className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                    </div>
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Admin Email <span className="text-danger">*</span></Typography>
-                        <input type="email" name="admin_email" value={formData.admin_email} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                    </div>
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Temporary Password <span className="text-danger">*</span></Typography>
-                        <div className="relative">
-                            <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-500 hover:text-black dark:hover:text-white">
-                                {showPassword ? <X size={20} /> : <Shield size={20} />}
-                            </button>
-                        </div>
-                        {formData.password.length > 0 && formData.password.length < 6 && (
-                            <Typography variant="caption" className="text-xs text-danger mt-1">Password must be at least 6 characters long.</Typography>
-                        )}
-                    </div>
+                    {formData.password.length > 0 && formData.password.length < 6 && (
+                      <Typography variant="caption" className="text-xs text-danger mt-1">Password must be at least 6 characters long.</Typography>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className={step === 2 ? 'block' : 'hidden'}>
                 <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><DollarSign size={18} /> Subscription & Billing</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                        <Typography variant="label" className="mb-2.5 block">Subscription Package <span className="text-danger">*</span></Typography>
-                        <div className="relative z-20 bg-white dark:bg-form-input">
-                            <select name="subscription_package_id" value={formData.subscription_package_id} onChange={handleChange} required className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white">
-                                <option value={0} disabled>Select a package</option>
-                                {packages.map(pkg => (
-                                    <option key={pkg.id} value={pkg.id}>
-                                        {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                  <div className="md:col-span-2">
+                    <Typography variant="label" className="mb-2.5 block">Subscription Package <span className="text-danger">*</span></Typography>
+                    <div className="relative z-20 bg-white dark:bg-form-input">
+                      <select name="subscription_package_id" value={formData.subscription_package_id} onChange={handleChange} required className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white">
+                        <option value={0} disabled>Select a package</option>
+                        {packages.map(pkg => (
+                          <option key={pkg.id} value={pkg.id}>
+                            {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    {selectedPackage && (
-                        <div className="md:col-span-2 p-4 border border-primary/20 bg-primary/5 rounded-lg">
-                            <Typography variant="body2" as="h6" className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</Typography>
-                            <Typography variant="body" className="text-gray-600 dark:text-gray-400">
-                                Max Staff: <strong className="font-semibold">{selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}</strong> |
-                                Max Leads: <strong className="font-semibold">{selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}</strong>
-                            </Typography>
-                            <Typography variant="caption" className="text-gray-500 mt-2">
-                                *Note: Since this is a manual provisioning, the dates below determine the subscription cycle.
-                            </Typography>
-                        </div>
+                  </div>
+                  {selectedPackage && (
+                    <div className="md:col-span-2 p-4 border border-primary/20 bg-primary/5 rounded-lg">
+                      <Typography variant="body2" as="h6" className="font-semibold text-primary mb-2">Package: {selectedPackage.name}</Typography>
+                      <Typography variant="body" className="text-gray-600 dark:text-gray-400">
+                        Max Staff: <strong className="font-semibold">{selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}</strong> |
+                        Max Leads: <strong className="font-semibold">{selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}</strong>
+                      </Typography>
+                      <Typography variant="caption" className="text-gray-500 mt-2">
+                        *Note: Since this is a manual provisioning, the dates below determine the subscription cycle.
+                      </Typography>
+                    </div>
+                  )}
+
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
+                    <input type="date" name="subscription_start_date" value={formData.subscription_start_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
+                    <input type="date" name="subscription_end_date" value={formData.subscription_end_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                    {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
+                      <Typography variant="caption" className="text-xs text-danger mt-1">End date must be after start date.</Typography>
                     )}
+                  </div>
 
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
-                        <input type="date" name="subscription_start_date" value={formData.subscription_start_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                    </div>
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
-                        <input type="date" name="subscription_end_date" value={formData.subscription_end_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                        {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
-                            <Typography variant="caption" className="text-xs text-danger mt-1">End date must be after start date.</Typography>
-                        )}
-                    </div>
-
-                    <div className="md:col-span-2 flex items-center space-x-3 mt-4">
-                        <label className="relative flex cursor-pointer select-none items-center">
-                            <input
-                                type="checkbox"
-                                name="send_welcome_email"
-                                checked={formData.send_welcome_email}
-                                onChange={handleChange}
-                                className="sr-only"
-                            />
-                            <div className={`h-6 w-10 rounded-full transition ${formData.send_welcome_email ? 'bg-success' : 'bg-gray-400'}`}>
-                                <div className={`dot absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white transition ${formData.send_welcome_email ? 'translate-x-full' : ''}`}>
-                                    <ToggleRight size={16} className={formData.send_welcome_email ? 'text-success' : 'text-gray-400'} />
-                                </div>
-                            </div>
-                        </label>
-                        <div className="flex flex-col">
-                            <Typography variant="body" className="font-medium text-black dark:text-white">Send Activation Email</Typography>
-                            <Typography variant="caption" className="text-gray-500">Sends the Admin an OTP to set their permanent password.</Typography>
+                  <div className="md:col-span-2 flex items-center space-x-3 mt-4">
+                    <label className="relative flex cursor-pointer select-none items-center">
+                      <input
+                        type="checkbox"
+                        name="send_welcome_email"
+                        checked={formData.send_welcome_email}
+                        onChange={handleChange}
+                        className="sr-only"
+                      />
+                      <div className={`h-6 w-10 rounded-full transition ${formData.send_welcome_email ? 'bg-success' : 'bg-gray-400'}`}>
+                        <div className={`dot absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white transition ${formData.send_welcome_email ? 'translate-x-full' : ''}`}>
+                          <ToggleRight size={16} className={formData.send_welcome_email ? 'text-success' : 'text-gray-400'} />
                         </div>
+                      </div>
+                    </label>
+                    <div className="flex flex-col">
+                      <Typography variant="body" className="font-medium text-black dark:text-white">Send Activation Email</Typography>
+                      <Typography variant="caption" className="text-gray-500">Sends the Admin an OTP to set their permanent password.</Typography>
                     </div>
+                  </div>
                 </div>
               </div>
 
               <div className="flex justify-between pt-6 mt-6 border-t border-stroke dark:border-strokedark">
-                  {step === 2 && (
-                      <button
-                          type="button"
-                          onClick={() => setStep(1)}
-                          className="flex items-center gap-2 rounded bg-gray-300 py-3 px-6 text-black hover:bg-gray-400 transition-colors"
-                      >
-                          <ArrowLeft size={18} /> <Typography variant="body" as="span" className="font-medium">Previous</Typography>
-                      </button>
-                  )}
+                {step === 2 && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setStep(1)}
+                    leftIcon={<ArrowLeft size={18} />}
+                  >
+                    Previous
+                  </Button>
+                )}
 
-                  {step === 1 && (
-                      <button
-                          type="button"
-                          onClick={handleNext}
-                          className="ml-auto flex items-center gap-2 rounded bg-primary py-3 px-6 font-medium text-white hover:bg-primary/90 transition-colors"
-                      >
-                          <Typography variant="body" as="span" className="font-medium text-white">Next</Typography> <ArrowRight size={18} />
-                      </button>
-                  )}
+                {step === 1 && (
+                  <Button
+                    variant="primary"
+                    onClick={handleNext}
+                    rightIcon={<ArrowRight size={18} />}
+                    className="ml-auto"
+                  >
+                    Next
+                  </Button>
+                )}
 
-                  {step === 2 && (
-                      <button
-                          type="submit"
-                          disabled={createCompanyMutation.isPending || !isFormValid}
-                          className="rounded bg-success py-3 px-6 font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
-                      >
-                          <Typography variant="body" as="span" className="font-medium text-white">
-                              {createCompanyMutation.isPending ? 'Provisioning...' : 'Provision Company'}
-                          </Typography>
-                      </button>
-                  )}
+                {step === 2 && (
+                  <Button
+                    variant="success"
+                    type="submit"
+                    isLoading={createCompanyMutation.isPending}
+                    disabled={!isFormValid}
+                  >
+                    Provision Company
+                  </Button>
+                )}
               </div>
             </div>
           </form>

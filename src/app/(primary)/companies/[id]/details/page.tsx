@@ -4,6 +4,7 @@ import React, { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import Loader from '@/components/common/Loader';
+import { SkeletonRect, SkeletonText } from '@/components/common/Skeleton';
 import { AlertCircle, Mail, Phone, Globe, MapPin, Users, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Typography } from '@/components/common/Typography';
@@ -32,7 +33,27 @@ export default function CompanyDetailsPage({ params }: PageProps) {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) return <Loader />;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <SkeletonText className="h-8 w-64 mb-2" />
+            <SkeletonText className="h-4 w-96" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <SkeletonRect className="h-64 w-full" />
+            <SkeletonRect className="h-48 w-full" />
+          </div>
+          <div className="lg:col-span-1 space-y-6">
+            <SkeletonRect className="h-48 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const company = companyResponse?.data?.company;
   // NOTE: Company stats are usually fetched on the Overview page ([id]/page.tsx).
