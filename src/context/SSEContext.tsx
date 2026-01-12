@@ -46,9 +46,9 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     let data: any;
     try {
       if (eventType === 'keep-alive' && event.data === 'heartbeat') {
-          data = { type: 'heartbeat' };
+        data = { type: 'heartbeat' };
       } else {
-          data = JSON.parse(event.data);
+        data = JSON.parse(event.data);
       }
     } catch {
       data = event.data;
@@ -63,33 +63,33 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     }
 
     source.onopen = () => {
-        console.log("SSE Connection: Successfully Established");
-        setIsConnected(true);
-        setConnectionAttempts(0);
+      console.log("SSE Connection: Successfully Established");
+      setIsConnected(true);
+      setConnectionAttempts(0);
     };
 
     source.onerror = (error) => {
-        console.error("SSE Connection: Error", error);
-        setIsConnected(false);
-        source.close();
+      console.error("SSE Connection: Error", error);
+      setIsConnected(false);
+      source.close();
     };
 
     source.onmessage = (event) => {
-        dispatchMessage('keep-alive', event);
+      dispatchMessage('keep-alive', event);
     };
 
     for (const eventType of listenersRef.current.keys()) {
-        source.addEventListener(eventType, (event) => {
-            dispatchMessage(eventType, event);
-        });
+      source.addEventListener(eventType, (event) => {
+        dispatchMessage(eventType, event);
+      });
     }
 
     connectionTimeoutRef.current = setTimeout(() => {
-        if (source.readyState !== EventSource.OPEN && source.readyState !== EventSource.CONNECTING) {
-            console.warn("SSE Connection: Timeout - connection did not establish");
-            source.close();
-            setEventSource(null);
-        }
+      if (source.readyState !== EventSource.OPEN && source.readyState !== EventSource.CONNECTING) {
+        console.warn("SSE Connection: Timeout - connection did not establish");
+        source.close();
+        setEventSource(null);
+      }
     }, 5000);
   }, [dispatchMessage]);
 
@@ -97,13 +97,13 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     const token = getAuthToken();
 
     if (!token) {
-        console.warn("SSE Connection: No token available");
-        return;
+      console.warn("SSE Connection: No token available");
+      return;
     }
 
     if (connectionAttempts > 3) {
-        console.error("SSE Connection: Max reconnection attempts reached");
-        return;
+      console.error("SSE Connection: Max reconnection attempts reached");
+      return;
     }
 
     console.log("SSE Connection: Attempting to connect...", { attempt: connectionAttempts + 1 });
@@ -115,8 +115,8 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
       setEventSource(newSource);
       setConnectionAttempts(prev => prev + 1);
     } else {
-        console.error("SSE Connection: Failed to create connection");
-        setIsConnected(false);
+      console.error("SSE Connection: Failed to create connection");
+      setIsConnected(false);
     }
   }, [connectionAttempts, setupSourceListeners]);
 
@@ -124,39 +124,39 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
     console.log("SSE Connection: Reconnecting...");
 
     if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-        eventSource.close();
+      eventSource.close();
     }
 
     setEventSource(null);
     setIsConnected(false);
 
     reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+      connect();
     }, 2000);
   }, [eventSource, connect]);
 
   useEffect(() => {
 
     if (!isInitialized || !isAuthenticated) {
-        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-            eventSource.close();
-        }
-        setEventSource(null);
-        setIsConnected(false);
-        // Clear all listeners when disconnecting
-        listenersRef.current.clear();
-        return;
+      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+      }
+      setEventSource(null);
+      setIsConnected(false);
+      // Clear all listeners when disconnecting
+      listenersRef.current.clear();
+      return;
     }
 
     const token = getAuthToken();
 
     if (!token) {
-        console.warn("SSE: Token not available yet");
-        return;
+      console.warn("SSE: Token not available yet");
+      return;
     }
 
     if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
-        connect();
+      connect();
     }
 
     return () => {
@@ -171,30 +171,33 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
 
   useEffect(() => {
     if (!isConnected && isAuthenticated && isInitialized && eventSource === null) {
-        const reconnectDelay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000);
-        console.log(`SSE: Will attempt reconnection in ${reconnectDelay}ms`);
+      const reconnectDelay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000);
+      console.log(`SSE: Will attempt reconnection in ${reconnectDelay}ms`);
 
-        reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-        }, reconnectDelay);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connect();
+      }, reconnectDelay);
 
-        return () => {
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-            }
-        };
+      return () => {
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+      };
     }
   }, [isConnected, isAuthenticated, isInitialized, eventSource, connectionAttempts, connect]);
 
   // Cleanup on unmount - prevent memory leaks
   useEffect(() => {
+    // Capture the ref value for cleanup
+    const currentListeners = listenersRef.current;
+
     return () => {
       // Close EventSource connection
       if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
         eventSource.close();
       }
       // Clear all listeners to prevent memory leaks
-      listenersRef.current.clear();
+      currentListeners.clear();
       // Clear timeouts
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
@@ -210,9 +213,9 @@ export const SSEProvider: React.FC<React.PropsWithChildren<{}>> = ({ children })
       listenersRef.current.set(eventType, new Set());
       // CHANGED: Allow adding listener even if connecting (readyState 0)
       if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-          eventSource.addEventListener(eventType, (event) => {
-              dispatchMessage(eventType, event);
-          });
+        eventSource.addEventListener(eventType, (event) => {
+          dispatchMessage(eventType, event);
+        });
       }
     }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { DynamicTableProps } from '@/types/table';
-import Loader from '@/components/common/Loader';
-import {Typography} from '@/components/common/Typography';
+import TableSkeleton from './TableSkeleton';
+import { Typography } from '@/components/common/Typography';
 
 const DynamicTable = <T extends Record<string, any>>({
   data,
@@ -11,7 +11,7 @@ const DynamicTable = <T extends Record<string, any>>({
 }: DynamicTableProps<T>) => {
 
   if (isLoading) {
-    return <Loader />;
+    return <TableSkeleton columns={columns.length} />;
   }
 
   if (!data || data.length === 0) {

@@ -26,20 +26,20 @@ interface PageProps {
 
 // Fixed InfoBlock: Uses 'as="p"/"div"' to ensure block display behavior
 const InfoBlock = ({ label, value, className = '' }: { label: string, value: React.ReactNode, className?: string }) => (
-    <div className={className}>
-        <Typography variant="label" as="p" className="text-xs mb-1.5 block">{label}</Typography>
-        <Typography as="div" variant="value" className="break-words block">
-            {value}
-        </Typography>
-    </div>
+  <div className={className}>
+    <Typography variant="label" as="p" className="text-xs mb-1.5 block">{label}</Typography>
+    <Typography as="div" variant="value" className="break-words block">
+      {value}
+    </Typography>
+  </div>
 );
 
 const getInvoiceStatusColor = (status: string) => {
-    switch (status) {
-        case 'paid': return 'bg-success/10 text-success';
-        case 'overdue': return 'bg-danger/10 text-danger';
-        default: return 'bg-warning/10 text-warning';
-    }
+  switch (status) {
+    case 'paid': return 'bg-success/10 text-success';
+    case 'overdue': return 'bg-danger/10 text-danger';
+    default: return 'bg-warning/10 text-warning';
+  }
 };
 
 export default function CompanyOverviewPage({ params }: PageProps) {
@@ -63,8 +63,9 @@ export default function CompanyOverviewPage({ params }: PageProps) {
 
   const { data: invoicesResponse } = useQuery({
     queryKey: ['company-invoices', companyId],
-    queryFn: () => invoiceService.getAllInvoices(1, 5, { search: undefined, status: undefined }),
+    queryFn: () => invoiceService.getAllInvoices(1, 5, { company_id: companyId }),
     staleTime: 5 * 60 * 1000,
+    enabled: !!companyId,
   });
 
   if (companyLoading) {
@@ -101,32 +102,32 @@ export default function CompanyOverviewPage({ params }: PageProps) {
 
   const invoiceColumns: TableColumn<Invoice>[] = [
     {
-        key: 'invoice_number',
-        header: 'Invoice #',
-        headerClassName: 'min-w-[100px] w-[25%]',
-        render: (invoice) => <Typography variant="value" className="font-medium">{invoice.invoice_number}</Typography>,
+      key: 'invoice_number',
+      header: 'Invoice #',
+      headerClassName: 'min-w-[100px] w-[25%]',
+      render: (invoice) => <Typography variant="value" className="font-medium">{invoice.invoice_number}</Typography>,
     },
     {
-        key: 'total_amount',
-        header: 'Amount',
-        headerClassName: 'min-w-[100px] w-[25%]',
-        render: (invoice) => <Typography variant="body" className="font-medium">{invoice.currency} {parseFloat(invoice.total_amount).toFixed(2)}</Typography>,
+      key: 'total_amount',
+      header: 'Amount',
+      headerClassName: 'min-w-[100px] w-[25%]',
+      render: (invoice) => <Typography variant="body" className="font-medium">{invoice.currency} {parseFloat(invoice.total_amount).toFixed(2)}</Typography>,
     },
     {
-        key: 'due_date',
-        header: 'Due Date',
-        headerClassName: 'min-w-[100px] w-[25%]',
-        render: (invoice) => <Typography variant="body" className="text-xs text-gray-600 dark:text-gray-400">{format(new Date(invoice.due_date), 'MMM dd, yyyy')}</Typography>,
+      key: 'due_date',
+      header: 'Due Date',
+      headerClassName: 'min-w-[100px] w-[25%]',
+      render: (invoice) => <Typography variant="body" className="text-xs text-gray-600 dark:text-gray-400">{format(new Date(invoice.due_date), 'MMM dd, yyyy')}</Typography>,
     },
     {
-        key: 'status',
-        header: 'Status',
-        headerClassName: 'min-w-[100px] w-[25%]',
-        render: (invoice) => (
-            <span className={`px-2 py-0.5 rounded-full text-xxs font-semibold ${getInvoiceStatusColor(invoice.status)}`}>
-                {invoice.status.replace(/_/g, ' ').toUpperCase()}
-            </span>
-        ),
+      key: 'status',
+      header: 'Status',
+      headerClassName: 'min-w-[100px] w-[25%]',
+      render: (invoice) => (
+        <span className={`px-2 py-0.5 rounded-full text-xxs font-semibold ${getInvoiceStatusColor(invoice.status)}`}>
+          {invoice.status.replace(/_/g, ' ').toUpperCase()}
+        </span>
+      ),
     },
   ];
 
@@ -250,8 +251,8 @@ export default function CompanyOverviewPage({ params }: PageProps) {
           {recentInvoices.length > 0 && (
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 hover:shadow-lg transition-shadow">
               <div className='flex justify-between items-center mb-5 pb-3 border-b border-stroke dark:border-strokedark'>
-                  <div className="flex items-center gap-2"><CreditCard size={18} className="text-primary" /><Typography variant="card-title" as="h3" className="text-base">Recent Invoices</Typography></div>
-                  <Link href={`/companies/${companyId}/invoices`} className="inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium transition-all hover:gap-2">View all <ArrowRight size={16} /></Link>
+                <div className="flex items-center gap-2"><CreditCard size={18} className="text-primary" /><Typography variant="card-title" as="h3" className="text-base">Recent Invoices</Typography></div>
+                <Link href={`/companies/${companyId}/invoices`} className="inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium transition-all hover:gap-2">View all <ArrowRight size={16} /></Link>
               </div>
               <DynamicTable<Invoice> data={recentInvoices} columns={invoiceColumns} isLoading={false} />
             </div>

@@ -180,7 +180,7 @@ const Header = (props: {
 
         <div className="flex items-center gap-3 2xsm:gap-7">
           <ul className="flex items-center gap-2 2xsm:gap-4">
-            {isHydrated && <DarkModeSwitcher />}
+            {isHydrated ? <DarkModeSwitcher /> : <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />}
 
             <li>
               <Link
@@ -197,7 +197,7 @@ const Header = (props: {
               </Link>
             </li>
           </ul>
-          {isHydrated && <DropdownUser />}
+          {isHydrated ? <DropdownUser /> : <div className="h-10 w-32 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
         </div>
       </div>
     </header>
