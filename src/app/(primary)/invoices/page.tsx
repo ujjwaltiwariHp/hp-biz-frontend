@@ -68,7 +68,7 @@ const isOverdue = (dueDate: string, status: string) => {
 };
 
 const canMarkPayment = (status: string) => {
-  return status === 'sent' || status === 'overdue' || status === 'partially_paid';
+  return status === 'sent' || status === 'overdue' || status === 'partially_paid' || status === 'pending';
 };
 
 export default function InvoicesPage() {
