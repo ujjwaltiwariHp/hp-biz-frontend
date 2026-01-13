@@ -131,7 +131,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
       key: 'total_amount',
       header: 'Amount',
       headerClassName: 'min-w-[100px] w-[25%]',
-      render: (invoice) => <Typography variant="body" className="font-medium">{invoice.currency} {parseFloat(invoice.total_amount).toFixed(2)}</Typography>,
+      render: (invoice) => <Typography variant="body" className="font-medium">$ {parseFloat(invoice.total_amount).toFixed(2)}</Typography>,
     },
     {
       key: 'due_date',

@@ -270,7 +270,7 @@ export default function SubscriptionsPage() {
                 // Ensure values are treated as numbers for formatting
                 const monthlyPrice = parseFloat(pkg.price_monthly || '0');
                 const yearlyPrice = parseFloat(pkg.price_yearly || '0');
-                const currency = pkg.currency || 'USD';
+                const currency = '$'; // Force currency display to $
 
                 return (
                   <div

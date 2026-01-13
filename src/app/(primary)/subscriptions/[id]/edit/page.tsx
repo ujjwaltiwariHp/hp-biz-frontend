@@ -3,6 +3,7 @@
 import PackageForm from '@/components/forms/PackageForm';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
+import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionService } from '@/services/subscription.service';
 import { useRouter } from 'next/navigation';
@@ -56,7 +57,33 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
   };
 
   if (isLoading) {
-    return <Loader />;
+    return (
+      <>
+        <div className="mb-6">
+          <SkeletonLoader type="text" width={300} height={32} />
+        </div>
+        <div className="w-full">
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark h-[600px]">
+            <div className="py-3 px-5 border-b border-stroke dark:border-strokedark">
+              <SkeletonLoader type="text" width={200} height={24} />
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                <div className="lg:col-span-1">
+                  <SkeletonLoader type="text" width={100} className="mb-2" />
+                  <SkeletonLoader type="rect" height={40} />
+                </div>
+                <div className="lg:col-span-2">
+                  <SkeletonLoader type="text" width={100} className="mb-2" />
+                  <SkeletonLoader type="rect" height={40} />
+                </div>
+              </div>
+              <SkeletonLoader type="rect" height={300} />
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (isError || !existingPackage) {
@@ -68,7 +95,7 @@ export default function EditSubscriptionPage({ params }: EditSubscriptionPagePro
   return (
     <>
       <Breadcrumb pageName={`Edit Package: ${existingPackage.name}`} />
-      <div className="mx-auto max-w-4xl">
+      <div className="w-full">
         <PackageForm
           title={`Edit Package: ${existingPackage.name}`}
           initialData={existingPackage as SubscriptionPackage}

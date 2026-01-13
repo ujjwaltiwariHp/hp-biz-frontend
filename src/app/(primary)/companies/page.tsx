@@ -232,7 +232,7 @@ export default function CompaniesPage() {
           </Typography>
           <Typography variant="body" className="text-sm text-primary font-medium">
             {company.package_price
-              ? `${company.package_currency || 'USD'} ${company.package_price}/mo`
+              ? `$ ${company.package_price}/mo`
               : '-'}
           </Typography>
         </div>

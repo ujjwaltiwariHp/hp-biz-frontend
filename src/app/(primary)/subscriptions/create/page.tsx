@@ -32,7 +32,7 @@ export default function CreateSubscriptionPage() {
   return (
     <>
       <Breadcrumb pageName="Create Subscription Package" />
-      <div className="mx-auto max-w-4xl">
+      <div className="w-full">
         <PackageForm
           title="Create New Package"
           onSubmit={handleSubmit}

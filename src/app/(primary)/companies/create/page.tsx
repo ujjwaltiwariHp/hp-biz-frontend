@@ -63,11 +63,14 @@ const getDefaultFormData = (selectedPackage: SubscriptionPackage | null): Create
 
 export default function CreateCompanyPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+
   const [formData, setFormData] = useState<CreateCompanyData>(getDefaultFormData(null));
   const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
+
+  // ... (keeping query logic) ... 
+
 
   const {
     data: packagesResponse,
@@ -140,24 +143,7 @@ export default function CreateCompanyPage() {
     }));
   };
 
-  const handleNext = () => {
-    const { company_name, admin_email, admin_name, password } = formData;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!company_name || !admin_email || !admin_name || !password) {
-      toast.error('Please fill all required Company Admin fields.');
-      return;
-    }
-    if (!emailRegex.test(admin_email)) {
-      toast.error('Please provide a valid Admin Email.');
-      return;
-    }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters long.');
-      return;
-    }
-    setStep(2);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,13 +164,23 @@ export default function CreateCompanyPage() {
 
   if (packagesLoading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="w-full space-y-4">
         <SkeletonText className="h-8 w-48 mb-4" />
         <div className="rounded-sm border border-stroke bg-white p-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+          {/* Company Info Skeleton */}
+          <SkeletonText className="h-6 w-64 mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full" />
+          </div>
+
+          {/* Subscription Info Skeleton */}
           <SkeletonText className="h-6 w-64 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <SkeletonRect className="h-12 w-full" />
-            <SkeletonRect className="h-12 w-full" />
+            <SkeletonRect className="h-12 w-full md:col-span-2" />
+            <SkeletonRect className="h-24 w-full md:col-span-2" />
             <SkeletonRect className="h-12 w-full" />
             <SkeletonRect className="h-12 w-full" />
           </div>
@@ -217,19 +213,22 @@ export default function CreateCompanyPage() {
   return (
     <>
       <Breadcrumb pageName="Provision New Company" />
-      <div className="mx-auto max-w-3xl">
+      <div className="w-full">
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
             <Typography variant="card-title" as="h4">
-              Company Provisioning Wizard (Step {step} of 2)
+              Company and Subscription Details
             </Typography>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
 
-              <div className={step === 1 ? 'block' : 'hidden'}>
-                <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><User size={18} /> Company & Admin Information</Typography>
+              {/* SECTION 1: Company & Admin Information */}
+              <div className="mb-10">
+                <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium bg-primary/5 p-2 rounded w-fit px-4">
+                  <User size={18} /> Company & Admin Information
+                </Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Typography variant="label" className="mb-2.5 block">Company Name <span className="text-danger">*</span></Typography>
@@ -266,8 +265,11 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
-              <div className={step === 2 ? 'block' : 'hidden'}>
-                <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium"><DollarSign size={18} /> Subscription & Billing</Typography>
+              {/* SECTION 2: Subscription & Billing */}
+              <div className="mb-6">
+                <Typography variant="body2" as="h5" className="text-primary mb-5 flex items-center gap-2 font-medium bg-primary/5 p-2 rounded w-fit px-4">
+                  <DollarSign size={18} /> Subscription & Billing
+                </Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <Typography variant="label" className="mb-2.5 block">Subscription Package <span className="text-danger">*</span></Typography>
@@ -276,7 +278,7 @@ export default function CreateCompanyPage() {
                         <option value={0} disabled>Select a package</option>
                         {packages.map(pkg => (
                           <option key={pkg.id} value={pkg.id}>
-                            {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
+                            {pkg.name} ($ {Number(pkg.price_monthly).toFixed(2)} / month)
                           </option>
                         ))}
                       </select>
@@ -330,38 +332,18 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-6 mt-6 border-t border-stroke dark:border-strokedark">
-                {step === 2 && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setStep(1)}
-                    leftIcon={<ArrowLeft size={18} />}
-                  >
-                    Previous
-                  </Button>
-                )}
-
-                {step === 1 && (
-                  <Button
-                    variant="primary"
-                    onClick={handleNext}
-                    rightIcon={<ArrowRight size={18} />}
-                    className="ml-auto"
-                  >
-                    Next
-                  </Button>
-                )}
-
-                {step === 2 && (
-                  <Button
-                    variant="success"
-                    type="submit"
-                    isLoading={createCompanyMutation.isPending}
-                    disabled={!isFormValid}
-                  >
-                    Provision Company
-                  </Button>
-                )}
+              {/* Submit Button */}
+              <div className="flex justify-end pt-6 mt-6 border-t border-stroke dark:border-strokedark">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  size="lg"
+                  isLoading={createCompanyMutation.isPending}
+                  disabled={!isFormValid || createCompanyMutation.isPending}
+                  className="px-8 min-w-[200px]"
+                >
+                  Provision Company
+                </Button>
               </div>
             </div>
           </form>
