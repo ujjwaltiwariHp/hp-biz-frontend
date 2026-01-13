@@ -4,6 +4,7 @@ import React, { use } from 'react';
 import Link from 'next/link';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
+import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
@@ -121,8 +122,41 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     }
   }, [currentCompany, packages, packageMap, formData.subscription_package_id]);
 
-  if (isCompanyLoading || isPackagesLoading) {
-    return <Loader variant="page" />;
+  if ((isCompanyLoading && !currentCompany) || (isPackagesLoading && !packagesResponse)) {
+    return (
+      <>
+        <div className="mb-6">
+          <SkeletonLoader type="text" width={150} height={20} className="mb-4" />
+          <SkeletonLoader type="text" width={250} height={24} />
+        </div>
+        <div className="mx-auto max-w-2xl">
+          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="py-4 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
+              <SkeletonLoader type="text" width={180} height={24} />
+            </div>
+            <div className="p-6.5">
+              <div className="mb-6">
+                <SkeletonLoader type="rect" height={80} />
+              </div>
+              <div className="mb-6">
+                <SkeletonLoader type="text" width={150} className="mb-2" />
+                <SkeletonLoader type="rect" height={40} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <SkeletonLoader type="text" width={100} className="mb-2" />
+                  <SkeletonLoader type="rect" height={40} />
+                </div>
+                <div>
+                  <SkeletonLoader type="text" width={100} className="mb-2" />
+                  <SkeletonLoader type="rect" height={40} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (!currentCompany || isCompanyError) {
@@ -153,13 +187,13 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
     const { subscription_package_id, subscription_start_date, subscription_end_date } = formData;
 
     if (subscription_package_id <= 0 || !subscription_start_date || !subscription_end_date) {
-        toast.error('All subscription fields are required.');
-        return;
+      toast.error('All subscription fields are required.');
+      return;
     }
 
     if (new Date(subscription_end_date) <= new Date(subscription_start_date)) {
-        toast.error('End date must be after start date.');
-        return;
+      toast.error('End date must be after start date.');
+      return;
     }
 
     updateMutation.mutate(formData);
@@ -182,85 +216,85 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <div className="py-4 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
             <Typography variant="card-title" as="h4" className="flex items-center gap-2">
-                <Package size={16} className="text-primary" />
-                Update Subscription
+              <Package size={16} className="text-primary" />
+              Update Subscription
             </Typography>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="p-6.5">
-                <div className="space-y-6">
-                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
-                        <Typography variant="label">Current Package</Typography>
-                        <Typography variant="value" as="h5" className="mt-1">
-                            {currentCompany.package_name}
-                        </Typography>
-                        <Typography variant="caption" className="text-xs text-primary mt-1">
-                            Current Period: {formatDate(currentCompany.subscription_start_date)} - {formatDate(currentCompany.subscription_end_date)}
-                        </Typography>
-                    </div>
-
-                    <div>
-                        <Typography variant="label" className="mb-2.5 block">New Subscription Package <span className="text-danger">*</span></Typography>
-                        <select
-                            name="subscription_package_id"
-                            value={formData.subscription_package_id}
-                            onChange={handleChange}
-                            required
-                            className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                        >
-                            <option value={0} disabled>Select a package</option>
-                            {packages.map(pkg => (
-                                <option key={pkg.id} value={pkg.id}>
-                                    {pkg.name} ({pkg.currency || 'USD'} {Number(pkg.price_monthly).toFixed(2)} / month)
-                                </option>
-                            ))}
-                        </select>
-                        {selectedPackage && (
-                            <Typography variant="caption" className="text-xs text-gray-500 mt-2">
-                                New Package Price: {selectedPackage.currency || 'USD'} {Number(selectedPackage.price_monthly).toFixed(2)} / month
-                            </Typography>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
-                            <input
-                                type="date"
-                                name="subscription_start_date"
-                                value={formData.subscription_start_date}
-                                onChange={handleChange}
-                                required
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
-                            <input
-                                type="date"
-                                name="subscription_end_date"
-                                value={formData.subscription_end_date}
-                                onChange={handleChange}
-                                required
-                                className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                            />
-                            {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
-                                <Typography variant="caption" className="text-xxs text-danger mt-2 flex items-center gap-1"><X size={12} /> End date must be after start date.</Typography>
-                            )}
-                        </div>
-                    </div>
+              <div className="space-y-6">
+                <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
+                  <Typography variant="label">Current Package</Typography>
+                  <Typography variant="value" as="h5" className="mt-1">
+                    {currentCompany.package_name}
+                  </Typography>
+                  <Typography variant="caption" className="text-xs text-primary mt-1">
+                    Current Period: {formatDate(currentCompany.subscription_start_date)} - {formatDate(currentCompany.subscription_end_date)}
+                  </Typography>
                 </div>
 
-                <div className="flex justify-end pt-6 mt-6 border-t border-stroke dark:border-strokedark">
-                    <button
-                        type="submit"
-                        disabled={updateMutation.isPending || formData.subscription_package_id === 0 || (new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date))}
-                        className="rounded bg-success py-2 px-4 text-sm font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
-                    >
-                        {updateMutation.isPending ? 'Updating...' : 'Update Subscription'}
-                    </button>
+                <div>
+                  <Typography variant="label" className="mb-2.5 block">New Subscription Package <span className="text-danger">*</span></Typography>
+                  <select
+                    name="subscription_package_id"
+                    value={formData.subscription_package_id}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                  >
+                    <option value={0} disabled>Select a package</option>
+                    {packages.map(pkg => (
+                      <option key={pkg.id} value={pkg.id}>
+                        {pkg.name} ($ {Number(pkg.price_monthly).toFixed(2)} / month)
+                      </option>
+                    ))}
+                  </select>
+                  {selectedPackage && (
+                    <Typography variant="caption" className="text-xs text-gray-500 mt-2">
+                      New Package Price: $ {Number(selectedPackage.price_monthly).toFixed(2)} / month
+                    </Typography>
+                  )}
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
+                    <input
+                      type="date"
+                      name="subscription_start_date"
+                      value={formData.subscription_start_date}
+                      onChange={handleChange}
+                      required
+                      className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
+                    <input
+                      type="date"
+                      name="subscription_end_date"
+                      value={formData.subscription_end_date}
+                      onChange={handleChange}
+                      required
+                      className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-5 text-sm text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                    />
+                    {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
+                      <Typography variant="caption" className="text-xxs text-danger mt-2 flex items-center gap-1"><X size={12} /> End date must be after start date.</Typography>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-6 mt-6 border-t border-stroke dark:border-strokedark">
+                <button
+                  type="submit"
+                  disabled={updateMutation.isPending || formData.subscription_package_id === 0 || (new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date))}
+                  className="rounded bg-success py-2 px-4 text-sm font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
+                >
+                  {updateMutation.isPending ? 'Updating...' : 'Update Subscription'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

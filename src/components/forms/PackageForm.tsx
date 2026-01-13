@@ -180,7 +180,7 @@ export default function PackageForm({
   }, {} as Record<string, SubscriptionFeature[]>);
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-boxdark rounded-sm border border-stroke dark:border-strokedark shadow-default font-satoshi max-w-[1600px] mx-auto">
+    <div className="h-full flex flex-col bg-white dark:bg-boxdark rounded-sm border border-stroke dark:border-strokedark shadow-default font-satoshi w-full">
       {/* Header */}
       <div className="py-3 px-5 border-b border-stroke dark:border-strokedark flex justify-between items-center shrink-0">
         <Typography
@@ -201,14 +201,12 @@ export default function PackageForm({
                 className="sr-only"
               />
               <div
-                className={`h-6 w-11 rounded-full transition shadow-inner ${
-                  formData.is_active ? 'bg-green-500' : 'bg-blue-500'
-                }`}
+                className={`h-6 w-11 rounded-full transition shadow-inner ${formData.is_active ? 'bg-green-500' : 'bg-blue-500'
+                  }`}
               >
                 <div
-                  className={`dot absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white transition shadow-sm ${
-                    formData.is_active ? 'translate-x-full' : ''
-                  }`}
+                  className={`dot absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white transition shadow-sm ${formData.is_active ? 'translate-x-full' : ''
+                    }`}
                 ></div>
               </div>
             </label>
@@ -387,22 +385,19 @@ export default function PackageForm({
                     className="sr-only"
                   />
                   <div
-                    className={`h-6 w-11 rounded-full transition shadow-inner ${
-                      formData.is_trial ? 'bg-green-500' : 'bg-blue-500'
-                    }`}
+                    className={`h-6 w-11 rounded-full transition shadow-inner ${formData.is_trial ? 'bg-green-500' : 'bg-blue-500'
+                      }`}
                   >
                     <div
-                      className={`dot absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white transition shadow-sm ${
-                        formData.is_trial ? 'translate-x-full' : ''
-                      }`}
+                      className={`dot absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white transition shadow-sm ${formData.is_trial ? 'translate-x-full' : ''
+                        }`}
                     ></div>
                   </div>
                 </label>
               </div>
               <div
-                className={`transition-opacity duration-200 ${
-                  formData.is_trial ? 'opacity-100' : 'opacity-40 pointer-events-none'
-                }`}
+                className={`transition-opacity duration-200 ${formData.is_trial ? 'opacity-100' : 'opacity-40 pointer-events-none'
+                  }`}
               >
                 <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
                   Duration (Days)
@@ -450,11 +445,10 @@ export default function PackageForm({
                           <div
                             key={feature.key}
                             onClick={() => handleFeatureToggle(feature.key)}
-                            className={`flex items-start justify-between p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
-                              isEnabled
+                            className={`flex items-start justify-between p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${isEnabled
                                 ? 'border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800 shadow-sm'
                                 : 'border-stroke bg-white dark:bg-boxdark dark:border-strokedark hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700'
-                            }`}
+                              }`}
                           >
                             <div className="flex-1 pr-3">
                               <div className="font-medium text-sm text-gray-900 dark:text-white mb-1">
@@ -467,14 +461,12 @@ export default function PackageForm({
 
                             {/* Toggle Switch - Blue/Green Only */}
                             <div
-                              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 mt-1 ${
-                                isEnabled ? 'bg-green-500' : 'bg-blue-500'
-                              }`}
+                              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 mt-1 ${isEnabled ? 'bg-green-500' : 'bg-blue-500'
+                                }`}
                             >
                               <div
-                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                                  isEnabled ? 'translate-x-5' : ''
-                                }`}
+                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isEnabled ? 'translate-x-5' : ''
+                                  }`}
                               />
                             </div>
                           </div>

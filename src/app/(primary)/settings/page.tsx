@@ -321,7 +321,7 @@ export default function SettingsPage() {
                     <InfoCard title="Company Name" value={billingSettings.company_name} />
                     <InfoCard title="Email" value={billingSettings.email} />
                     <InfoCard title="Phone" value={billingSettings.phone} />
-                    <InfoCard title="Currency" value={billingSettings.currency} />
+                    <InfoCard title="Currency" value="USD" />
                     <InfoCard
                       title="Tax Rate"
                       value={`${(billingSettings.tax_rate * 100).toFixed(2)}%`}

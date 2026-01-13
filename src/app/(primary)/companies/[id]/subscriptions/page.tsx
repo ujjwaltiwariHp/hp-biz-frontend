@@ -273,7 +273,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
               <InfoValue
                 label="Price"
-                value={isPageLoading ? <SkeletonLoader type="text" width={100} /> : `${company?.package_currency || 'USD'} ${company?.package_price === null || company?.package_price === undefined
+                value={isPageLoading ? <SkeletonLoader type="text" width={100} /> : `$ ${company?.package_price === null || company?.package_price === undefined
                   ? '0.00'
                   : typeof company?.package_price === 'string'
                     ? parseFloat(company.package_price).toFixed(2)
@@ -387,7 +387,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   </option>
                   {!isPageLoading && packages.map((pkg: any) => (
                     <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} ({pkg.currency || 'USD'} {pkg.price_monthly} / month)
+                      {pkg.name} ($ {pkg.price_monthly} / month)
                     </option>
                   ))}
                 </select>
@@ -395,7 +395,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 {selectedPackage && (
                   <div className="mt-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
                     <Typography variant="body2" className="font-medium text-primary mb-2">
-                      <span className='font-bold'>New Plan:</span> {selectedPackage.name} ({selectedPackage.currency || 'USD'} {selectedPackage.price_monthly} / month)
+                      <span className='font-bold'>New Plan:</span> {selectedPackage.name} ($ {selectedPackage.price_monthly} / month)
                     </Typography>
                   </div>
                 )}

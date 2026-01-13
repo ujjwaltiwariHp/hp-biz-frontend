@@ -12,7 +12,5 @@ export default function Home() {
     router.push('/dashboard');
   }, [router]);
 
-  return (
-    <Loader variant="page" size="xl" />
-  );
+  return null;
 }

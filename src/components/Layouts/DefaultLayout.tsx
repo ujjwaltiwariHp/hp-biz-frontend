@@ -22,11 +22,11 @@ export default function DefaultLayout({
   const pathname = usePathname();
 
   if (!isInitialized) {
-    return <Loader />;
+    return null;
   }
 
   if (!isAuthenticated && !pathname?.startsWith("/auth")) {
-    return <Loader />;
+    return null;
   }
 
   return (
