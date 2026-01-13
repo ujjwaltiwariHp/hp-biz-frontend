@@ -30,12 +30,12 @@ export default function CompanyDetailLayout({
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useAuth();
 
-  // Dialog State
+
   const toggleDialog = useConfirmDialog();
   const deleteDialog = useConfirmDialog();
   const [selectedAction, setSelectedAction] = useState<'activate' | 'deactivate' | null>(null);
 
-  // Fetch company data
+
   const {
     data: companyResponse,
     isLoading,
@@ -48,7 +48,7 @@ export default function CompanyDetailLayout({
     staleTime: 5 * 60 * 1000,
   });
 
-  // --- Mutation Logic (Moved from Page to Layout) ---
+
 
   const activateMutation = useMutation({
     mutationFn: () => companyService.activateCompanyAccount(companyId),
@@ -88,7 +88,7 @@ export default function CompanyDetailLayout({
     },
   });
 
-  // --- Handlers ---
+
 
   const handleToggleStatus = () => {
     if (!isSuperAdmin) {
@@ -123,7 +123,7 @@ export default function CompanyDetailLayout({
   };
 
 
-  // Handle errors
+
   React.useEffect(() => {
     if (isError) {
       toast.error(
@@ -137,7 +137,7 @@ export default function CompanyDetailLayout({
     if (isLoading) {
       return (
         <div className="space-y-4">
-          <SkeletonRect className="h-10 w-full max-w-md mb-6" /> {/* Breadcrumbish */}
+          <SkeletonRect className="h-10 w-full max-w-md mb-6" />
           <div className="flex gap-4 border-b border-stroke dark:border-strokedark pb-4">
             <SkeletonRect className="h-8 w-24" />
             <SkeletonRect className="h-8 w-24" />
@@ -157,11 +157,9 @@ export default function CompanyDetailLayout({
 
   return (
     <>
-      {/* Company Info Header Bar */}
       <div className="mb-6 rounded-lg border border-stroke bg-white dark:bg-boxdark dark:border-strokedark shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-4 md:px-6">
 
-          {/* Title & Back Button */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/companies')}
@@ -194,7 +192,6 @@ export default function CompanyDetailLayout({
             </div>
           </div>
 
-          {/* Action Buttons (Visible only to SuperAdmin) */}
           {isSuperAdmin && (
             <div className="flex flex-wrap gap-2">
               <button
@@ -222,12 +219,10 @@ export default function CompanyDetailLayout({
         </div>
       </div>
 
-      {/* Page Content */}
       <div className="min-w-0">
         {children}
       </div>
 
-      {/* Confirmation Dialogs (Placed in Layout to work across all sub-pages) */}
       <ConfirmDialog
         {...toggleDialog.confirmProps}
         type={selectedAction === 'deactivate' ? 'warning' : 'success'}

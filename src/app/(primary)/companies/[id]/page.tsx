@@ -25,7 +25,6 @@ interface PageProps {
   }>;
 }
 
-// Fixed InfoBlock: Uses 'as="p"/"div"' to ensure block display behavior
 const InfoBlock = ({ label, value, className = '' }: { label: string, value: React.ReactNode, className?: string }) => (
   <div className={className}>
     <Typography variant="label" as="p" className="text-xs mb-1.5 block">{label}</Typography>
@@ -47,7 +46,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const companyId = parseInt(resolvedParams.id, 10);
 
-  // --- Queries ---
+
   const { data: companyResponse, isLoading: companyLoading } = useQuery({
     queryKey: ['company', companyId],
     queryFn: () => companyService.getCompany(companyId),
@@ -72,7 +71,6 @@ export default function CompanyOverviewPage({ params }: PageProps) {
   if (companyLoading) {
     return (
       <div className="space-y-5 p-4 md:p-6">
-        {/* KPI Skeletons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <SkeletonRect className="h-32 w-full" />
           <SkeletonRect className="h-32 w-full" />
@@ -83,7 +81,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
           <div className="lg:col-span-2 space-y-5">
             <SkeletonRect className="h-64 w-full" />
             <SkeletonRect className="h-48 w-full" />
-            <SkeletonRect className="h-96 w-full" /> {/* Table area */}
+            <SkeletonRect className="h-96 w-full" />
           </div>
           <div className="lg:col-span-1 space-y-5">
             <SkeletonRect className="h-64 w-full" />
@@ -154,13 +152,13 @@ export default function CompanyOverviewPage({ params }: PageProps) {
   ];
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="space-y-5">
 
-      {/* KPI Statistics Cards */}
+
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          {/* Total Staff KPI */}
+
           <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-5 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <div className="p-3 rounded-lg bg-primary/10 dark:bg-primary/20">
@@ -178,7 +176,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Total Leads KPI */}
+
           <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-5 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <div className="p-3 rounded-lg bg-success/10 dark:bg-success/20">
@@ -196,7 +194,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Total Activities KPI */}
+
           <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-5 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <div className="p-3 rounded-lg bg-warning/10 dark:bg-warning/20">
@@ -216,13 +214,12 @@ export default function CompanyOverviewPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Main Content Grid */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* LEFT COLUMN - Company Information */}
         <div className="lg:col-span-2 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Company Profile Card */}
+
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-center gap-2 mb-5 pb-3 border-b border-stroke dark:border-strokedark">
                 <Building2 size={18} className="text-primary" />
@@ -245,7 +242,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Admin Contact Card */}
+
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-center gap-2 mb-5 pb-3 border-b border-stroke dark:border-strokedark">
                 <UserCheck size={18} className="text-primary" />
@@ -269,7 +266,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Recent Invoices Section */}
+
           {recentInvoices.length > 0 && (
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 hover:shadow-lg transition-shadow">
               <div className='flex justify-between items-center mb-5 pb-3 border-b border-stroke dark:border-strokedark'>
@@ -281,10 +278,9 @@ export default function CompanyOverviewPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* RIGHT COLUMN - Subscription Details */}
         <div className="lg:col-span-1 space-y-5">
-          {/* Current Subscription Card - FIXED: Matched styling with Admin box */}
-          <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-1 hover:shadow-lg transition-shadow">
+
+          <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-2 mb-5 pb-3 border-b border-stroke dark:border-strokedark">
               <Package size={18} className="text-primary" />
               <Typography variant="card-title" as="h3" className="text-base">Current Subscription</Typography>
@@ -299,10 +295,10 @@ export default function CompanyOverviewPage({ params }: PageProps) {
 
               <div className="flex items-center gap-3 p-3 bg-primary/5 dark:bg-primary/10 rounded-lg">
                 <DollarSign size={20} className="text-primary" />
-                <div>
-                  <Typography variant="label" className="text-xs mb-1">Pricing</Typography>
+                <div className="flex flex-col">
+                  <Typography variant="label" className="text-xs mb-1.5">Pricing</Typography>
                   <Typography variant="value" className="text-lg font-bold text-black dark:text-white">
-                    ${parseFloat(String(company.package_price)).toFixed(2)}
+                    $ {parseFloat(String(company.package_price)).toFixed(2)}
                     <span className="text-xs font-normal text-gray-600 dark:text-gray-400"> / month</span>
                   </Typography>
                 </div>
@@ -330,7 +326,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Package Features Card */}
+
           {pkg && (
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-center gap-2 mb-5 pb-3 border-b border-stroke dark:border-strokedark">

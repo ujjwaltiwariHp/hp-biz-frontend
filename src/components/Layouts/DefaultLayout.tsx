@@ -3,6 +3,9 @@
 import React, { useState, Suspense } from 'react';
 
 import dynamic from 'next/dynamic';
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import Loader from '../common/Loader';
 
 import Sidebar from '../Sidebar/index';
 import Header from '../Header/index';
@@ -15,10 +18,20 @@ export default function DefaultLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isAuthenticated, isInitialized } = useAuth();
+  const pathname = usePathname();
+
+  if (!isInitialized) {
+    return <Loader />;
+  }
+
+  if (!isAuthenticated && !pathname?.startsWith("/auth")) {
+    return <Loader />;
+  }
 
   return (
     <div className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen">
-      {/* Background components with hydration guards to prevent SSR/CSR mismatch */}
+
       <AnimatedBackground />
       <GlassmorphicShapes />
 

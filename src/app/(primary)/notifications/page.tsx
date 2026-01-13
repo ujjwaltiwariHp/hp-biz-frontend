@@ -22,7 +22,7 @@ import { toast } from 'react-toastify';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useSSE } from '@/hooks/useSSE';
-import Loader from '@/components/common/Loader';
+import { SkeletonCircle, SkeletonText } from '@/components/common/Skeleton';
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
@@ -171,7 +171,7 @@ const NotificationsPage = () => {
     ...n,
     priority:
       n.notification_type === 'payment_pending' ||
-      n.notification_type === 'invoice_overdue'
+        n.notification_type === 'invoice_overdue'
         ? 'high'
         : (n.priority as 'low' | 'normal' | 'high') || 'normal',
   }));
@@ -188,14 +188,6 @@ const NotificationsPage = () => {
     const payload = raw?.data || raw;
     return payload?.stats?.unread_notifications || payload?.unread_count || 0;
   })();
-
-  if (isLoading)
-    return (
-      <>
-        <Breadcrumb pageName=" Notifications" />
-        <Loader variant="inline" size="lg" className="h-40" />
-      </>
-    );
 
   if (error)
     return (
@@ -225,11 +217,10 @@ const NotificationsPage = () => {
             <button
               key={level}
               onClick={() => setPriorityFilter(level as any)}
-              className={`px-4 py-1.5 rounded-md border text-sm font-medium transition ${
-                priorityFilter === level
-                  ? 'bg-primary text-white border-primary'
-                  : 'hover:bg-gray-100 border-gray-300 dark:border-gray-600'
-              }`}
+              className={`px-4 py-1.5 rounded-md border text-sm font-medium transition ${priorityFilter === level
+                ? 'bg-primary text-white border-primary'
+                : 'hover:bg-gray-100 border-gray-300 dark:border-gray-600'
+                }`}
             >
               {level === 'all' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1)}
             </button>
@@ -265,7 +256,23 @@ const NotificationsPage = () => {
       </div>
 
       <div className="space-y-3">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={`skeleton-${i}`}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-l-4 rounded-md bg-white dark:bg-boxdark shadow-sm border-gray-200 dark:border-strokedark"
+            >
+              <div className="flex items-start sm:items-center gap-3 w-full">
+                <SkeletonCircle className="w-5 h-5 flex-shrink-0" />
+                <div className="space-y-2 w-full max-w-2xl">
+                  <SkeletonText className="h-4 w-40" />
+                  <SkeletonText className="h-3 w-24" />
+                  <SkeletonText className="h-3 w-full max-w-md" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-gray-500">All caught up!</div>
         ) : (
           filtered.map((n) => {
@@ -273,9 +280,8 @@ const NotificationsPage = () => {
             return (
               <div
                 key={n.id}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-l-4 rounded-md bg-white dark:bg-boxdark shadow-sm ${
-                  n.is_read ? 'opacity-60 border-gray-300' : 'border-primary'
-                }`}
+                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-l-4 rounded-md bg-white dark:bg-boxdark shadow-sm ${n.is_read ? 'opacity-60 border-gray-300' : 'border-primary'
+                  }`}
               >
                 <div className="flex items-start sm:items-center gap-3 min-w-0">
                   <div className="mt-1 sm:mt-0">{getNotificationIcon(n.notification_type)}</div>

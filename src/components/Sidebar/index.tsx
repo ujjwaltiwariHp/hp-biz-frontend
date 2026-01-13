@@ -49,13 +49,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
 
 
-  // Ensure we have a valid permissions object
   const safePermissions = permissions || { all: [], company: [], user: [] };
 
   const menuItems: MenuItem[] = getMenuItems(companyId);
 
-  // Optimistic UI: If not initialized (loading/SSR), show ALL items to prevent flicker.
-  // Security is handled by the API and subsequent redirection if unauthorized.
+
   const filteredItems = !isInitialized
     ? menuItems
     : menuItems.filter((item: MenuItem) =>

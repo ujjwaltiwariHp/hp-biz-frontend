@@ -31,7 +31,7 @@ interface PageProps {
 }
 
 const formatStatusText = (status: string) => {
-    return status.replace(/_/g, ' ').toUpperCase();
+  return status.replace(/_/g, ' ').toUpperCase();
 }
 
 const getStatusIcon = (status: string) => {
@@ -100,11 +100,11 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
   const companyId = parseInt(resolvedParams.id, 10);
   const router = useRouter();
 
-  // State
+
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Search State
+
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
 
@@ -149,7 +149,7 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     },
   });
 
-  // Handlers
+
   const handleDownload = (invoiceId: number) => {
     downloadMutation.mutate(invoiceId);
   };
@@ -338,75 +338,74 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Filters Section */}
       <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 1. Search */}
-            <div className="relative">
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                    Search Invoices
-                </label>
-                <StandardSearchInput
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    onSearch={handleSearch}
-                    onClear={handleClearSearch}
-                    placeholder="Search by invoice number..."
-                    isLoading={invoicesLoading}
-                />
-            </div>
 
-            {/* 2. Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                Filter by Status
-              </label>
-             <select
-  value={statusFilter}
-  onChange={handleStatusChange}
-  className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
->
-  <option value="all">All Status</option>
-  <option value="draft">Draft</option>
-  <option value="pending">Pending</option>
-  <option value="sent">Sent</option>
-  <option value="payment_received">Payment Received</option>
-  <option value="partially_paid">Partially Paid</option>
-  <option value="paid">Paid</option>
-  <option value="overdue">Overdue</option>
-  <option value="void">Void</option>
-  <option value="cancelled">Cancelled</option>
-  <option value="rejected">Rejected</option>
-</select>
-            </div>
+          <div className="relative">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+              Search Invoices
+            </label>
+            <StandardSearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              onSearch={handleSearch}
+              onClear={handleClearSearch}
+              placeholder="Search by invoice number..."
+              isLoading={invoicesLoading}
+            />
+          </div>
+
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+              Filter by Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={handleStatusChange}
+              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="pending">Pending</option>
+              <option value="sent">Sent</option>
+              <option value="payment_received">Payment Received</option>
+              <option value="partially_paid">Partially Paid</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+              <option value="void">Void</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
         </div>
 
-        {/* Active Filters Display */}
+
         {activeFiltersCount > 0 && (
-            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-primary">
-                        Active Filters ({activeFiltersCount}):
-                    </span>
-                    {appliedSearchTerm && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                            Search: {appliedSearchTerm}
-                        </span>
-                    )}
-                    {statusFilter !== 'all' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                            Status: {formatStatusText(statusFilter)}
-                        </span>
-                    )}
-                </div>
-                <button
-                    onClick={handleClearFilters}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                >
-                    <X size={16} />
-                    Clear All
-                </button>
+          <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-primary">
+                Active Filters ({activeFiltersCount}):
+              </span>
+              {appliedSearchTerm && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                  Search: {appliedSearchTerm}
+                </span>
+              )}
+              {statusFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
+                  Status: {formatStatusText(statusFilter)}
+                </span>
+              )}
             </div>
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
+            >
+              <X size={16} />
+              Clear All
+            </button>
+          </div>
         )}
       </div>
 

@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
 import { Typography } from '@/components/common/Typography';
+import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { SubscriptionUpdate } from '@/types/company';
 
 interface PageProps {
@@ -55,15 +56,15 @@ const calculateEndDate = (startDate: string, durationType: string = 'monthly'): 
 };
 
 const InfoValue = ({ label, value, icon, className = '' }: { label: string, value: React.ReactNode, icon?: React.ReactNode, className?: string }) => (
-    <div className={`flex flex-col ${className}`}>
-        <Typography variant="label" className="mb-1">{label}</Typography>
-        <div className="flex items-center gap-2">
-            {icon}
-            <Typography variant="value" as="p" className="text-sm font-semibold break-words">
-                {value}
-            </Typography>
-        </div>
+  <div className={`flex flex-col ${className}`}>
+    <Typography variant="label" className="mb-1">{label}</Typography>
+    <div className="flex items-center gap-2">
+      {icon}
+      <Typography variant="value" as="p" className="text-sm font-semibold break-words">
+        {value}
+      </Typography>
     </div>
+  </div>
 );
 
 
@@ -203,11 +204,9 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
     updateMutation.mutate(formData);
   };
 
-  if (companyLoading || packagesLoading) {
-    return <Loader variant="page" />;
-  }
+  const isPageLoading = companyLoading || packagesLoading;
 
-  if (!company) {
+  if (!isPageLoading && !company) {
     return (
       <div className="text-center py-12">
         <AlertCircle size={48} className="mx-auto mb-3 text-danger opacity-50" />
@@ -218,14 +217,13 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
     );
   }
 
-  const isSubscriptionExpired =
-    new Date(company.subscription_end_date) < new Date();
+  const isSubscriptionExpired = company ? new Date(company.subscription_end_date) < new Date() : false;
 
-  const daysRemaining = Math.ceil(
+  const daysRemaining = company ? Math.ceil(
     (new Date(company.subscription_end_date).getTime() -
       new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
+    (1000 * 60 * 60 * 24)
+  ) : 0;
 
 
   return (
@@ -236,7 +234,7 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
         </Typography>
 
         <Typography variant="caption" className="mt-1">
-          Update subscription plan and dates for {company.company_name}
+          {isPageLoading ? <SkeletonLoader type="text" width={250} /> : `Update subscription plan and dates for ${company?.company_name}`}
         </Typography>
       </div>
 
@@ -270,32 +268,30 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
               <InfoValue
                 label="Package Name"
-                value={company.package_name}
+                value={isPageLoading ? <SkeletonLoader type="text" width={120} /> : company?.package_name}
               />
 
               <InfoValue
-                  label="Price"
-                  value={`${
-                    company.package_currency || 'USD'} ${
-                    company.package_price === null || company.package_price === undefined
-                      ? '0.00'
-                      : typeof company.package_price === 'string'
-                        ? parseFloat(company.package_price).toFixed(2)
-                        : company.package_price.toFixed(2)
+                label="Price"
+                value={isPageLoading ? <SkeletonLoader type="text" width={100} /> : `${company?.package_currency || 'USD'} ${company?.package_price === null || company?.package_price === undefined
+                  ? '0.00'
+                  : typeof company?.package_price === 'string'
+                    ? parseFloat(company.package_price).toFixed(2)
+                    : company?.package_price?.toFixed(2)
                   } / month`}
-                  icon={<DollarSign size={16} className="text-primary/70 dark:text-white/70" />}
+                icon={!isPageLoading ? <DollarSign size={16} className="text-primary/70 dark:text-white/70" /> : undefined}
               />
 
               <div className="pt-4 border-t border-stroke dark:border-strokedark space-y-4">
                 <InfoValue
-                    label="Start Date"
-                    value={format(new Date(company.subscription_start_date), 'MMM dd, yyyy')}
-                    icon={<Calendar size={16} className="text-primary/70 dark:text-white/70" />}
+                  label="Start Date"
+                  value={isPageLoading ? <SkeletonLoader type="text" width={120} /> : (company?.subscription_start_date ? format(new Date(company.subscription_start_date), 'MMM dd, yyyy') : '-')}
+                  icon={!isPageLoading ? <Calendar size={16} className="text-primary/70 dark:text-white/70" /> : undefined}
                 />
                 <InfoValue
-                    label="End Date"
-                    value={format(new Date(company.subscription_end_date), 'MMM dd, yyyy')}
-                    icon={<Calendar size={16} className="text-primary/70 dark:text-white/70" />}
+                  label="End Date"
+                  value={isPageLoading ? <SkeletonLoader type="text" width={120} /> : (company?.subscription_end_date ? format(new Date(company.subscription_end_date), 'MMM dd, yyyy') : '-')}
+                  icon={!isPageLoading ? <Calendar size={16} className="text-primary/70 dark:text-white/70" /> : undefined}
                 />
               </div>
 
@@ -303,53 +299,63 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                 <Typography variant="label" className="mb-2">
                   Subscription Status
                 </Typography>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      isSubscriptionExpired ? 'bg-danger' : 'bg-success'
-                    }`}
-                  ></span>
-                  <Typography variant="value" as="span" className={`font-semibold ${
-                      isSubscriptionExpired ? 'text-danger' : 'text-success'
-                    }`}>
-                    {isSubscriptionExpired ? 'Expired' : 'Active'}
-                  </Typography>
-                  {!isSubscriptionExpired && (
-                    <Typography variant="caption" className="text-xs text-gray-600 dark:text-gray-400 ml-2">
-                      ({daysRemaining}{' '}
-                      days remaining)
+                {isPageLoading ? (
+                  <SkeletonLoader type="text" width={150} />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-3 w-3 rounded-full ${isSubscriptionExpired ? 'bg-danger' : 'bg-success'
+                        }`}
+                    ></span>
+                    <Typography variant="value" as="span" className={`font-semibold ${isSubscriptionExpired ? 'text-danger' : 'text-success'
+                      }`}>
+                      {isSubscriptionExpired ? 'Expired' : 'Active'}
                     </Typography>
-                  )}
-                </div>
+                    {!isSubscriptionExpired && (
+                      <Typography variant="caption" className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                        ({daysRemaining}{' '}
+                        days remaining)
+                      </Typography>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {selectedPackage && (
+          {(isPageLoading || selectedPackage) && (
             <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
               <Typography variant="card-title" as="h3" className="mb-4">
-                {selectedPackage.name} Features
+                {isPageLoading ? <SkeletonLoader type="text" width={150} /> : `${selectedPackage.name} Features`}
               </Typography>
               <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-3">
-                <li className="flex justify-between items-center">
-                  <Typography variant="body" as="span">Max Staff:</Typography>
-                  <Typography variant="value" as="span" className="font-semibold">
-                      {selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}
-                  </Typography>
-                </li>
-                <li className="flex justify-between items-center">
-                  <Typography variant="body" as="span">Max Leads/Month:</Typography>
-                  <Typography variant="value" as="span" className="font-semibold">
-                      {selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}
-                  </Typography>
-                </li>
-                {selectedPackage.is_trial && (
-                  <li className="flex justify-between items-center border-t border-stroke dark:border-strokedark pt-3">
-                    <Typography variant="body" as="span" className="text-indigo-600 dark:text-indigo-400">Trial Duration:</Typography>
-                    <Typography variant="value" as="span" className="font-semibold text-indigo-600 dark:text-indigo-400">
-                      {selectedPackage.trial_duration_days} days
-                    </Typography>
-                  </li>
+                {isPageLoading ? (
+                  <>
+                    <SkeletonLoader type="text" width="100%" count={3} />
+                  </>
+                ) : (
+                  <>
+                    <li className="flex justify-between items-center">
+                      <Typography variant="body" as="span">Max Staff:</Typography>
+                      <Typography variant="value" as="span" className="font-semibold">
+                        {selectedPackage.max_staff_count === 0 ? 'Unlimited' : selectedPackage.max_staff_count}
+                      </Typography>
+                    </li>
+                    <li className="flex justify-between items-center">
+                      <Typography variant="body" as="span">Max Leads/Month:</Typography>
+                      <Typography variant="value" as="span" className="font-semibold">
+                        {selectedPackage.max_leads_per_month === 0 ? 'Unlimited' : selectedPackage.max_leads_per_month}
+                      </Typography>
+                    </li>
+                    {selectedPackage.is_trial && (
+                      <li className="flex justify-between items-center border-t border-stroke dark:border-strokedark pt-3">
+                        <Typography variant="body" as="span" className="text-indigo-600 dark:text-indigo-400">Trial Duration:</Typography>
+                        <Typography variant="value" as="span" className="font-semibold text-indigo-600 dark:text-indigo-400">
+                          {selectedPackage.trial_duration_days} days
+                        </Typography>
+                      </li>
+                    )}
+                  </>
                 )}
               </ul>
             </div>
@@ -372,14 +378,14 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   name="subscription_package_id"
                   value={formData.subscription_package_id}
                   onChange={handleChange}
-                  disabled={!isSuperAdmin}
+                  disabled={!isSuperAdmin || isPageLoading}
                   required
                   className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value={0} disabled>
-                    Select a package
+                    {isPageLoading ? 'Loading packages...' : 'Select a package'}
                   </option>
-                  {packages.map((pkg: any) => (
+                  {!isPageLoading && packages.map((pkg: any) => (
                     <option key={pkg.id} value={pkg.id}>
                       {pkg.name} ({pkg.currency || 'USD'} {pkg.price_monthly} / month)
                     </option>
@@ -427,10 +433,10 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
 
                   {new Date(formData.subscription_end_date) <=
                     new Date(formData.subscription_start_date) && (
-                    <Typography variant="caption" className="text-xxs text-danger mt-2 flex items-center gap-1">
-                      <X size={12} /> End date must be after start date.
-                    </Typography>
-                  )}
+                      <Typography variant="caption" className="text-xxs text-danger mt-2 flex items-center gap-1">
+                        <X size={12} /> End date must be after start date.
+                      </Typography>
+                    )}
                 </div>
               </div>
             </div>
