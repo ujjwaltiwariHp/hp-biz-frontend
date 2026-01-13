@@ -94,7 +94,7 @@ const BillingSettingsModal: React.FC<BillingSettingsModalProps> = ({ settings, o
     if (!mounted) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4 sm:p-6 backdrop-blur-sm transition-all duration-300">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4 sm:p-6 transition-all duration-300">
             <ClickOutside onOutsideClick={onClose} className="w-full max-w-4xl flex flex-col max-h-[90vh] sm:max-h-[85vh] transform transition-all">
                 <div className="w-full rounded-lg bg-white dark:bg-boxdark shadow-2xl flex flex-col max-h-full overflow-hidden">
                     <div className="flex items-center justify-between border-b dark:border-strokedark px-4 sm:px-6 py-4 shrink-0 bg-white dark:bg-boxdark z-10">
