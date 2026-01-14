@@ -16,6 +16,7 @@ interface AdminManagementTableProps {
   profile: SuperAdmin;
   roles: SuperAdminRole[];
   permissions: SuperAdminPermissions;
+  isLoading?: boolean;
 }
 
 export default function AdminManagementTable({
@@ -23,6 +24,7 @@ export default function AdminManagementTable({
   profile,
   roles,
   permissions,
+  isLoading = false,
 }: AdminManagementTableProps) {
   const queryClient = useQueryClient();
   const deleteDialog = useConfirmDialog();
@@ -39,7 +41,8 @@ export default function AdminManagementTable({
       deleteDialog.closeDialog();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete admin');
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Failed to delete admin';
+      toast.error(msg);
       deleteDialog.closeDialog();
     },
   });
@@ -52,7 +55,8 @@ export default function AdminManagementTable({
       toggleDialog.closeDialog();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Failed to update status';
+      toast.error(msg);
       toggleDialog.closeDialog();
     },
   });
@@ -63,15 +67,20 @@ export default function AdminManagementTable({
       toast.error("Cannot delete your own account");
       return;
     }
-    if (admin.super_admin_role_id === 1) {
-      toast.error('Cannot delete a primary Super Admin account.');
+    if (admin.id === 1) {
+      toast.error('Cannot delete the Root Super Admin account.');
       return;
     }
+
     setSelectedAdmin(admin);
     deleteDialog.openDialog();
   };
 
   const handleToggleStatus = (admin: SuperAdmin) => {
+    if (admin.id === 1) {
+        toast.error('Cannot deactivate the Root Super Admin account.');
+        return;
+    }
     setSelectedAdmin(admin);
     toggleDialog.openDialog();
   };
@@ -85,15 +94,19 @@ export default function AdminManagementTable({
     }
   };
 
-  // --- Permission Checks ---
   const isAdminDeletable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
-    if (admin.super_admin_role_id === 1) return false;
+
+    if (admin.id === 1) return false;
+
     return hasPermission(permissions, 'super_admins', 'delete');
   };
 
   const isAdminUpdatable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
+
+    if (admin.id === 1) return false;
+
     return hasPermission(permissions, 'super_admins', 'update');
   };
 
@@ -125,11 +138,10 @@ export default function AdminManagementTable({
           className="hover:opacity-80 transition-opacity text-left"
         >
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-xs font-medium ${
-              admin.super_admin_role_id === 1
-                ? 'bg-danger/10 text-danger border border-danger/20'
-                : 'bg-success/10 text-success border border-success/20'
-            }`}
+            className={`inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-xs font-medium ${admin.super_admin_role_id === 1
+              ? 'bg-danger/10 text-danger border border-danger/20'
+              : 'bg-success/10 text-success border border-success/20'
+              }`}
           >
             <Shield size={12} />
             {admin.role_name || 'N/A'}
@@ -142,16 +154,14 @@ export default function AdminManagementTable({
       header: 'Status',
       render: (admin) => (
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-xs font-medium ${
-            admin.status === 'active'
-              ? 'bg-success/10 text-success border border-success/20'
-              : 'bg-danger/10 text-danger border border-danger/20'
-          }`}
+          className={`inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-xs font-medium ${admin.status === 'active'
+            ? 'bg-success/10 text-success border border-success/20'
+            : 'bg-danger/10 text-danger border border-danger/20'
+            }`}
         >
           <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              admin.status === 'active' ? 'bg-success' : 'bg-danger'
-            }`}
+            className={`h-1.5 w-1.5 rounded-full ${admin.status === 'active' ? 'bg-success' : 'bg-danger'
+              }`}
           ></span>
           {admin.status.charAt(0).toUpperCase() + admin.status.slice(1)}
         </span>
@@ -167,11 +177,10 @@ export default function AdminManagementTable({
           {isAdminUpdatable(admin) && (
             <button
               onClick={() => handleToggleStatus(admin)}
-              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors ${
-                admin.status === 'active'
-                  ? 'text-danger hover:text-danger/80'
-                  : 'text-success hover:text-success/80'
-              } disabled:opacity-50`}
+              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors ${admin.status === 'active'
+                ? 'text-danger hover:text-danger/80'
+                : 'text-success hover:text-success/80'
+                } disabled:opacity-50`}
               disabled={toggleStatusMutation.isPending}
               title={admin.status === 'active' ? 'Deactivate' : 'Activate'}
             >
@@ -185,9 +194,8 @@ export default function AdminManagementTable({
           {hasPermission(permissions, 'super_admins', 'delete') && (
             <button
               onClick={() => handleDelete(admin)}
-              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 text-danger hover:text-danger/80 transition-colors ${
-                !isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 text-danger hover:text-danger/80 transition-colors ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               disabled={
                 deleteMutation.isPending ||
                 toggleStatusMutation.isPending ||
@@ -208,7 +216,7 @@ export default function AdminManagementTable({
       <DynamicTable<SuperAdmin>
         data={admins}
         columns={columns}
-        isLoading={false} // Parent modal handles loading
+        isLoading={isLoading}
       />
 
       <PermissionsModal
@@ -225,7 +233,6 @@ export default function AdminManagementTable({
         message={`Are you sure you want to permanently delete "${selectedAdmin?.name}"?`}
         onConfirm={() => {
           if (selectedAdmin) deleteMutation.mutate(selectedAdmin.id);
-          deleteDialog.closeDialog();
         }}
         confirmText="Delete"
         isLoading={deleteMutation.isPending}
@@ -236,12 +243,10 @@ export default function AdminManagementTable({
         {...toggleDialog.confirmProps}
         type={selectedAdmin?.status === 'active' ? 'warning' : 'success'}
         title={`${selectedAdmin?.status === 'active' ? 'Deactivate' : 'Activate'} Administrator`}
-        message={`Are you sure you want to ${
-          selectedAdmin?.status === 'active' ? 'deactivate' : 'activate'
-        } "${selectedAdmin?.name}"?`}
+        message={`Are you sure you want to ${selectedAdmin?.status === 'active' ? 'deactivate' : 'activate'
+          } "${selectedAdmin?.name}"?`}
         onConfirm={() => {
           if (selectedAdmin) toggleStatusMutation.mutate(selectedAdmin.id);
-          toggleDialog.closeDialog();
         }}
         confirmText={selectedAdmin?.status === 'active' ? 'Deactivate' : 'Activate'}
         isLoading={toggleStatusMutation.isPending}

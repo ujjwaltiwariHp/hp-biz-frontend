@@ -71,6 +71,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
       onClose={isLoading ? () => { } : onCancel}
       size="sm"
       showCloseButton={false} // Custom close button handling or none
+      zIndex={1000000} // Ensure it appears above other modals
     >
       <div className="text-center">
         {/* Icon */}

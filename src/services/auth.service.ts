@@ -48,11 +48,11 @@ export const authService = {
   updateProfile: async (profileData: UpdateProfileData): Promise<ProfileResponse> => {
     const response = await apiClient.put('/super-admin/auth/profile', profileData);
     if (response.data.success && typeof window !== 'undefined') {
-        const currentUser = localStorage.getItem('superAdmin');
-        if (currentUser) {
-            const parsed = JSON.parse(currentUser);
-            localStorage.setItem('superAdmin', JSON.stringify({ ...parsed, ...response.data.data }));
-        }
+      const currentUser = localStorage.getItem('superAdmin');
+      if (currentUser) {
+        const parsed = JSON.parse(currentUser);
+        localStorage.setItem('superAdmin', JSON.stringify({ ...parsed, ...response.data.data }));
+      }
     }
     return response.data;
   },
@@ -74,11 +74,17 @@ export const authService = {
 
   deleteAdmin: async (adminId: number): Promise<DeleteAdminResponse> => {
     const response = await apiClient.delete(`/super-admin/auth/delete/${adminId}`);
+    if (!response.data.success) {
+      throw { response: { data: response.data } }; // Throw object structure matching axios error
+    }
     return response.data;
   },
 
   toggleAdminStatus: async (adminId: number): Promise<ToggleStatusResponse> => {
-    const response = await apiClient.put(`/super-admin/auth/toggle-status/${adminId}`);
+    const response = await apiClient.put(`/super-admin/auth/toggle-status/${adminId}`, {});
+    if (!response.data.success) {
+      throw { response: { data: response.data } };
+    }
     return response.data;
   },
 
@@ -98,8 +104,8 @@ export const authService = {
 
   getCurrentUser: () => {
     if (typeof window !== 'undefined') {
-        const userStr = localStorage.getItem('superAdmin');
-        return userStr ? JSON.parse(userStr) : null;
+      const userStr = localStorage.getItem('superAdmin');
+      return userStr ? JSON.parse(userStr) : null;
     }
     return null;
   }

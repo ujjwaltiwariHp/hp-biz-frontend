@@ -27,15 +27,6 @@ export const ViewAdminsModal: React.FC<ViewAdminsModalProps> = ({
     permissions.all?.includes('crud') ||
     permissions.super_admins?.includes('view');
 
-  // Full-screen loader overlay when loading
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-[9999]">
-        <Loader />
-      </div>
-    );
-  }
-
   return (
     <ModalContainer
       isOpen={isOpen}
@@ -49,16 +40,13 @@ export const ViewAdminsModal: React.FC<ViewAdminsModalProps> = ({
             You do not have permission to view the list of administrators.
           </p>
         </div>
-      ) : !admins || admins.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p className="text-sm">No administrators found.</p>
-        </div>
       ) : (
         <AdminManagementTable
-          admins={admins}
+          admins={admins || []}
           profile={profile}
           roles={roles}
           permissions={permissions}
+          isLoading={isLoading}
         />
       )}
     </ModalContainer>
