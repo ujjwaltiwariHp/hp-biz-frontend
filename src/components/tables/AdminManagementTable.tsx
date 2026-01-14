@@ -67,15 +67,20 @@ export default function AdminManagementTable({
       toast.error("Cannot delete your own account");
       return;
     }
-    if (admin.super_admin_role_id === 1) {
-      toast.error('Cannot delete a primary Super Admin account.');
+    if (admin.id === 1) {
+      toast.error('Cannot delete the Root Super Admin account.');
       return;
     }
+
     setSelectedAdmin(admin);
     deleteDialog.openDialog();
   };
 
   const handleToggleStatus = (admin: SuperAdmin) => {
+    if (admin.id === 1) {
+        toast.error('Cannot deactivate the Root Super Admin account.');
+        return;
+    }
     setSelectedAdmin(admin);
     toggleDialog.openDialog();
   };
@@ -89,19 +94,19 @@ export default function AdminManagementTable({
     }
   };
 
-  // --- Permission Checks ---
   const isAdminDeletable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
-    // Strictly prevent deleting any Super Admin (ID 1 or by name)
-    if (admin.super_admin_role_id === 1 || admin.role_name === 'Super Admin') return false;
+
+    if (admin.id === 1) return false;
+
     return hasPermission(permissions, 'super_admins', 'delete');
   };
 
   const isAdminUpdatable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
-    // Can deactivate both Super Admins and Sub Admins (except self, handled above)
-    // Primary Super Admin (ID 1) might still be protected by backend, but user said "can deactivate status of suber-admin"
-    // We'll trust the permission check for the general capability
+
+    if (admin.id === 1) return false;
+
     return hasPermission(permissions, 'super_admins', 'update');
   };
 
