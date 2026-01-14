@@ -8,11 +8,10 @@ import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { Typography } from '@/components/common/Typography';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
-import { Download, RefreshCw, Zap, Code, User, Building2, Mail, Filter, X } from 'lucide-react';
+import { Download, RefreshCw, Zap, Code, User, Building2, Mail } from 'lucide-react';
 import { toast } from 'react-toastify';
-import DateRangePicker from '@/components/common/DateRangePicker';
 import { useSSE } from '@/hooks/useSSE';
-import StandardSearchInput from '@/components/common/StandardSearchInput';
+import TableToolbar from '@/components/common/TableToolbar';
 
 type LogType = 'activity' | 'system';
 
@@ -340,12 +339,12 @@ export default function LogsPage() {
             </div>
           )}
           {log.user_name && log.user_name !== 'System' && (
-             <div className="flex items-center gap-2 mt-0.5" title={log.user_name}>
-               <User size={14} className="shrink-0 text-gray-400" />
-               <Typography variant="caption" className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate max-w-[180px]">
-                 {log.user_name}
-               </Typography>
-             </div>
+            <div className="flex items-center gap-2 mt-0.5" title={log.user_name}>
+              <User size={14} className="shrink-0 text-gray-400" />
+              <Typography variant="caption" className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate max-w-[180px]">
+                {log.user_name}
+              </Typography>
+            </div>
           )}
         </div>
       ),
@@ -387,103 +386,54 @@ export default function LogsPage() {
   ].filter(Boolean).length;
 
   const renderFilters = () => (
-    <div className="px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-            Global Search
-          </label>
-          <StandardSearchInput
-            value={searchTerm}
-            onChange={setSearchTerm}
-            onSearch={handleSearch}
-            onClear={handleClearSearch}
-            placeholder="Search logs..."
-            isLoading={isLoading}
-          />
-        </div>
-
-        <div className="md:col-span-1">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-            {logType === 'activity' ? 'Resource Type' : 'Log Level'}
-          </label>
-          {logType === 'activity' ? (
-            <input
-              type="text"
-              placeholder="e.g. COMPANY, USER"
-              value={filters.resource_type || ''}
-              onChange={(e) => handleFilterChange('resource_type', e.target.value)}
-              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
-            />
-          ) : (
-            <select
-              value={filters.log_level || ''}
-              onChange={(e) => handleFilterChange('log_level', e.target.value)}
-              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
-            >
-              <option value="">All Levels</option>
-              {['ERROR', 'WARN', 'INFO', 'DEBUG', 'SUCCESS', 'CRITICAL'].map(level => (
-                <option key={level} value={level.toLowerCase()}>{level}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-            Date Range
-          </label>
-          <button
-            onClick={() => setShowDatePicker(true)}
-            className="flex items-center justify-between w-full gap-2 px-4 py-2.5 text-sm border border-stroke bg-white dark:bg-boxdark rounded dark:border-strokedark transition-colors text-left"
-          >
-            <span className="truncate text-black dark:text-white">
-              {filters.start_date && filters.end_date
-                ? `${getDateString(filters.start_date)} - ${getDateString(filters.end_date)}`
-                : 'Select dates'}
-            </span>
-            <Filter size={16} className="text-gray-500 flex-shrink-0" />
-          </button>
-        </div>
-      </div>
-
-      {activeFiltersCount > 0 && (
-        <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-primary">
-              Active Filters ({activeFiltersCount}):
-            </span>
-            {appliedSearchTerm && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                Search: {appliedSearchTerm}
-              </span>
-            )}
-            {filters.resource_type && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                Resource: {filters.resource_type}
-              </span>
-            )}
-            {filters.log_level && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                Level: {filters.log_level}
-              </span>
-            )}
-            {(filters.start_date || filters.end_date) && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                Date: {getDateString(filters.start_date)} - {getDateString(filters.end_date)}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={handleClearFilters}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-          >
-            <X size={16} />
-            Clear All
-          </button>
-        </div>
-      )}
-    </div>
+    <TableToolbar
+      searchConfig={{
+        value: searchTerm,
+        onChange: setSearchTerm,
+        onSearch: handleSearch,
+        onClear: handleClearSearch,
+        placeholder: "Search logs...",
+        isLoading: isLoading,
+      }}
+      filterConfigs={[
+        logType === 'activity' ? {
+          key: 'resource_type',
+          label: 'Resource Type',
+          value: filters.resource_type || '',
+          onChange: (val) => handleFilterChange('resource_type', val),
+          type: 'input',
+          placeholder: "e.g. COMPANY, USER",
+        } : {
+          key: 'log_level',
+          label: 'Log Level',
+          value: filters.log_level || '',
+          onChange: (val) => handleFilterChange('log_level', val),
+          options: [
+            { label: 'All Levels', value: '' },
+            ...['ERROR', 'WARN', 'INFO', 'DEBUG', 'SUCCESS', 'CRITICAL'].map(level => ({ label: level, value: level.toLowerCase() }))
+          ],
+        }
+      ]}
+      dateRangeConfig={{
+        value: { startDate: (filters.start_date as string) || '', endDate: (filters.end_date as string) || '' },
+        onChange: (range) => setFilters(prev => ({ ...prev, start_date: range.startDate, end_date: range.endDate })),
+        onApply: (range) => {
+          setFilters(prev => ({ ...prev, start_date: range.startDate, end_date: range.endDate }));
+          setCurrentPage(1);
+          setShowDatePicker(false);
+        },
+      }}
+      activeFilters={{
+        count: activeFiltersCount,
+        filters: [
+          appliedSearchTerm ? { key: 'search', label: 'Search', value: appliedSearchTerm } : null,
+          filters.resource_type ? { key: 'resource', label: 'Resource', value: filters.resource_type } : null,
+          filters.log_level ? { key: 'level', label: 'Level', value: filters.log_level } : null,
+          (filters.start_date || filters.end_date) ? { key: 'date', label: 'Date', value: `${getDateString(filters.start_date)} - ${getDateString(filters.end_date)}` } : null
+        ].filter(Boolean) as any,
+        onClearAll: handleClearFilters,
+      }}
+    />
   );
 
   const renderTable = () => {
@@ -532,22 +482,20 @@ export default function LogsPage() {
           <div className="flex items-center p-1 bg-gray-100 dark:bg-meta-4 rounded-lg">
             <button
               onClick={() => handleLogTypeChange('activity')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                logType === 'activity'
-                  ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${logType === 'activity'
+                ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
             >
               <Zap size={16} />
               Activity Logs
             </button>
             <button
               onClick={() => handleLogTypeChange('system')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                logType === 'system'
-                  ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${logType === 'system'
+                ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
             >
               <Code size={16} />
               System Logs
@@ -609,22 +557,7 @@ export default function LogsPage() {
         )}
       </div>
 
-      <DateRangePicker
-        isOpen={showDatePicker}
-        dateRange={{
-          startDate: (filters.start_date as string) || '',
-          endDate: (filters.end_date as string) || ''
-        }}
-        setDateRange={(range) => {
-           setFilters(prev => ({
-             ...prev,
-             start_date: range.startDate,
-             end_date: range.endDate
-           }));
-        }}
-        onClose={() => setShowDatePicker(false)}
-        onApply={handleDateRangeApply}
-      />
+
     </>
   );
 }

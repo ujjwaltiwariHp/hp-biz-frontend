@@ -10,8 +10,6 @@ import {
   Download,
   DollarSign,
   Plus,
-  Filter,
-  X,
   CheckCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,12 +20,11 @@ import { useSSE } from '@/hooks/useSSE';
 import Link from 'next/link';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
-import StandardSearchInput from '@/components/common/StandardSearchInput';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import TableSkeleton from '@/components/common/TableSkeleton';
 import { SkeletonRect } from '@/components/common/Skeleton';
-import DateRangePicker from '@/components/common/DateRangePicker';
 import Loader from '@/components/common/Loader';
+import TableToolbar from '@/components/common/TableToolbar';
 
 const formatStatusText = (status: string) => {
   return status.replace(/_/g, ' ').toUpperCase();
@@ -343,25 +340,7 @@ export default function InvoicesPage() {
     },
   ];
 
-  if (isLoading) {
-    if (isLoading) {
-      return (
-        <>
-          <Breadcrumb pageName="Invoices" />
-          <div className="space-y-4">
-            <div className="bg-white dark:bg-boxdark p-4 rounded-sm border border-stroke dark:border-strokedark mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SkeletonRect className="h-10 w-full" />
-                <SkeletonRect className="h-10 w-full" />
-                <SkeletonRect className="h-10 w-full" />
-              </div>
-            </div>
-            <TableSkeleton columns={7} />
-          </div>
-        </>
-      );
-    }
-  }
+
 
   return (
     <>
@@ -388,102 +367,64 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        <div className="px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4 border-b border-stroke dark:border-strokedark">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Typography variant="label" as="span">Search Invoices</Typography>
-              </label>
-              <StandardSearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
-                onSearch={handleSearch}
-                onClear={handleClearSearch}
-                placeholder="Search by invoice #, company, email..."
-                minLength={3}
-                isLoading={isLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Typography variant="label" as="span">Filter by Status</Typography>
-              </label>
-              <select
-                value={statusFilter}
-                onChange={handleStatusChange}
-                className="w-full h-11 rounded-lg border border-stroke px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
-                <option value="sent">Sent</option>
-                <option value="payment_received">Payment Received</option>
-                <option value="partially_paid">Partially Paid</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
-                <option value="void">Void</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Typography variant="label" as="span">Date Range</Typography>
-              </label>
-              <button
-                onClick={() => setShowDatePicker(true)}
-                className="flex items-center justify-between w-full h-11 px-4 text-sm border border-stroke bg-white dark:bg-boxdark rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-boxdark dark:border-strokedark text-left"
-              >
-                <span className="truncate text-black dark:text-white">
-                  {dateRange.startDate && dateRange.endDate
-                    ? `${dateRange.startDate} - ${dateRange.endDate}`
-                    : 'Select dates'}
-                </span>
-                <Filter size={16} className="text-gray-500 flex-shrink-0" />
-              </button>
-            </div>
-          </div>
-
-          {activeFiltersCount > 0 && (
-            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Typography variant="body2" className="text-primary font-medium">
-                  Active Filters ({activeFiltersCount}):
-                </Typography>
-                {appliedSearchTerm && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                    Search: {appliedSearchTerm}
-                  </span>
-                )}
-                {statusFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                    Status: {formatStatusText(statusFilter)}
-                  </span>
-                )}
-                {(dateRange.startDate || dateRange.endDate) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                    Date: {dateRange.startDate} - {dateRange.endDate}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={handleClearFilters}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-              >
-                <X size={16} />
-                Clear All
-              </button>
-            </div>
-          )}
-        </div>
+        <TableToolbar
+          searchConfig={{
+            value: searchTerm,
+            onChange: setSearchTerm,
+            onSearch: handleSearch,
+            onClear: handleClearSearch,
+            placeholder: "Search by invoice #, company, email...",
+            isLoading: isLoading,
+          }}
+          filterConfigs={[
+            {
+              key: 'status',
+              label: 'Filter by Status',
+              value: statusFilter,
+              onChange: (val) => {
+                setStatusFilter(val);
+                setCurrentPage(1);
+              },
+              options: [
+                { label: 'All Status', value: 'all' },
+                { label: 'Draft', value: 'draft' },
+                { label: 'Pending', value: 'pending' },
+                { label: 'Sent', value: 'sent' },
+                { label: 'Payment Received', value: 'payment_received' },
+                { label: 'Partially Paid', value: 'partially_paid' },
+                { label: 'Paid', value: 'paid' },
+                { label: 'Overdue', value: 'overdue' },
+                { label: 'Void', value: 'void' },
+                { label: 'Cancelled', value: 'cancelled' },
+                { label: 'Rejected', value: 'rejected' },
+              ],
+            },
+          ]}
+          dateRangeConfig={{
+            value: dateRange,
+            onChange: setDateRange,
+            onApply: handleDateRangeApply,
+          }}
+          activeFilters={{
+            count: activeFiltersCount,
+            filters: [
+              appliedSearchTerm ? { key: 'search', label: 'Search', value: appliedSearchTerm } : null,
+              statusFilter !== 'all' ? { key: 'status', label: 'Status', value: formatStatusText(statusFilter) } : null,
+              (dateRange.startDate || dateRange.endDate) ? { key: 'date', label: 'Date', value: `${dateRange.startDate} - ${dateRange.endDate}` } : null
+            ].filter(Boolean) as any,
+            onClearAll: handleClearFilters,
+          }}
+        />
 
         {invoices.length > 0 || isLoading ? (
           <DynamicTable<Invoice>
             data={invoices}
             columns={invoiceColumns}
             isLoading={isLoading}
+            skeletonConfig={{
+              rows: 10,
+              columnWidths: [150, 150, 100, 120, 120, 100, 170],
+            }}
           />
         ) : (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -529,13 +470,7 @@ export default function InvoicesPage() {
         )}
       </div>
 
-      <DateRangePicker
-        isOpen={showDatePicker}
-        dateRange={dateRange}
-        setDateRange={setDateRange}
-        onClose={() => setShowDatePicker(false)}
-        onApply={handleDateRangeApply}
-      />
+
 
       <ConfirmDialog
         {...paymentDialog.confirmProps}

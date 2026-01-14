@@ -8,6 +8,7 @@ const DynamicTable = <T extends Record<string, any>>({
   columns,
   caption,
   isLoading = false,
+  skeletonConfig,
 }: DynamicTableProps<T>) => {
 
 
@@ -37,14 +38,15 @@ const DynamicTable = <T extends Record<string, any>>({
 
           <tbody>
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, rowIndex) => (
+              Array.from({ length: skeletonConfig?.rows || 5 }).map((_, rowIndex) => (
                 <tr key={`skeleton-row-${rowIndex}`} className="border-b border-stroke dark:border-strokedark">
                   {columns.map((col, colIndex) => (
                     <td key={`skeleton-col-${colIndex}`} className={`py-5 px-4 ${col.className || ''}`}>
                       <SkeletonLoader
                         type="text"
-                        width="80%"
-                        height={20}
+                        className={skeletonConfig?.className}
+                        width={skeletonConfig?.columnWidths?.[colIndex] || "80%"}
+                        height={skeletonConfig?.rowHeights?.[rowIndex] || 20}
                       />
                     </td>
                   ))}
