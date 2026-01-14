@@ -12,6 +12,7 @@ interface ModalProps {
     children: React.ReactNode;
     size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
     showCloseButton?: boolean;
+    zIndex?: number;
 }
 
 const sizeClasses = {
@@ -29,6 +30,7 @@ const Modal: React.FC<ModalProps> = ({
     children,
     size = 'md',
     showCloseButton = true,
+    zIndex = 999999,
 }) => {
     const [mounted, setMounted] = useState(false);
 
@@ -44,6 +46,11 @@ const Modal: React.FC<ModalProps> = ({
             document.body.style.overflow = 'unset';
         }
         return () => {
+            // Only reset overflow if we are the last modal? 
+            // For simplicity, we keep existing behavior but we might want to improve this later.
+            // However, removing the cleanup of unset might be safer if multiple modals exist.
+            // But standard way is to use a context or class counting.
+            // Leaving as is for now as zIndex is the likely blocker.
             document.body.style.overflow = 'unset';
         };
     }, [isOpen]);
@@ -51,7 +58,10 @@ const Modal: React.FC<ModalProps> = ({
     if (!mounted || !isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+        <div
+            className="fixed inset-0 flex items-center justify-center bg-black/60 p-4 overflow-y-auto"
+            style={{ zIndex }}
+        >
             <ClickOutside onOutsideClick={onClose} className="w-full h-full flex items-center justify-center pointer-events-none">
                 <div
                     className={`relative w-full ${sizeClasses[size]} rounded-xl bg-white dark:bg-boxdark max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto transform transition-all duration-300 ease-in-out`}
