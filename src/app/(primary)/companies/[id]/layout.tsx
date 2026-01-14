@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { SkeletonRect } from '@/components/common/Skeleton';
 import { Company } from '@/types/company';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Building, UserCheck, UserX, Trash2 } from 'lucide-react';
 import { Typography } from '@/components/common/Typography';
@@ -27,6 +27,8 @@ export default function CompanyDetailLayout({
   const resolvedParams = use(params);
   const companyId = parseInt(resolvedParams.id, 10);
   const router = useRouter();
+  const pathname = usePathname();
+  const isOverviewPage = pathname === `/companies/${resolvedParams.id}`;
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useAuth();
 
@@ -157,67 +159,69 @@ export default function CompanyDetailLayout({
 
   return (
     <>
-      <div className="mb-6 rounded-lg border border-stroke bg-white dark:bg-boxdark dark:border-strokedark shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-4 md:px-6">
+      {isOverviewPage && (
+        <div className="mb-6 rounded-lg border border-stroke bg-white dark:bg-boxdark dark:border-strokedark shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-4 md:px-6">
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/companies')}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-meta-4 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
-              title="Back to Companies"
-            >
-              <ArrowLeft size={20} />
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push('/companies')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-meta-4 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
+                title="Back to Companies"
+              >
+                <ArrowLeft size={20} />
+              </button>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
-                <Building size={20} />
-              </div>
-              <div>
-                <Typography variant="value" as="h1" className="text-lg font-bold text-black dark:text-white">
-                  {company.company_name}
-                </Typography>
-                <div className="flex items-center gap-2">
-                  <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
-                    ID: {company.unique_company_id}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
+                  <Building size={20} />
+                </div>
+                <div>
+                  <Typography variant="value" as="h1" className="text-lg font-bold text-black dark:text-white">
+                    {company.company_name}
                   </Typography>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${company.is_active
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                    {company.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Typography variant="caption" className="text-xs text-gray-500 dark:text-gray-400">
+                      ID: {company.unique_company_id}
+                    </Typography>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${company.is_active
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                      {company.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {isSuperAdmin && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleToggleStatus}
+                  disabled={activateMutation.isPending || deactivateMutation.isPending}
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all hover:shadow-md ${company.is_active
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                    } disabled:opacity-50`}
+                >
+                  {company.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
+                  {company.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-danger text-white rounded-lg hover:bg-danger/90 transition-all hover:shadow-md disabled:opacity-50"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
-
-          {isSuperAdmin && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleToggleStatus}
-                disabled={activateMutation.isPending || deactivateMutation.isPending}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all hover:shadow-md ${company.is_active
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-green-600 text-white hover:bg-green-700'
-                  } disabled:opacity-50`}
-              >
-                {company.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
-                {company.is_active ? 'Deactivate' : 'Activate'}
-              </button>
-
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-danger text-white rounded-lg hover:bg-danger/90 transition-all hover:shadow-md disabled:opacity-50"
-              >
-                <Trash2 size={16} />
-                Delete
-              </button>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
       <div className="min-w-0">
         {children}

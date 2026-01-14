@@ -7,6 +7,8 @@ import { companyService } from '@/services/company.service';
 import Loader from '@/components/common/Loader';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+import { SkeletonRect } from '@/components/common/Skeleton';
+import TableSkeleton from '@/components/common/TableSkeleton';
 import {
   FileText,
   Download,
@@ -19,10 +21,11 @@ import {
 import { format } from 'date-fns';
 
 import { Typography } from '@/components/common/Typography';
-import StandardSearchInput from '@/components/common/StandardSearchInput';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
 import { Invoice } from '@/types/invoice';
+import TableToolbar from '@/components/common/TableToolbar';
+import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 
 interface PageProps {
   params: Promise<{
@@ -177,8 +180,17 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     setCurrentPage(1);
   };
 
-  if (companyLoading || invoicesLoading) {
-    return <Loader variant="page" />;
+  // UPDATED: Allow UI to render, use skeletons for data
+  if (companyLoading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonRect className="h-8 w-48 mb-6" /> {/* Breadcrumb skeleton */}
+        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+          <SkeletonRect className="h-16 w-full mb-4" /> {/* Toolbar skeleton */}
+          <TableSkeleton columns={5} />
+        </div>
+      </div>
+    );
   }
 
   const company = companyResponse?.data?.company;
@@ -291,130 +303,63 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className='flex items-end justify-between'>
-        <div>
-          <Typography variant="page-title" as="h2">
-            Invoices
-          </Typography>
-          <Typography variant="caption" className="mt-1">
-            View and manage invoices for {company.company_name}
-          </Typography>
-        </div>
+      <div className="mb-6">
+        <Breadcrumb pageName="Invoices" />
       </div>
 
-      {companyInvoices.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
-            <Typography variant="label" as="p">
-              Total Invoices
-            </Typography>
-            <Typography variant="page-title" className="text-lg font-bold text-black dark:text-white mt-2">
-              {companyInvoices.length}
-            </Typography>
-          </div>
+      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+        <TableToolbar
+          searchConfig={{
+            value: searchTerm,
+            onChange: setSearchTerm,
+            onSearch: handleSearch,
+            onClear: handleClearSearch,
+            placeholder: "Search invoices...",
+            isLoading: invoicesLoading,
+          }}
+          filterConfigs={[
+            {
+              key: 'status',
+              label: 'Status',
+              value: statusFilter,
+              onChange: (val) => {
+                setStatusFilter(val);
+                setCurrentPage(1);
+              },
+              options: [
+                { label: 'All Status', value: 'all' },
+                { label: 'Draft', value: 'draft' },
+                { label: 'Pending', value: 'pending' },
+                { label: 'Sent', value: 'sent' },
+                { label: 'Payment Received', value: 'payment_received' },
+                { label: 'Partially Paid', value: 'partially_paid' },
+                { label: 'Paid', value: 'paid' },
+                { label: 'Overdue', value: 'overdue' },
+                { label: 'Void', value: 'void' },
+                { label: 'Cancelled', value: 'cancelled' },
+                { label: 'Rejected', value: 'rejected' },
+              ],
+            },
+          ]}
+          activeFilters={{
+            count: activeFiltersCount,
+            filters: [
+              appliedSearchTerm ? { key: 'search', label: 'Search', value: appliedSearchTerm } : null,
+              statusFilter !== 'all' ? { key: 'status', label: 'Status', value: formatStatusText(statusFilter) } : null,
+            ].filter(Boolean) as any,
+            onClearAll: handleClearFilters,
+          }}
+        />
 
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
-            <Typography variant="label" as="p">
-              Total Amount
-            </Typography>
-            <Typography variant="page-title" className="text-lg font-bold text-primary mt-2">
-              {companyInvoices[0]?.currency}{' '}
-              {companyInvoices
-                .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0)
-                .toFixed(2)}
-            </Typography>
-          </div>
-
-          <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-4">
-            <Typography variant="label" as="p">
-              Overdue Invoices
-            </Typography>
-            <Typography variant="page-title" className="text-lg font-bold text-danger mt-2">
-              {companyInvoices.filter(
-                (inv) => isOverdue(inv.due_date, inv.status)
-              ).length}
-            </Typography>
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          <div className="relative">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-              Search Invoices
-            </label>
-            <StandardSearchInput
-              value={searchTerm}
-              onChange={setSearchTerm}
-              onSearch={handleSearch}
-              onClear={handleClearSearch}
-              placeholder="Search by invoice number..."
-              isLoading={invoicesLoading}
-            />
-          </div>
-
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={handleStatusChange}
-              className="w-full rounded border border-stroke py-2.5 px-4 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="sent">Sent</option>
-              <option value="payment_received">Payment Received</option>
-              <option value="partially_paid">Partially Paid</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-              <option value="void">Void</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
-
-
-        {activeFiltersCount > 0 && (
-          <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-primary">
-                Active Filters ({activeFiltersCount}):
-              </span>
-              {appliedSearchTerm && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                  Search: {appliedSearchTerm}
-                </span>
-              )}
-              {statusFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                  Status: {formatStatusText(statusFilter)}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={handleClearFilters}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-            >
-              <X size={16} />
-              Clear All
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-lg border border-stroke dark:border-strokedark overflow-hidden">
         {companyInvoices.length > 0 ? (
           <DynamicTable<Invoice>
             data={companyInvoices}
             columns={invoiceColumns}
             isLoading={invoicesLoading}
+            skeletonConfig={{
+              rows: 5,
+              columnWidths: [150, 100, 100, 120, 100],
+            }}
           />
         ) : (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-boxdark">
@@ -429,6 +374,47 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
                 ? "Try clearing the search or adjusting your filters."
                 : "Invoice data is currently unavailable."}
             </Typography>
+          </div>
+        )}
+
+        {pagination && pagination.totalCount > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 border-t border-stroke dark:border-strokedark">
+            <Typography variant="caption" className="text-xs text-gray-600 dark:text-gray-400">
+              Showing{' '}
+              <span className="font-semibold text-black dark:text-white">
+                {(currentPage - 1) * 10 + 1}
+              </span>{' '}
+              to{' '}
+              <span className="font-semibold text-black dark:text-white">
+                {Math.min(currentPage * 10, pagination.totalCount)}
+              </span>{' '}
+              of{' '}
+              <span className="font-semibold text-black dark:text-white">
+                {pagination.totalCount}
+              </span>{' '}
+              results
+            </Typography>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-xs font-medium border border-stroke rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
+              >
+                Previous
+              </button>
+              <Typography variant="body" className="px-4 py-2 text-xs font-semibold text-black dark:text-white">
+                Page {currentPage} of {pagination.totalPages}
+              </Typography>
+              <button
+                onClick={() =>
+                  setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))
+                }
+                disabled={currentPage === pagination.totalPages}
+                className="px-4 py-2 text-xs font-medium border border-stroke rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:hover:bg-boxdark dark:text-white transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

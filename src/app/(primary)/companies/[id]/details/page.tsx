@@ -8,6 +8,7 @@ import { SkeletonRect, SkeletonText } from '@/components/common/Skeleton';
 import { AlertCircle, Mail, Phone, Globe, MapPin, Users, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Typography } from '@/components/common/Typography';
+import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -77,13 +78,11 @@ export default function CompanyDetailsPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Typography variant="page-title" as="h1">Company Profile Details</Typography>
-          <Typography variant="caption" className="mt-0.5">
-            Core information and contact details for {company.company_name}
-          </Typography>
-        </div>
+      <div className="mb-6">
+        <Breadcrumb pageName="Company Profile Details" />
+        <Typography variant="caption" className="mt-1">
+          Core information and contact details for {company.company_name}
+        </Typography>
       </div>
 
       {/* Permission Warning */}

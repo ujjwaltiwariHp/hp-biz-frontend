@@ -6,13 +6,14 @@ import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
 import { invoiceService } from '@/services/invoice.service';
 import Loader from '@/components/common/Loader';
-import { SkeletonRect } from '@/components/common/Skeleton';
+import { SkeletonRect, SkeletonText } from '@/components/common/Skeleton';
 import {
   Mail, Phone, Globe, MapPin, Users, TrendingUp, CreditCard,
   UserCheck, CheckCircle, AlertCircle, Activity, ArrowRight,
   Package, Building2, Calendar, DollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { format } from 'date-fns';
 import { Typography } from '@/components/common/Typography';
 import DynamicTable from '@/components/common/DynamicTable';
@@ -42,10 +43,81 @@ const getInvoiceStatusColor = (status: string) => {
   }
 };
 
-export default function CompanyOverviewPage({ params }: PageProps) {
+const CompanyOverviewSkeleton = () => (
+  <div className="space-y-5">
+    {/* Stats Cards Skeleton */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-5">
+          <div className="flex items-center justify-between mb-3">
+            <SkeletonRect className="h-10 w-10 rounded-lg" />
+            <SkeletonText className="h-6 w-16 rounded-full" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <SkeletonText className="h-8 w-24 mb-1" />
+            <SkeletonText className="h-4 w-32" />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="lg:col-span-2 space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Company Profile Skeleton */}
+          <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+            <div className="flex items-center gap-2 mb-5 pb-3 border-b border-stroke dark:border-strokedark">
+              <SkeletonRect className="h-5 w-5" />
+              <SkeletonText className="h-5 w-32" />
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <SkeletonText className="h-3 w-20 mb-1" />
+                  <SkeletonText className="h-5 w-48" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Administrator Skeleton */}
+          <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+            <div className="flex items-center gap-2 mb-5 pb-3 border-b border-stroke dark:border-strokedark">
+              <SkeletonRect className="h-5 w-5" />
+              <SkeletonText className="h-5 w-32" />
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <SkeletonText className="h-3 w-20 mb-1" />
+                  <SkeletonText className="h-5 w-48" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Invoices Skeleton */}
+        <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+          <SkeletonRect className="h-8 w-full mb-4" />
+          <SkeletonRect className="h-32 w-full" />
+        </div>
+      </div>
+
+      {/* Subscription Skeleton */}
+      <div className="lg:col-span-1 space-y-5">
+        <div className="rounded-xl border border-stroke dark:border-strokedark bg-white dark:bg-boxdark p-6">
+          <SkeletonRect className="h-6 w-48 mb-4" />
+          <SkeletonRect className="h-48 w-full" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+function CompanyOverviewContent({ params }: PageProps) {
   const resolvedParams = use(params);
   const companyId = parseInt(resolvedParams.id, 10);
-
 
   const { data: companyResponse, isLoading: companyLoading } = useQuery({
     queryKey: ['company', companyId],
@@ -69,27 +141,7 @@ export default function CompanyOverviewPage({ params }: PageProps) {
   });
 
   if (companyLoading) {
-    return (
-      <div className="space-y-5 p-4 md:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SkeletonRect className="h-32 w-full" />
-          <SkeletonRect className="h-32 w-full" />
-          <SkeletonRect className="h-32 w-full" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 space-y-5">
-            <SkeletonRect className="h-64 w-full" />
-            <SkeletonRect className="h-48 w-full" />
-            <SkeletonRect className="h-96 w-full" />
-          </div>
-          <div className="lg:col-span-1 space-y-5">
-            <SkeletonRect className="h-64 w-full" />
-            <SkeletonRect className="h-48 w-full" />
-          </div>
-        </div>
-      </div>
-    );
+    return <CompanyOverviewSkeleton />;
   }
 
   const company = companyResponse?.data?.company;
@@ -354,5 +406,13 @@ export default function CompanyOverviewPage({ params }: PageProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CompanyOverviewPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<CompanyOverviewSkeleton />}>
+      <CompanyOverviewContent params={params} />
+    </Suspense>
   );
 }
