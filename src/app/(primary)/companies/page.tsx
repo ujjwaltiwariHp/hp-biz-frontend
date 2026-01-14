@@ -1,11 +1,11 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { useState } from 'react';
 import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
-import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight, Filter, X } from 'lucide-react';
+import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight, Filter, X, Eye } from 'lucide-react';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Link from 'next/link';
@@ -21,7 +21,7 @@ import TableSkeleton from '@/components/common/TableSkeleton';
 import { SkeletonRect } from '@/components/common/Skeleton';
 import StandardSearchInput from '@/components/common/StandardSearchInput';
 import Loader from '@/components/common/Loader'; // Import Common Loader
-
+import Button from '@/components/common/Button';
 
 export default function CompaniesPage() {
   const { isSuperAdmin } = useAuth();
@@ -49,7 +49,7 @@ export default function CompaniesPage() {
 
   const companiesQueryKey = ['companies', currentPage, appliedSearchTerm, statusFilter, dateRange];
 
-  const { data: companiesData, isLoading } = useQuery({
+  const { data: companiesData, isLoading, isPlaceholderData } = useQuery({
     queryKey: companiesQueryKey,
     queryFn: () => companyService.getCompanies({
       page: currentPage,
@@ -59,6 +59,7 @@ export default function CompaniesPage() {
       startDate: dateRange.startDate ? new Date(dateRange.startDate).toISOString() : undefined,
       endDate: dateRange.endDate ? new Date(dateRange.endDate).toISOString() : undefined,
     }),
+    placeholderData: keepPreviousData,
   });
 
   useSSE('sa_company_list_refresh', ['companies']);
@@ -67,7 +68,7 @@ export default function CompaniesPage() {
     mutationFn: companyService.activateCompanyAccount,
     onSuccess: (data) => {
       toast.success(data.message || 'Company activated successfully');
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: companiesQueryKey });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to activate company');
@@ -78,7 +79,7 @@ export default function CompaniesPage() {
     mutationFn: companyService.deactivateCompanyAccount,
     onSuccess: (data) => {
       toast.success(data.message || 'Company deactivated successfully');
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: companiesQueryKey });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to deactivate company');
@@ -89,7 +90,7 @@ export default function CompaniesPage() {
     mutationFn: companyService.removeCompany,
     onSuccess: (data) => {
       toast.success(data.message || 'Company deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: companiesQueryKey });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to delete company');
@@ -289,73 +290,62 @@ export default function CompaniesPage() {
     {
       key: 'actions',
       header: 'Actions',
-      headerClassName: 'w-[100px] text-center',
-      className: 'w-[100px] text-center',
+      headerClassName: 'w-[140px] text-center',
+      className: 'w-[140px] min-w-[140px]',
       render: (company) => (
-        <div className="flex items-center space-x-2 justify-center" onClick={(e) => e.stopPropagation()}>
-          <button
+        <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleViewCompany(company)}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
+            className="!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 text-primary"
             title="View Details"
           >
-            <ArrowRight size={18} />
-          </button>
+            <Eye size={18} />
+          </Button>
+
           {isSuperAdmin && (
             <>
               <Link
                 href={`/companies/${company.id}/subscriptions`}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:text-warning dark:hover:text-warning"
                 title="Update Subscription"
               >
-                <Package size={18} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 text-warning"
+                >
+                  <Package size={18} />
+                </Button>
               </Link>
-              <button
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleToggleStatus(company)}
-                className={`p-2 rounded-lg transition-colors ${activateMutation.isPending || deactivateMutation.isPending
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                  } ${company.is_active
-                    ? 'text-red-600 dark:text-red-400 hover:text-red-700'
-                    : 'text-green-600 dark:text-green-400 hover:text-green-700'
-                  }`}
                 disabled={activateMutation.isPending || deactivateMutation.isPending}
+                className={`!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 ${company.is_active ? 'text-meta-1' : 'text-meta-3'}`}
                 title={company.is_active ? 'Deactivate Company' : 'Activate Company'}
               >
                 {company.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
-              </button>
-              <button
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleDelete(company)}
-                className={`p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600 dark:text-red-400 hover:text-red-700 ${deleteMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
                 disabled={deleteMutation.isPending}
+                className="!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 text-meta-1"
                 title="Delete Company"
               >
                 <Trash2 size={18} />
-              </button>
+              </Button>
             </>
           )}
         </div>
       ),
     },
   ];
-
-  // UPDATED: Using consistent Common Loader Component
-  if (isLoading) {
-    if (isLoading) {
-      return (
-        <>
-          <Breadcrumb pageName="Companies" />
-          <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white dark:bg-boxdark p-4 rounded-sm border border-stroke dark:border-strokedark">
-              <SkeletonRect className="h-10 w-64" />
-              <SkeletonRect className="h-10 w-32" />
-            </div>
-            <TableSkeleton columns={7} />
-          </div>
-        </>
-      );
-    }
-  }
 
   return (
     <>
@@ -372,13 +362,14 @@ export default function CompaniesPage() {
             </Typography>
           </div>
           {isSuperAdmin && (
-            <Link
-              href="/companies/create"
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90 transition-colors"
-              title="Provision a new company account and assign subscription"
-            >
-              <Plus size={20} />
-              <Typography variant="body" as="span" className="text-white">Provision Company</Typography>
+            <Link href="/companies/create">
+              <Button
+                leftIcon={<Plus size={20} />}
+                className="bg-primary text-white hover:bg-opacity-90 transition-colors"
+                title="Provision a new company account and assign subscription"
+              >
+                Provision Company
+              </Button>
             </Link>
           )}
         </div>
@@ -398,7 +389,7 @@ export default function CompaniesPage() {
                 onSearch={handleSearch}
                 onClear={handleClearSearch}
                 placeholder="Name, Email, or ID..."
-                isLoading={isLoading}
+                isLoading={isLoading && !isPlaceholderData}
               />
             </div>
 

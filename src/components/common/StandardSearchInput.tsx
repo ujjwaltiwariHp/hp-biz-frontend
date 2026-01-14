@@ -13,15 +13,10 @@ interface StandardSearchInputProps {
   isLoading?: boolean;
   disabled?: boolean;
   className?: string;
+  debounceMs?: number;
 }
 
-/**
- * StandardSearchInput - A reusable search component that:
- * 1. Only triggers search on Enter key press or Search button click
- * 2. Shows validation for minimum length
- * 3. Provides clear functionality
- * 4. Shows loading state
- */
+
 export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
   value,
   onChange,
@@ -32,34 +27,46 @@ export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
   isLoading = false,
   disabled = false,
   className = '',
+  debounceMs = 500,
 }) => {
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync local value with prop value
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
+
+  const triggerSearch = (val: string) => {
+    if (val.length === 0 || val.length >= minLength) {
+      onSearch();
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
     onChange(newValue);
+
+    // Debounce Logic
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      triggerSearch(newValue);
+    }, debounceMs);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleSearch();
+      // Clear pending debounce and trigger immediately
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      triggerSearch(localValue);
     }
-  };
-
-  const handleSearch = () => {
-    // Prevent search if value is less than minLength
-    if (localValue.length > 0 && localValue.length < minLength) {
-      return;
-    }
-    onSearch();
   };
 
   const handleClear = () => {
@@ -72,17 +79,17 @@ export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
   };
 
   const showMinLengthWarning = localValue.length > 0 && localValue.length < minLength;
-  const canSearch = localValue.length === 0 || localValue.length >= minLength;
 
   return (
     <div className={`relative ${className}`}>
-      {/* Search Icon */}
-      <Search
-        className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
-          isLoading ? 'text-primary animate-pulse' : 'text-gray-400'
-        }`}
-        size={18}
-      />
+      {/* Search Icon or Loading Spinner */}
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors text-gray-400">
+        {isLoading ? (
+          <Loader className="animate-spin text-primary" size={18} />
+        ) : (
+          <Search size={18} />
+        )}
+      </div>
 
       {/* Input Field */}
       <input
@@ -92,23 +99,14 @@ export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
         value={localValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        disabled={disabled || isLoading}
-        className={`w-full rounded-lg border ${
-          showMinLengthWarning ? 'border-warning' : 'border-stroke'
-        } py-2.5 pl-10 pr-20 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm ${
-          disabled ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''
-        }`}
+        disabled={disabled}
+        className={`w-full rounded-lg border ${showMinLengthWarning ? 'border-warning' : 'border-stroke'
+          } py-2.5 pl-10 pr-10 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-primary text-sm ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''
+          }`}
       />
 
-      {/* Right Actions */}
+      {/* Right Actions - Only Clear Button Now */}
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-        {/* Loading Indicator */}
-        {isLoading && (
-          <div className="p-1.5">
-            <Loader className="animate-spin text-primary" size={16} />
-          </div>
-        )}
-
         {/* Clear Button */}
         {!isLoading && localValue.length > 0 && (
           <button
@@ -120,36 +118,12 @@ export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
             <X size={16} />
           </button>
         )}
-
-        {/* Search Button */}
-        {!isLoading && (
-          <button
-            type="button"
-            onClick={handleSearch}
-            disabled={!canSearch || disabled}
-            className={`p-1.5 rounded-md transition-colors ${
-              canSearch && !disabled
-                ? 'text-primary hover:bg-primary/10'
-                : 'text-gray-300 cursor-not-allowed'
-            }`}
-            title={canSearch ? 'Search (Enter)' : `Minimum ${minLength} characters`}
-          >
-            <Search size={16} />
-          </button>
-        )}
       </div>
 
-      {/* Validation Message */}
+      {/* Validation Message - Optional, kept discrete */}
       {showMinLengthWarning && (
-        <div className="absolute top-full mt-1 text-xs text-warning flex items-center gap-1">
-          <span>Minimum {minLength} characters required</span>
-        </div>
-      )}
-
-      {/* Helper Text */}
-      {!showMinLengthWarning && localValue.length === 0 && (
-        <div className="absolute top-full mt-1 text-xs text-gray-500">
-          Press Enter to search
+        <div className="absolute top-full mt-1 text-xs text-warning">
+          Type at least {minLength} characters...
         </div>
       )}
     </div>

@@ -91,16 +91,16 @@ const KPICard = ({
 
     <div className="relative flex items-start justify-between gap-2">
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 truncate tracking-wide uppercase">
+        <Typography variant="label" className="text-slate-500 dark:text-slate-400 mb-1.5 truncate tracking-wide uppercase">
           {title}
-        </p>
-        <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white mb-0.5 truncate leading-tight">
+        </Typography>
+        <Typography variant="value" as="h3" className="text-2xl font-extrabold text-slate-800 dark:text-white mb-0.5 truncate leading-tight">
           {value}
-        </h3>
+        </Typography>
         {subtitle && (
-          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 truncate leading-tight">
+          <Typography variant="caption" className="font-medium text-slate-400 dark:text-slate-500 truncate leading-tight">
             {subtitle}
-          </p>
+          </Typography>
         )}
       </div>
 
@@ -324,12 +324,11 @@ export default function Dashboard() {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between shrink-0 px-1 gap-2">
           <div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Typography variant="page-title" as="h1" className="flex items-center gap-2">
               Dashboard Overview
               {isDataLoading && <RefreshCw size={14} className="animate-spin text-primary" />}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block font-medium">
-            </p>
+            </Typography>
+
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -338,9 +337,9 @@ export default function Dashboard() {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-boxdark border border-stroke dark:border-strokedark shadow-sm hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
             >
               <Calendar size={13} className="text-slate-500" />
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+              <Typography variant="label" className="text-slate-600 dark:text-slate-300">
                 {dateRange.startDate} - {dateRange.endDate}
-              </span>
+              </Typography>
             </button>
 
             <button
@@ -352,7 +351,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 shrink-0">
           <KPICard
             icon={Building2} title="Total Companies" value={overview.total_companies} subtitle={`+${overview.new_companies_period} New`}
             trendUp={true} iconColor="text-primary" iconBg="bg-primary/10 dark:bg-primary/20"
@@ -410,11 +409,11 @@ export default function Dashboard() {
 
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-stroke dark:border-strokedark">
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Typography variant="card-title" as="h3" className="flex items-center gap-2">
                   <TrendingUp size={16} className="text-primary" />
                   Top Active Companies
-                </h3>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Logs (User + System)</p>
+                </Typography>
+                <Typography variant="caption" className="font-medium">Total Logs (User + System)</Typography>
               </div>
             </div>
             <div className="flex-1 min-h-0 w-full">
@@ -456,11 +455,11 @@ export default function Dashboard() {
           <div className="col-span-1 lg:col-span-3 h-[400px] lg:h-[480px] flex flex-col rounded-lg border border-stroke bg-white p-4 shadow-sm dark:border-strokedark dark:bg-boxdark">
 
             <div className="mb-3 pb-3 border-b border-stroke dark:border-strokedark">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <Typography variant="card-title" as="h3" className="flex items-center gap-2">
                 <Activity size={16} className="text-primary" />
                 Distribution
-              </h3>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Paid vs Free</p>
+              </Typography>
+              <Typography variant="caption" className="font-medium">Paid vs Free</Typography>
             </div>
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative w-full">
               {overview.total_companies > 0 ? (
@@ -474,12 +473,12 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex flex-col items-center justify-center mt-2">
-                    <span className="text-lg font-bold text-slate-800 dark:text-white">{overview.total_companies}</span>
-                    <span className="text-xs text-slate-500 uppercase font-bold">Total</span>
+                    <Typography variant="value" className="text-lg">{overview.total_companies}</Typography>
+                    <Typography variant="badge" className="text-xxs">Total</Typography>
                   </div>
                 </>
               ) : (
-                <div className="flex h-full items-center justify-center text-slate-400"><Activity size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
+                <div className="flex h-full items-center justify-center text-slate-400"><Activity size={24} className="mb-1 opacity-50" /><Typography variant="caption">No Data</Typography></div>
               )}
             </div>
             <div className="mt-3 pt-3 border-t border-stroke dark:border-strokedark flex flex-col gap-2">
@@ -489,7 +488,7 @@ export default function Dashboard() {
                     <div className="h-2 w-2 rounded-full ring-1 ring-slate-100 dark:ring-slate-700" style={{ backgroundColor: item.color }} />
                     <span className="text-slate-600 dark:text-slate-300 font-medium">{item.name}</span>
                   </div>
-                  <span className="font-bold text-slate-800 dark:text-white">{item.value}</span>
+                  <Typography variant="value" className="!text-xs">{item.value}</Typography>
                 </div>
               ))}
             </div>
@@ -498,11 +497,11 @@ export default function Dashboard() {
           <div className="col-span-1 lg:col-span-5 h-[400px] lg:h-[480px] flex flex-col rounded-lg border border-stroke bg-white p-4 shadow-sm dark:border-strokedark dark:bg-boxdark">
 
             <div className="mb-3 pb-3 border-b border-stroke dark:border-strokedark">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <Typography variant="card-title" as="h3" className="flex items-center gap-2">
                 <Building2 size={16} className="text-primary" />
                 New Arrivals
-              </h3>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest 5 Registered</p>
+              </Typography>
+              <Typography variant="caption" className="font-medium">Latest 5 Registered</Typography>
             </div>
             <div className="flex-1 min-h-0 relative w-full">
               {recentCompanies.length > 0 ? (
@@ -514,7 +513,7 @@ export default function Dashboard() {
                   />
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center text-slate-400"><UserX size={24} className="mb-1 opacity-50" /><span className="text-xs">No Data</span></div>
+                <div className="flex h-full items-center justify-center text-slate-400"><UserX size={24} className="mb-1 opacity-50" /><Typography variant="caption">No Data</Typography></div>
               )}
             </div>
           </div>
