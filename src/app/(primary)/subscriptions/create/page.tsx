@@ -1,7 +1,6 @@
 'use client';
 
 import PackageForm from '@/components/forms/PackageForm';
-import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionService } from '@/services/subscription.service';
 import { useRouter } from 'next/navigation';
@@ -31,7 +30,6 @@ export default function CreateSubscriptionPage() {
 
   return (
     <>
-      <Breadcrumb pageName="Create Subscription Package" />
       <div className="w-full">
         <PackageForm
           title="Create New Package"

@@ -3,9 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
-import { SkeletonRect, SkeletonText } from '@/components/common/Skeleton';
 import Button from '@/components/common/Button';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
@@ -162,37 +160,13 @@ export default function CreateCompanyPage() {
     createCompanyMutation.mutate(dataToSend);
   };
 
-  if (packagesLoading) {
-    return (
-      <div className="w-full space-y-4">
-        <SkeletonText className="h-8 w-48 mb-4" />
-        <div className="rounded-sm border border-stroke bg-white p-6 shadow-default dark:border-strokedark dark:bg-boxdark">
-          {/* Company Info Skeleton */}
-          <SkeletonText className="h-6 w-64 mb-6" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <SkeletonRect className="h-12 w-full" />
-            <SkeletonRect className="h-12 w-full" />
-            <SkeletonRect className="h-12 w-full" />
-            <SkeletonRect className="h-12 w-full" />
-          </div>
+  // REMOVED: Blocking skeleton loader. Form structure should be visible immediately.
+  // if (packagesLoading) { ... }
 
-          {/* Subscription Info Skeleton */}
-          <SkeletonText className="h-6 w-64 mb-6" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <SkeletonRect className="h-12 w-full md:col-span-2" />
-            <SkeletonRect className="h-24 w-full md:col-span-2" />
-            <SkeletonRect className="h-12 w-full" />
-            <SkeletonRect className="h-12 w-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (packagesError || packages.length === 0) {
+  if (!packagesLoading && (packagesError || packages.length === 0)) {
     return (
       <>
-        <Breadcrumb pageName="Create Company" />
+        {/* Breadcrumb removed */}
         <div className="p-6 text-center border border-danger/50 bg-danger/10 rounded-lg">
           <XCircle size={32} className="text-danger mx-auto mb-3" />
           <Typography variant="page-title" as="h3">Error Loading Packages</Typography>
@@ -212,7 +186,7 @@ export default function CreateCompanyPage() {
 
   return (
     <>
-      <Breadcrumb pageName="Provision New Company" />
+      {/* Breadcrumb removed */}
       <div className="w-full">
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
           <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
@@ -274,14 +248,18 @@ export default function CreateCompanyPage() {
                   <div className="md:col-span-2">
                     <Typography variant="label" className="mb-2.5 block">Subscription Package <span className="text-danger">*</span></Typography>
                     <div className="relative z-20 bg-white dark:bg-form-input">
-                      <select name="subscription_package_id" value={formData.subscription_package_id} onChange={handleChange} required className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white">
-                        <option value={0} disabled>Select a package</option>
-                        {packages.map(pkg => (
-                          <option key={pkg.id} value={pkg.id}>
-                            {pkg.name} ($ {Number(pkg.price_monthly).toFixed(2)} / month)
-                          </option>
-                        ))}
-                      </select>
+                      {packagesLoading ? (
+                        <div className="h-[50px] w-full rounded border border-stroke bg-gray-100 dark:border-strokedark dark:bg-meta-4 animate-pulse" />
+                      ) : (
+                        <select name="subscription_package_id" value={formData.subscription_package_id} onChange={handleChange} required className="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white">
+                          <option value={0} disabled>Select a package</option>
+                          {packages.map(pkg => (
+                            <option key={pkg.id} value={pkg.id}>
+                              {pkg.name} ($ {Number(pkg.price_monthly).toFixed(2)} / month)
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
                   {selectedPackage && (

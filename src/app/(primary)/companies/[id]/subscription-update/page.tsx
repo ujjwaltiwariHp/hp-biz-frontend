@@ -4,7 +4,7 @@ import React, { use } from 'react';
 import Link from 'next/link';
 import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import Loader from '@/components/common/Loader';
-import SkeletonLoader from '@/components/common/SkeletonLoader';
+import { SkeletonRect, SkeletonText } from '@/components/common/Skeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyService } from '@/services/company.service';
 import { subscriptionService } from '@/services/subscription.service';
@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { SubscriptionUpdate } from '@/types/company';
 import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Package, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
@@ -51,7 +51,50 @@ const calculateEndDate = (startDate: string, durationType: string = 'monthly'): 
   return format(end, 'yyyy-MM-dd');
 };
 
-export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
+const SubscriptionUpdateSkeleton = () => (
+  <>
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <SkeletonRect className="h-4 w-4 rounded" />
+        <SkeletonText className="h-4 w-32" />
+      </div>
+      <SkeletonText className="h-8 w-64" />
+    </div>
+    <div className="mx-auto max-w-2xl">
+      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+        <div className="py-4 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex items-center gap-2">
+          <SkeletonRect className="h-5 w-5 rounded" />
+          <SkeletonText className="h-6 w-48" />
+        </div>
+        <div className="p-6.5">
+          <div className="mb-6 space-y-2">
+            <div className="p-4 rounded-lg bg-gray-50 dark:bg-meta-4 border border-stroke dark:border-strokedark">
+              <SkeletonText className="h-3 w-24 mb-2" />
+              <SkeletonText className="h-5 w-48 mb-2" />
+              <SkeletonText className="h-3 w-64" />
+            </div>
+          </div>
+          <div className="mb-6">
+            <SkeletonText className="h-4 w-40 mb-2.5" />
+            <SkeletonRect className="h-11 w-full rounded" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <SkeletonText className="h-4 w-24 mb-2.5" />
+              <SkeletonRect className="h-11 w-full rounded" />
+            </div>
+            <div>
+              <SkeletonText className="h-4 w-24 mb-2.5" />
+              <SkeletonRect className="h-11 w-full rounded" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
+);
+
+function UpdateSubscriptionContent({ params }: UpdatePageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -123,40 +166,7 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
   }, [currentCompany, packages, packageMap, formData.subscription_package_id]);
 
   if ((isCompanyLoading && !currentCompany) || (isPackagesLoading && !packagesResponse)) {
-    return (
-      <>
-        <div className="mb-6">
-          <SkeletonLoader type="text" width={150} height={20} className="mb-4" />
-          <SkeletonLoader type="text" width={250} height={24} />
-        </div>
-        <div className="mx-auto max-w-2xl">
-          <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-            <div className="py-4 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
-              <SkeletonLoader type="text" width={180} height={24} />
-            </div>
-            <div className="p-6.5">
-              <div className="mb-6">
-                <SkeletonLoader type="rect" height={80} />
-              </div>
-              <div className="mb-6">
-                <SkeletonLoader type="text" width={150} className="mb-2" />
-                <SkeletonLoader type="rect" height={40} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <SkeletonLoader type="text" width={100} className="mb-2" />
-                  <SkeletonLoader type="rect" height={40} />
-                </div>
-                <div>
-                  <SkeletonLoader type="text" width={100} className="mb-2" />
-                  <SkeletonLoader type="rect" height={40} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
+    return <SubscriptionUpdateSkeleton />;
   }
 
   if (!currentCompany || isCompanyError) {
@@ -300,5 +310,13 @@ export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
         </div>
       </div>
     </>
+  );
+}
+
+export default function UpdateSubscriptionPage({ params }: UpdatePageProps) {
+  return (
+    <Suspense fallback={<SubscriptionUpdateSkeleton />}>
+      <UpdateSubscriptionContent params={params} />
+    </Suspense>
   );
 }

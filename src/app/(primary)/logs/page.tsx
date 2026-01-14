@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { logsService } from '@/services/logs.service';
 import { ActivityLog, LogFilters, SystemLog } from '@/types/logs';
-import Breadcrumb from '@/components/Breadcrumbs/Breadcrumb';
 import { Typography } from '@/components/common/Typography';
 import DynamicTable from '@/components/common/DynamicTable';
 import { TableColumn } from '@/types/table';
@@ -475,7 +474,6 @@ export default function LogsPage() {
 
   return (
     <>
-      <Breadcrumb pageName="Logs Management" />
 
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
