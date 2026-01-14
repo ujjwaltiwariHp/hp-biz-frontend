@@ -5,7 +5,7 @@ import { companyService } from '@/services/company.service';
 import { useState } from 'react';
 import { Company } from '@/types/company';
 import { toast } from 'react-toastify';
-import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight, Filter, X, Eye } from 'lucide-react';
+import { UserCheck, UserX, Trash2, Building, Package, Plus, ArrowRight, Eye } from 'lucide-react';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Link from 'next/link';
@@ -22,6 +22,7 @@ import { SkeletonRect } from '@/components/common/Skeleton';
 import StandardSearchInput from '@/components/common/StandardSearchInput';
 import Loader from '@/components/common/Loader'; // Import Common Loader
 import Button from '@/components/common/Button';
+import TableToolbar from '@/components/common/TableToolbar';
 
 export default function CompaniesPage() {
   const { isSuperAdmin } = useAuth();
@@ -324,7 +325,7 @@ export default function CompaniesPage() {
                 size="sm"
                 onClick={() => handleToggleStatus(company)}
                 disabled={activateMutation.isPending || deactivateMutation.isPending}
-                className={`!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 ${company.is_active ? 'text-meta-1' : 'text-meta-3'}`}
+                className={`!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 ${company.is_active ? 'text-red-500' : 'text-green-600'}`}
                 title={company.is_active ? 'Deactivate Company' : 'Activate Company'}
               >
                 {company.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
@@ -335,7 +336,7 @@ export default function CompaniesPage() {
                 size="sm"
                 onClick={() => handleDelete(company)}
                 disabled={deleteMutation.isPending}
-                className="!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 text-meta-1"
+                className="!p-2 hover:bg-gray-100 dark:hover:bg-boxdark-2 text-red-500"
                 title="Delete Company"
               >
                 <Trash2 size={18} />
@@ -374,105 +375,47 @@ export default function CompaniesPage() {
           )}
         </div>
 
-        {/* Filters Section */}
-        <div className="px-4 md:px-6 xl:px-7.5 py-6 bg-gray-50 dark:bg-meta-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
-            {/* 1. Global Search */}
-            <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Typography variant="label" as="span">Search</Typography>
-              </label>
-              <StandardSearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
-                onSearch={handleSearch}
-                onClear={handleClearSearch}
-                placeholder="Name, Email, or ID..."
-                isLoading={isLoading && !isPlaceholderData}
-              />
-            </div>
-
-            {/* 2. Status Filter */}
-            <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Typography variant="label" as="span">Status</Typography>
-              </label>
-              <div className="relative z-20 bg-white dark:bg-boxdark rounded border border-stroke dark:border-strokedark">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as any);
-                    setCurrentPage(1);
-                  }}
-                  className="relative z-20 w-full appearance-none rounded border-none bg-transparent py-2.5 px-4 h-11 outline-none transition focus:border-primary active:border-primary dark:bg-boxdark dark:text-white"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                <span className="absolute top-1/2 right-4 z-10 -translate-y-1/2">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g opacity="0.8">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.29289 8.29289C5.68342 7.90237 6.31658 7.90237 6.70711 8.29289L12 13.5858L17.2929 8.29289C17.6834 7.90237 18.3166 7.90237 18.7071 8.29289C19.0976 8.68342 19.0976 9.31658 18.7071 9.70711L12.7071 15.7071C12.3166 16.0976 11.6834 16.0976 11.2929 15.7071L5.29289 9.70711C4.90237 9.31658 4.90237 8.68342 5.29289 8.29289Z" fill="#637381"></path>
-                    </g>
-                  </svg>
-                </span>
-              </div>
-            </div>
-
-            {/* 3. Date Range Filter */}
-            <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Typography variant="label" as="span">Date Range</Typography>
-              </label>
-              <button
-                onClick={() => setShowDatePicker(true)}
-                className="flex items-center justify-between w-full h-11 px-4 text-sm border border-stroke bg-white dark:bg-boxdark rounded dark:border-strokedark transition-colors text-left"
-              >
-                <span className="truncate text-black dark:text-white">
-                  {dateRange.startDate && dateRange.endDate
-                    ? `${dateRange.startDate} - ${dateRange.endDate}`
-                    : 'Select dates'}
-                </span>
-                <Filter size={16} className="text-gray-500 flex-shrink-0" />
-              </button>
-            </div>
-          </div>
-
-          {/* Active Filters Display */}
-          {activeFiltersCount > 0 && (
-            <div className="mt-4 flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-primary">
-                  Active Filters ({activeFiltersCount}):
-                </span>
-                {appliedSearchTerm && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                    Search: {appliedSearchTerm}
-                  </span>
-                )}
-                {statusFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                    Status: {statusFilter}
-                  </span>
-                )}
-                {(dateRange.startDate || dateRange.endDate) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-boxdark rounded text-xs border border-stroke dark:border-strokedark">
-                    Date: {dateRange.startDate} - {dateRange.endDate}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={handleClearFilters}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-              >
-                <X size={16} />
-                Clear All
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Table Toolbar (Filters & Search) */}
+        <TableToolbar
+          searchConfig={{
+            value: searchTerm,
+            onChange: setSearchTerm,
+            onSearch: handleSearch,
+            onClear: handleClearSearch,
+            placeholder: "Name, Email, or ID...",
+            isLoading: isLoading && !isPlaceholderData,
+          }}
+          filterConfigs={[
+            {
+              key: 'status',
+              label: 'Status',
+              value: statusFilter,
+              onChange: (val) => {
+                setStatusFilter(val as any);
+                setCurrentPage(1);
+              },
+              options: [
+                { label: 'All Status', value: 'all' },
+                { label: 'Active', value: 'active' },
+                { label: 'Inactive', value: 'inactive' },
+              ],
+            },
+          ]}
+          dateRangeConfig={{
+            value: dateRange,
+            onChange: setDateRange,
+            onApply: handleDateRangeApply,
+          }}
+          activeFilters={{
+            count: activeFiltersCount,
+            filters: [
+              appliedSearchTerm ? { key: 'search', label: 'Search', value: appliedSearchTerm } : null,
+              statusFilter !== 'all' ? { key: 'status', label: 'Status', value: statusFilter } : null,
+              (dateRange.startDate || dateRange.endDate) ? { key: 'date', label: 'Date', value: `${dateRange.startDate} - ${dateRange.endDate}` } : null
+            ].filter(Boolean) as any,
+            onClearAll: handleClearFilters,
+          }}
+        />
 
         {/* Dynamic Table Component */}
         <DynamicTable
@@ -548,14 +491,7 @@ export default function CompaniesPage() {
         isLoading={activateMutation.isPending || deactivateMutation.isPending}
       />
 
-      {/* Date Range Picker Modal */}
-      <DateRangePicker
-        isOpen={showDatePicker}
-        dateRange={dateRange}
-        setDateRange={setDateRange}
-        onClose={() => setShowDatePicker(false)}
-        onApply={handleDateRangeApply}
-      />
+
     </>
   );
 }

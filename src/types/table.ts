@@ -11,4 +11,10 @@ export interface DynamicTableProps<T> {
   columns: TableColumn<T>[];
   caption?: string;
   isLoading?: boolean;
+  skeletonConfig?: {
+    rows?: number;
+    columnWidths?: (number | string)[];
+    rowHeights?: (number | string)[];
+    className?: string;
+  };
 }
