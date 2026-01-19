@@ -15,6 +15,7 @@ import { SubscriptionPackage, PackagesResponse } from '@/types/subscription';
 import { ArrowLeft, ArrowRight, Shield, User, DollarSign, ToggleRight, X, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Typography } from '@/components/common/Typography';
+import DatePicker from '@/components/common/Calendar/DatePicker';
 
 const calculateEndDate = (startDate: string, durationType: string): string => {
   if (!startDate) return '';
@@ -277,11 +278,19 @@ export default function CreateCompanyPage() {
 
                   <div>
                     <Typography variant="label" className="mb-2.5 block">Start Date <span className="text-danger">*</span></Typography>
-                    <input type="date" name="subscription_start_date" value={formData.subscription_start_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                    <DatePicker
+                      name="subscription_start_date"
+                      value={formData.subscription_start_date}
+                      onChange={handleChange as any}
+                    />
                   </div>
                   <div>
                     <Typography variant="label" className="mb-2.5 block">End Date <span className="text-danger">*</span></Typography>
-                    <input type="date" name="subscription_end_date" value={formData.subscription_end_date} onChange={handleChange} required className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                    <DatePicker
+                      name="subscription_end_date"
+                      value={formData.subscription_end_date}
+                      onChange={handleChange as any}
+                    />
                     {new Date(formData.subscription_end_date) <= new Date(formData.subscription_start_date) && (
                       <Typography variant="caption" className="text-xs text-danger mt-1">End date must be after start date.</Typography>
                     )}
