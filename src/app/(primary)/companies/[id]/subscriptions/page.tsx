@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 import { Typography } from '@/components/common/Typography';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
+import DatePicker from '@/components/common/Calendar/DatePicker';
 import { SubscriptionUpdate } from '@/types/company';
 
 interface PageProps {
@@ -406,14 +407,11 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   <Typography variant="label" className="mb-2.5 block">
                     Start Date <span className="text-danger">*</span>
                   </Typography>
-                  <input
-                    type="date"
+                  <DatePicker
                     name="subscription_start_date"
                     value={formData.subscription_start_date}
-                    onChange={handleChange}
+                    onChange={handleChange as any}
                     disabled={!isSuperAdmin}
-                    required
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -421,14 +419,11 @@ export default function CompanySubscriptionsPage({ params }: PageProps) {
                   <Typography variant="label" className="mb-2.5 block">
                     End Date <span className="text-danger">*</span>
                   </Typography>
-                  <input
-                    type="date"
+                  <DatePicker
                     name="subscription_end_date"
                     value={formData.subscription_end_date}
-                    onChange={handleChange}
+                    onChange={handleChange as any}
                     disabled={!isSuperAdmin}
-                    required
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   />
 
                   {new Date(formData.subscription_end_date) <=

@@ -3,11 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Calendar as CalendarIcon, Check } from 'lucide-react';
-
-type DateRange = {
-  startDate: string;
-  endDate: string;
-};
+import { DateRange } from './Calendar/Calendar';
+import DatePicker from './Calendar/DatePicker';
+import { format } from 'date-fns';
 
 interface Props {
   isOpen: boolean;
@@ -43,19 +41,19 @@ export const DateRangePicker: React.FC<Props> = ({
   const applyPreset = (days: number) => {
     const end = new Date();
     const start = new Date();
-    start.setDate(end.getDate() - days);
+    start.setDate(end.getDate() - (days - 1)); // Inclusive
     setLocalRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(end, 'yyyy-MM-dd'),
     });
   };
 
   const applyThisMonth = () => {
-    const end = new Date();
-    const start = new Date(end.getFullYear(), end.getMonth(), 1);
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
     setLocalRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(today, 'yyyy-MM-dd'),
     });
   };
 
@@ -64,8 +62,8 @@ export const DateRangePicker: React.FC<Props> = ({
     const start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
     const endPrev = new Date(end.getFullYear(), end.getMonth(), 0);
     setLocalRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: endPrev.toISOString().split('T')[0],
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(endPrev, 'yyyy-MM-dd'),
     });
   };
 
@@ -84,6 +82,14 @@ export const DateRangePicker: React.FC<Props> = ({
   const handleCancel = () => {
     setLocalRange(dateRange);
     onClose();
+  };
+
+  const handleChange = (e: { target: { name: string; value: string } }) => {
+    const { name, value } = e.target;
+    setLocalRange(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const isValidRange = localRange.startDate && localRange.endDate &&
@@ -125,24 +131,22 @@ export const DateRangePicker: React.FC<Props> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Start Date
               </label>
-              <input
-                type="date"
-                aria-label="Start Date"
+              <DatePicker
+                name="startDate"
                 value={localRange.startDate}
-                onChange={(e) => setLocalRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black dark:text-white outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input text-sm"
+                onChange={handleChange}
+                placeholder="Select start date"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 End Date
               </label>
-              <input
-                type="date"
-                aria-label="End Date"
+              <DatePicker
+                name="endDate"
                 value={localRange.endDate}
-                onChange={(e) => setLocalRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2.5 px-4 text-black dark:text-white outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input text-sm"
+                onChange={handleChange}
+                placeholder="Select end date"
               />
             </div>
           </div>
@@ -239,5 +243,6 @@ export const DateRangePicker: React.FC<Props> = ({
     </div>
   );
 };
+
 
 export default DateRangePicker;
