@@ -124,8 +124,8 @@ export default function LogsPage() {
     });
   };
 
-  const handleSearch = () => {
-    setAppliedSearchTerm(searchTerm);
+  const handleSearch = (term?: string) => {
+    setAppliedSearchTerm(term !== undefined ? term : searchTerm);
     setCurrentPage(1);
   };
 

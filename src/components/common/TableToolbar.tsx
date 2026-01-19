@@ -26,10 +26,11 @@ export interface TableToolbarProps {
     searchConfig?: {
         value: string;
         onChange: (value: string) => void;
-        onSearch: () => void;
+        onSearch: (value?: string) => void;
         onClear: () => void;
         placeholder?: string;
         isLoading?: boolean;
+        minLength?: number;
     };
     filterConfigs?: FilterConfig[];
     dateRangeConfig?: {
@@ -76,6 +77,7 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
                             onClear={searchConfig.onClear}
                             placeholder={searchConfig.placeholder || "Search..."}
                             isLoading={searchConfig.isLoading}
+                            minLength={searchConfig.minLength}
                         />
                     </div>
                 )}

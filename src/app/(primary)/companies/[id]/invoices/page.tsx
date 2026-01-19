@@ -162,8 +162,8 @@ export default function CompanyInvoicesPage({ params }: PageProps) {
     setCurrentPage(1);
   };
 
-  const handleSearch = () => {
-    setAppliedSearchTerm(searchTerm);
+  const handleSearch = (term?: string) => {
+    setAppliedSearchTerm(term !== undefined ? term : searchTerm);
     setCurrentPage(1);
   };
 
