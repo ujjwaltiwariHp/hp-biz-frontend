@@ -140,7 +140,7 @@ export default function SettingsPage() {
       toast.error('Password must be at least 6 characters');
       return;
     }
-    changePasswordMutation.mutate({ currentPassword, newPassword });
+    changePasswordMutation.mutate({ currentPassword, newPassword, confirmPassword });
   };
 
   const handleCreateAdmin = (data: any) => {

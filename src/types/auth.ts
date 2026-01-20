@@ -18,6 +18,7 @@ export interface UpdateProfileData {
 export interface ChangePasswordData {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 export interface SuperAdminPermissions {
