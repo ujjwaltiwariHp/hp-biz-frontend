@@ -6,7 +6,7 @@ import { Search, X, Loader } from 'lucide-react';
 interface StandardSearchInputProps {
   value: string;
   onChange: (value: string) => void;
-  onSearch: () => void;
+  onSearch: (value?: string) => void;
   onClear?: () => void;
   placeholder?: string;
   minLength?: number;
@@ -39,7 +39,7 @@ export const StandardSearchInput: React.FC<StandardSearchInputProps> = ({
 
   const triggerSearch = (val: string) => {
     if (val.length === 0 || val.length >= minLength) {
-      onSearch();
+      onSearch(val);
     }
   };
 

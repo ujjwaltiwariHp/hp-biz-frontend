@@ -141,8 +141,8 @@ export default function CompaniesPage() {
   };
 
   // Search Handlers
-  const handleSearch = () => {
-    setAppliedSearchTerm(searchTerm);
+  const handleSearch = (term?: string) => {
+    setAppliedSearchTerm(term !== undefined ? term : searchTerm);
     setCurrentPage(1);
   };
 
@@ -384,6 +384,7 @@ export default function CompaniesPage() {
             onClear: handleClearSearch,
             placeholder: "Name, Email, or ID...",
             isLoading: isLoading && !isPlaceholderData,
+            minLength: 1,
           }}
           filterConfigs={[
             {

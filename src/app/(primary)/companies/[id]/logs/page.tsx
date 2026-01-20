@@ -158,8 +158,8 @@ export default function CompanyLogsPage({ params }: PageProps) {
   };
 
   // ... existing search handlers ...
-  const handleSearch = () => {
-    setAppliedSearchTerm(searchTerm);
+  const handleSearch = (term?: string) => {
+    setAppliedSearchTerm(term !== undefined ? term : searchTerm);
     setCurrentPage(1);
   };
 
@@ -472,6 +472,7 @@ export default function CompanyLogsPage({ params }: PageProps) {
             onClear: handleClearSearch,
             placeholder: "Search logs...",
             isLoading: logsLoading,
+            minLength: 1,
           }}
           filterConfigs={[
             logType === 'activity' ? {
@@ -503,27 +504,6 @@ export default function CompanyLogsPage({ params }: PageProps) {
                 ...['ERROR', 'WARN', 'INFO', 'DEBUG', 'SUCCESS', 'CRITICAL'].map(level => ({ label: level, value: level.toLowerCase() }))
               ],
             },
-            // Resource Type filter only for activity logs
-            logType === 'activity' ? {
-              key: 'resource_type',
-              label: 'Resource Type',
-              value: filters.resource_type || '',
-              onChange: (val: string) => {
-                setFilters(prev => ({ ...prev, resource_type: val }));
-                setCurrentPage(1);
-              },
-              options: [
-                { label: 'All Resources', value: '' },
-                { label: 'Company', value: 'COMPANY' },
-                { label: 'User', value: 'USER' },
-                { label: 'Product', value: 'PRODUCT' },
-                { label: 'Subscription', value: 'SUBSCRIPTION' },
-                { label: 'Invoice', value: 'INVOICE' },
-                { label: 'Payment', value: 'PAYMENT' },
-                { label: 'API Key', value: 'API_KEY' },
-                { label: 'Webhook', value: 'WEBHOOK' },
-              ],
-            } : null,
           ].filter(Boolean) as any}
           dateRangeConfig={{
             value: dateRange,
@@ -535,7 +515,6 @@ export default function CompanyLogsPage({ params }: PageProps) {
             filters: [
               appliedSearchTerm ? { key: 'search', label: 'Search', value: appliedSearchTerm } : null,
               (filters.action_type && logType === 'activity') ? { key: 'action', label: 'Action', value: filters.action_type } : null,
-              (filters.resource_type && logType === 'activity') ? { key: 'resource', label: 'Resource', value: filters.resource_type } : null,
               (filters.log_level && logType === 'system') ? { key: 'level', label: 'Level', value: filters.log_level } : null,
             ].filter(Boolean) as any,
             onClearAll: handleClearFilters,
