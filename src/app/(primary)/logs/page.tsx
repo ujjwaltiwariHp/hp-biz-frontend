@@ -93,6 +93,7 @@ export default function LogsPage() {
         ...filters,
         page: currentPage,
         limit: 10,
+        action_type: filters.action_type || undefined,
         resource_type: logType === 'activity' ? filters.resource_type : undefined,
         log_level: logType === 'system' ? filters.log_level : undefined,
         search: appliedSearchTerm || undefined,
@@ -102,6 +103,7 @@ export default function LogsPage() {
       };
       return logsService.getLogs(apiFilters);
     },
+    staleTime: 30000,
   });
 
   useSSE('sa_new_activity_log', logsQueryKey, { refetchQueries: true });
@@ -396,12 +398,18 @@ export default function LogsPage() {
       }}
       filterConfigs={[
         logType === 'activity' ? {
-          key: 'resource_type',
-          label: 'Resource Type',
-          value: filters.resource_type || '',
-          onChange: (val) => handleFilterChange('resource_type', val),
-          type: 'input',
-          placeholder: "e.g. COMPANY, USER",
+          key: 'action_type',
+          label: 'Action Type',
+          value: filters.action_type || '',
+          onChange: (val) => handleFilterChange('action_type', val),
+          options: [
+            { label: 'All Actions', value: '' },
+            { label: 'Create', value: 'CREATE' },
+            { label: 'Update', value: 'UPDATE' },
+            { label: 'Delete', value: 'DELETE' },
+            { label: 'Login', value: 'LOGIN' },
+            { label: 'Logout', value: 'LOGOUT' },
+          ],
         } : {
           key: 'log_level',
           label: 'Log Level',
@@ -426,7 +434,7 @@ export default function LogsPage() {
         count: activeFiltersCount,
         filters: [
           appliedSearchTerm ? { key: 'search', label: 'Search', value: appliedSearchTerm } : null,
-          filters.resource_type ? { key: 'resource', label: 'Resource', value: filters.resource_type } : null,
+          filters.action_type ? { key: 'action', label: 'Action', value: filters.action_type } : null,
           filters.log_level ? { key: 'level', label: 'Level', value: filters.log_level } : null,
           (filters.start_date || filters.end_date) ? { key: 'date', label: 'Date', value: `${getDateString(filters.start_date)} - ${getDateString(filters.end_date)}` } : null
         ].filter(Boolean) as any,
