@@ -175,7 +175,7 @@ export default function AdminManagementTable({
           {isAdminUpdatable(admin) && (
             <button
               onClick={() => handleToggleStatus(admin)}
-              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors ${admin.status === 'active'
+              className={`p-1.5 rounded hover:bg-gray-2 dark:hover:bg-meta-4 transition-colors ${admin.status === 'active'
                 ? 'text-danger hover:text-danger/80'
                 : 'text-success hover:text-success/80'
                 } disabled:opacity-50`}
@@ -192,7 +192,7 @@ export default function AdminManagementTable({
           {(profile.id === 1 || hasPermission(permissions, 'super_admins', 'delete')) && (
             <button
               onClick={() => handleDelete(admin)}
-              className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 text-danger hover:text-danger/80 transition-colors ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''
+              className={`p-1.5 rounded hover:bg-gray-2 dark:hover:bg-meta-4 text-danger hover:text-danger/80 transition-colors ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               disabled={
                 deleteMutation.isPending ||

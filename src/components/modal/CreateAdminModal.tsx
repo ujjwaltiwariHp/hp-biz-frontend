@@ -149,7 +149,7 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute top-1/2 right-4 z-10 -translate-y-1/2 text-gray-500" size={16} />
+              <ChevronDown className="absolute top-1/2 right-4 z-10 -translate-y-1/2 text-body" size={16} />
             </div>
           </div>
         )}
@@ -170,7 +170,7 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white p-1 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-body hover:text-black dark:hover:text-white p-1 transition-colors"
               disabled={isLoading}
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -188,7 +188,7 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="rounded-lg bg-gray-300 dark:bg-gray-600 py-2.5 px-6 text-black dark:text-white hover:bg-gray-400 dark:hover:bg-gray-700 text-sm transition-colors font-medium disabled:opacity-50"
+            className="rounded-lg bg-bodydark1 dark:bg-meta-4 py-2.5 px-6 text-black dark:text-white hover:bg-bodydark dark:hover:bg-opacity-90 text-sm transition-colors font-medium disabled:opacity-50"
           >
             Cancel
           </button>

@@ -89,7 +89,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       [key]: !showPasswords[key],
                     })
                   }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white p-1 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-body hover:text-black dark:hover:text-white p-1 transition-colors"
                 >
                   {showPasswords[key] ? (
                     <EyeOff size={20} />
@@ -105,7 +105,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-gray-300 dark:bg-gray-600 py-2.5 px-6 text-black dark:text-white hover:bg-gray-400 dark:hover:bg-gray-700 text-sm transition-colors font-medium"
+              className="rounded-lg bg-bodydark1 dark:bg-meta-4 py-2.5 px-6 text-black dark:text-white hover:bg-bodydark dark:hover:bg-opacity-90 text-sm transition-colors font-medium"
             >
               Cancel
             </button>
