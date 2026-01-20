@@ -78,8 +78,8 @@ export default function AdminManagementTable({
 
   const handleToggleStatus = (admin: SuperAdmin) => {
     if (admin.id === 1) {
-        toast.error('Cannot deactivate the Root Super Admin account.');
-        return;
+      toast.error('Cannot deactivate the Root Super Admin account.');
+      return;
     }
     setSelectedAdmin(admin);
     toggleDialog.openDialog();
@@ -96,17 +96,15 @@ export default function AdminManagementTable({
 
   const isAdminDeletable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
-
     if (admin.id === 1) return false;
-
+    if (profile.id === 1) return true; // Root supersedes all
     return hasPermission(permissions, 'super_admins', 'delete');
   };
 
   const isAdminUpdatable = (admin: SuperAdmin) => {
     if (admin.id === profile.id) return false;
-
     if (admin.id === 1) return false;
-
+    if (profile.id === 1) return true; // Root supersedes all
     return hasPermission(permissions, 'super_admins', 'update');
   };
 
@@ -191,7 +189,7 @@ export default function AdminManagementTable({
               )}
             </button>
           )}
-          {hasPermission(permissions, 'super_admins', 'delete') && (
+          {(profile.id === 1 || hasPermission(permissions, 'super_admins', 'delete')) && (
             <button
               onClick={() => handleDelete(admin)}
               className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-meta-4 text-danger hover:text-danger/80 transition-colors ${!isAdminDeletable(admin) ? 'opacity-50 cursor-not-allowed' : ''

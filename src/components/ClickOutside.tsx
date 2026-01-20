@@ -12,6 +12,12 @@ const ClickOutside: React.FC<ClickOutsideProps> = ({ children, onOutsideClick, c
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        // Prevent triggering if the click is inside another dialog (e.g. stacked modals)
+        const target = event.target as Element;
+        if (target && target.closest && target.closest('[role="dialog"]') && !wrapperRef.current.contains(target.closest('[role="dialog"]') as Node)) {
+          return;
+        }
+
         onOutsideClick();
       }
     }
