@@ -85,7 +85,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
         </h3>
 
         {/* Message */}
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-sm text-body dark:text-bodydark mb-6">
           {message}
         </p>
 

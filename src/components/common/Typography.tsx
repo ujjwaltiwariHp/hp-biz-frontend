@@ -24,12 +24,12 @@ interface TypographyProps {
 const variantClasses: Record<Variant, string> = {
   'page-title': 'text-lg md:text-xl font-bold text-black dark:text-white',
   'card-title': 'text-sm font-semibold text-black dark:text-white',
-  'label': 'text-xs font-medium text-gray-600 dark:text-gray-400',
+  'label': 'text-xs font-medium text-black dark:text-white',
   'value': 'text-sm font-semibold text-black dark:text-white',
-  'body': 'text-xs text-gray-700 dark:text-gray-300',
-  'body1': 'text-sm text-gray-700 dark:text-gray-300',
-  'body2': 'text-xs text-gray-500 dark:text-gray-400',
-  'caption': 'text-xs text-gray-500 dark:text-gray-400',
+  'body': 'text-xs text-body dark:text-bodydark',
+  'body1': 'text-sm text-body dark:text-bodydark',
+  'body2': 'text-xs text-bodydark2 dark:text-bodydark',
+  'caption': 'text-xs text-bodydark2 dark:text-bodydark',
   'badge': 'text-xxs font-semibold uppercase tracking-wide',
 };
 
